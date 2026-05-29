@@ -1,0 +1,11 @@
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+node_modules/
+__pycache__/
+*.pyc
+.env
+evidence/
+temp_bypass_conns.txt

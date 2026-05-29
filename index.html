@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>P2 Installation Items — Wiom CSP Tech Handoff</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #555;
+    --ink-faint: #8b8b8b;
+    --line: #e1e4e8;
+    --bg: #ffffff;
+    --bg-soft: #f6f8fa;
+    --accent: #0366d6;
+    --gap: #bf8700;     --gap-bg: #fff8c5;
+    --bug: #cf222e;     --bug-bg: #ffebe9;
+    --yes: #1a7f37;     --yes-bg: #dafbe1;
+    --no:  #cf222e;     --no-bg:  #ffebe9;
+    --new: #0366d6;     --new-bg: #ddf4ff;
+    --warn:#d4a72c;     --warn-bg:#fff8c5;
+    --code-bg: #f6f8fa;
+    --tab-active: #0366d6;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); background: var(--bg);
+    line-height: 1.5; margin: 0; padding: 0;
+    font-size: 14.5px;
+  }
+  .container { max-width: 920px; margin: 0 auto; padding: 0 2rem; }
+
+  header { border-bottom: 2px solid var(--ink); padding: 2rem 0 1rem; }
+  header h1 { margin: 0 0 0.3rem; font-size: 1.7rem; letter-spacing: -0.01em; }
+  header .meta { color: var(--ink-soft); font-size: 0.9rem; }
+
+  nav.tabs { position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 10; padding-top: 0.4rem; margin-bottom: 1.5rem; }
+  nav.tabs .tabstrip { display: flex; flex-wrap: wrap; gap: 0.1rem; }
+  .tab-btn { background: transparent; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; padding: 0.45rem 0.85rem; cursor: pointer; font-family: inherit; font-size: 0.86rem; color: var(--ink-soft); position: relative; top: 1px; transition: background 0.15s, color 0.15s; font-weight: 500; }
+  .tab-btn:hover { background: var(--bg-soft); color: var(--ink); }
+  .tab-btn.active { background: var(--bg); border-color: var(--line); color: var(--tab-active); font-weight: 600; border-bottom: 1px solid var(--bg); }
+  .tab-btn.pending { color: var(--ink-faint); font-style: italic; }
+  .tab-btn .num { font-family: ui-monospace, monospace; opacity: 0.7; margin-right: 0.3rem; }
+
+  .tab-pane { display: none; padding-bottom: 4rem; }
+  .tab-pane.active { display: block; }
+
+  h2 { margin: 0.5rem 0 1.25rem; font-size: 1.45rem; letter-spacing: -0.005em; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line); }
+  h3 { margin: 2rem 0 0.7rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); font-weight: 700; }
+
+  p, li { font-size: 0.92rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; }
+  code { background: var(--code-bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--line); }
+  pre { background: var(--code-bg); padding: 0.75rem 0.9rem; border-radius: 6px; border: 1px solid var(--line); overflow-x: auto; line-height: 1.4; font-size: 0.82rem; }
+  pre code { background: none; border: none; padding: 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: 0.6rem 0; font-size: 0.88rem; }
+  th, td { border: 1px solid var(--line); padding: 0.4rem 0.65rem; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 600; }
+
+  /* CLASSIFICATION */
+  .classify { border: 1px solid var(--line); border-radius: 8px; padding: 0; overflow: hidden; margin: 0.5rem 0 1.5rem; background: var(--bg); }
+  .classify-head { display: grid; grid-template-columns: 110px 1fr; align-items: stretch; border-bottom: 1px solid var(--line); }
+  .classify-type { background: var(--gap-bg); color: var(--gap); padding: 1rem 1rem 0.9rem; font-size: 1.45rem; font-weight: 800; text-align: center; letter-spacing: 0.04em; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; gap: 0.4rem; }
+  .classify-type.bug { background: var(--bug-bg); color: var(--bug); }
+  .classify-subtype { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; background: rgba(255,255,255,0.85); padding: 0.18rem 0.45rem; border-radius: 3px; text-transform: uppercase; align-self: center; line-height: 1.15; }
+
+  /* OWNER BLOCKS (for BUG items with tech/PM split) */
+  .owner-block { border: 1px solid var(--line); border-radius: 8px; padding: 0; margin: 0.5rem 0 0.8rem; overflow: hidden; background: var(--bg); }
+  .owner-block-head { padding: 0.55rem 1rem; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 0.6rem; }
+  .owner-block-head.tech { background: var(--new-bg); color: var(--new); }
+  .owner-block-head.pm   { background: var(--warn-bg); color: var(--gap); }
+  .owner-block-head .who { font-size: 0.7rem; font-weight: 600; color: var(--ink-soft); text-transform: none; letter-spacing: 0; }
+  .owner-block-body { padding: 0.7rem 1rem; }
+  .owner-block-body table { margin: 0; }
+  .owner-block-body table th { width: 150px; font-size: 0.78rem; text-transform: uppercase; color: var(--ink-soft); letter-spacing: 0.05em; vertical-align: top; }
+  .owner-block-body table td { font-size: 0.9rem; }
+  .owner-block-body ol { margin: 0; padding-left: 1.4rem; }
+  .owner-block-body li { margin-bottom: 0.35rem; font-size: 0.9rem; }
+  .classify-headline { padding: 1rem 1.2rem; font-size: 0.95rem; color: var(--ink-soft); line-height: 1.55; }
+  .classify-headline strong { color: var(--ink); margin-right: 0.4rem; }
+  .define-table { margin: 0; border: none; }
+  .define-table th, .define-table td { border: none; border-bottom: 1px solid var(--line); padding: 0.55rem 1rem; }
+  .define-table tr:last-child td { border-bottom: none; }
+  .define-table th { background: var(--bg-soft); width: 170px; font-size: 0.78rem; text-transform: uppercase; color: var(--ink-soft); letter-spacing: 0.05em; }
+  .define-table tr.group td { background: var(--bg-soft); font-size: 0.72rem; text-transform: uppercase; color: var(--ink-faint); letter-spacing: 0.08em; padding: 0.3rem 1rem; border-top: 1px solid var(--line); font-weight: 600; }
+  .define-yn { width: 92px; font-weight: 700; font-size: 0.92rem; }
+  .define-yn.yes { color: var(--yes); }
+  .define-yn.no  { color: var(--no); }
+  .define-yn.partial { color: var(--warn); }
+  .define-note { color: var(--ink-soft); font-size: 0.88rem; }
+
+  /* FLOW */
+  .flow { display: flex; flex-direction: column; align-items: center; padding: 1.1rem 0.9rem; margin: 0.5rem 0; background: var(--bg-soft); border: 1px solid var(--line); border-radius: 8px; }
+  .node { background: var(--bg); border: 1.5px solid var(--ink); padding: 0.42rem 0.85rem; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 0.82rem; font-weight: 500; text-align: center; max-width: 100%; }
+  .node small { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 400; color: var(--ink-soft); display: block; font-size: 0.72rem; margin-top: 0.15rem; }
+  .node.warn  { border-color: var(--warn); background: var(--warn-bg); }
+  .node.error { border-color: var(--no);  background: var(--no-bg);  color: var(--no);  font-weight: 700; }
+  .node.success { border-color: var(--yes); background: var(--yes-bg); color: var(--yes); font-weight: 700; }
+  .node.new   { border-color: var(--new); background: var(--new-bg); color: var(--new); font-weight: 700; border-style: dashed; }
+  .arrow { font-size: 0.82rem; color: var(--ink-soft); line-height: 1.3; margin: 0.2rem 0; text-align: center; }
+  .arrow .sym { font-size: 1rem; color: var(--ink-faint); margin-right: 0.15rem; }
+  .arrow small { font-size: 0.78rem; color: var(--ink-faint); font-weight: 400; }
+  .arrow-label { font-size: 0.72rem; color: var(--ink-soft); font-style: italic; margin: -0.05rem 0 0.1rem; text-align: center; max-width: 95%; }
+
+  /* OPEN QUESTIONS — PM input needed */
+  .open-questions { background: var(--warn-bg); border-left: 3px solid var(--warn); padding: 0.8rem 1rem; margin: 1.2rem 0; border-radius: 0 4px 4px 0; }
+  .open-questions h4 { margin: 0 0 0.5rem; color: var(--gap); text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.06em; }
+  .open-questions ol { margin: 0; padding-left: 1.4rem; }
+  .open-questions ol li { margin-bottom: 0.45rem; font-size: 0.9rem; }
+  .open-questions ol li .pm-default { color: var(--ink-soft); font-style: italic; font-size: 0.85rem; }
+
+  /* COMM TABLE */
+  .comm-table th { width: 80px; }
+  .comm-table th:nth-child(2), .comm-table th:nth-child(3), .comm-table th:nth-child(4) { width: auto; }
+  .comm-table td:first-child { font-family: ui-monospace, monospace; font-size: 0.9rem; font-weight: 700; color: var(--ink); background: var(--bg-soft); text-align: center; }
+  .comm-table .new-pn { background: var(--new-bg); border-left: 3px solid var(--new); }
+
+  /* FIX PLAN */
+  .fix-plan { list-style: none; padding: 0; margin: 0.5rem 0; counter-reset: step; }
+  .fix-plan > li {
+    display: grid; grid-template-columns: 36px 110px 1fr;
+    align-items: center; gap: 0.8rem;
+    padding: 0.7rem 0.9rem; border: 1px solid var(--line); border-radius: 6px;
+    margin-bottom: 0.4rem; background: var(--bg); counter-increment: step;
+  }
+  .fix-plan > li::before {
+    content: counter(step); font-weight: 700; font-size: 1rem; text-align: center;
+    color: var(--ink); background: var(--bg-soft); border-radius: 50%; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center; border: 1px solid var(--line);
+  }
+  .svc-tag { font-family: ui-monospace, monospace; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.25rem 0.5rem; border-radius: 4px; text-align: center; }
+  .svc-tag.os    { background: var(--warn-bg); color: var(--gap); }
+  .svc-tag.es    { background: #ffe4cc; color: #b94800; }
+  .svc-tag.code  { background: var(--new-bg); color: var(--new); }
+  .svc-tag.infra { background: #f0f0f0; color: #555; }
+  .svc-tag.das   { background: var(--yes-bg); color: var(--yes); }
+  .svc-tag.notif { background: #f3e5ff; color: #6f42c1; }
+  .svc-tag.app   { background: #d2f4ea; color: #0e7c66; }
+  .step-text { font-size: 0.91rem; }
+
+  /* RISKS */
+  .risks { padding-left: 1.3rem; margin: 0.5rem 0; }
+  .risks li { margin-bottom: 0.35rem; font-size: 0.88rem; }
+
+  /* DETAILS */
+  details { border: 1px solid var(--line); border-radius: 6px; padding: 0; margin: 0.5rem 0 1rem; background: var(--bg); }
+  details > summary { cursor: pointer; padding: 0.55rem 0.9rem; font-weight: 600; font-size: 0.86rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.04em; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+  details > summary::before { content: "▸"; font-size: 0.8rem; transition: transform 0.15s; }
+  details[open] > summary::before { transform: rotate(90deg); }
+  details > summary::-webkit-details-marker { display: none; }
+  details > div { padding: 0 0.9rem 0.9rem; border-top: 1px solid var(--line); }
+
+  /* CAVEAT */
+  .caveat { background: var(--warn-bg); border-left: 3px solid var(--warn); padding: 0.5rem 0.85rem; margin: 0.5rem 0; border-radius: 0 4px 4px 0; font-size: 0.88rem; }
+
+  /* PENDING */
+  .pending-pane { color: var(--ink-faint); font-style: italic; padding: 3rem; border: 1px dashed var(--line); border-radius: 8px; text-align: center; margin: 1rem 0; }
+  .pending-pane h2 { border: none; margin: 0; color: #aaa; font-style: normal; }
+
+  /* INDEX */
+  .index-table td { vertical-align: middle; }
+  .pill { display: inline-block; padding: 0.18rem 0.55rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; }
+  .pill.gap { background: var(--gap-bg); color: var(--gap); }
+  .pill.bug { background: var(--bug-bg); color: var(--bug); }
+  .pill.pending { background: #f0f0f0; color: var(--ink-faint); font-style: italic; }
+
+  footer { margin-top: 5rem; padding: 1.25rem 0 2rem; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.82rem; }
+
+  .sub-head { font-size: 0.74rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+  .sub-head.bad  { color: var(--no); }
+  .sub-head.good { color: var(--yes); }
+
+  @media print {
+    body { font-size: 11pt; }
+    .container { max-width: none; padding: 0 1rem; }
+    nav.tabs { display: none; }
+    .tab-pane { display: block !important; page-break-before: always; }
+    .tab-pane:first-of-type { page-break-before: auto; }
+    .pending-pane { display: none; }
+    pre, .flow, table, .fix-plan li { page-break-inside: avoid; }
+    details { border: none; }
+    details > summary::before { content: ""; }
+    details > div { display: block !important; border: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+  <h1>P2 Installation Items</h1>
+  <div class="meta">
+    <strong>Owner:</strong> Ashis &middot;
+    <strong>Started:</strong> 2026-05-29 &middot;
+    <strong>For:</strong> Wiom CSP Tech &middot;
+    <span id="status-counter">9 items</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="tabstrip">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="item-01"><span class="num">01</span>Slot proposal</button>
+    <button class="tab-btn" data-tab="item-02"><span class="num">02</span>Same-CSP loop</button>
+    <button class="tab-btn" data-tab="item-03"><span class="num">03</span>2 slots + counter</button>
+    <button class="tab-btn" data-tab="item-04"><span class="num">04</span>Tech FPN</button>
+    <button class="tab-btn" data-tab="item-05"><span class="num">05</span>Cancel bifurcation</button>
+    <button class="tab-btn" data-tab="item-06"><span class="num">06</span>CLOS sched</button>
+    <button class="tab-btn" data-tab="item-07"><span class="num">07</span>DAS sched</button>
+    <button class="tab-btn" data-tab="item-08"><span class="num">08</span>DAS state</button>
+    <button class="tab-btn" data-tab="item-09"><span class="num">09</span>Voice + landmark</button>
+  </div>
+</nav>
+
+<!-- ============ OVERVIEW ============ -->
+<section id="overview" class="tab-pane active">
+  <h2>Index</h2>
+  <table class="index-table">
+    <thead>
+      <tr><th style="width: 42px;">#</th><th>Title</th><th style="width: 90px;">Type</th><th>Defined where?</th><th style="width: 220px;">Service(s) to change</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>01</strong></td>
+        <td><a href="#item-01" class="tab-link" data-tab="item-01">Connection stuck when CSP doesn't propose a slot</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="mono" style="color: var(--no);">OS✗ &middot; ES✗ &middot; Code✗ &middot; App✗ &middot; PN✗</span></td>
+        <td><span class="mono">TAS</span>, OS, <span class="mono">CL infra</span>, <span class="mono">notif</span>, <span class="mono">app</span></td>
+      </tr>
+      <tr>
+        <td><strong>02</strong></td>
+        <td><a href="#item-02" class="tab-link" data-tab="item-02">Same CSP re-assigned in single-CSP zones (P51 bypass)</a></td>
+        <td><span class="pill bug">BUG</span></td>
+        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">Spec✓</span> &middot; <span style="color: var(--no);">Code✗</span></span></td>
+        <td><span class="mono">demand-allocation-service</span></td>
+      </tr>
+      <tr>
+        <td><strong>03</strong></td>
+        <td><a href="#item-03" class="tab-link" data-tab="item-03">Propose 2 slots + customer counter-proposal</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--no);">ES✗</span> &middot; <span style="color: var(--no);">Code✗</span> &middot; <span style="color: var(--no);">App✗</span></span></td>
+        <td><span class="mono">ES&nbsp;PRD</span>, <span class="mono">tas-service</span>, partner app, customer app</td>
+      </tr>
+      <tr>
+        <td><strong>04</strong></td>
+        <td><a href="#item-04" class="tab-link" data-tab="item-04">FPN for Rohit (technician) on assignment</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--ink-faint);">PRD&nbsp;n/a</span> &middot; <span style="color: var(--no);">App✗</span> &middot; <span style="color: var(--no);">CT✗</span></span></td>
+        <td>Technician app, CleverTap campaign</td>
+      </tr>
+      <tr>
+        <td><strong>05</strong></td>
+        <td><a href="#item-05" class="tab-link" data-tab="item-05">Bifurcate cancel-by-customer vs cancel-by-system</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--ink-faint);">PRD&nbsp;partial</span> &middot; <span style="color: var(--no);">Backend✗</span></span></td>
+        <td>Customer backend, <span class="mono">tas-service</span>, ES PRD</td>
+      </tr>
+      <tr>
+        <td><strong>06</strong></td>
+        <td><a href="#item-06" class="tab-link" data-tab="item-06">CLOS timeout scheduler unwired (P74/P75/P76/P77/P78 inert)</a></td>
+        <td><span class="pill bug">BUG</span></td>
+        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">PRD✓</span> &middot; <span style="color: var(--no);">Infra✗</span></span></td>
+        <td><span class="mono">connection-lifecycle-service</span>, <span class="mono">tas-service</span> (T3 co-fix)</td>
+      </tr>
+      <tr>
+        <td><strong>07</strong></td>
+        <td><a href="#item-07" class="tab-link" data-tab="item-07">DAS scheduler unwired (P41 + P191 inert) &mdash; blocked on 08</a></td>
+        <td><span class="pill bug">BUG</span></td>
+        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">PRD✓</span> &middot; <span style="color: var(--no);">Infra✗</span></span></td>
+        <td><span class="mono">demand-allocation-service</span></td>
+      </tr>
+      <tr>
+        <td><strong>08</strong></td>
+        <td><a href="#item-08" class="tab-link" data-tab="item-08">DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">PRD✓</span> &middot; <span style="color: var(--warn);">AM-02⚠</span> &middot; <span style="color: var(--no);">Caller✗</span></span></td>
+        <td><span class="mono">demand-allocation-service</span> &amp;/or <span class="mono">tas</span> (tech picks)</td>
+      </tr>
+      <tr>
+        <td><strong>09</strong></td>
+        <td><a href="#item-09" class="tab-link" data-tab="item-09">Show address-locality + landmark + voice direction in the CSP App</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--yes);">Customer PRD✓</span> &middot; <span style="color: var(--no);">CSP App✗</span></span></td>
+        <td>CSP App (model + drilldown + FPN overlay), design team</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>How to read each item</h3>
+  <ol>
+    <li><strong>Classification card</strong> — GAP or BUG; which layers define it (OS / ES / Code, plus Partner App and PN/CleverTap where the item touches the CSP-facing surface).</li>
+    <li><strong>Backend flow — today vs. want</strong> — two diagrams side-by-side. New behaviour shown in blue dashed.</li>
+    <li><strong>Communication timeline</strong> — when the partner sees what, on which surface.</li>
+    <li><strong>The fix</strong> — numbered, service-tagged sequence. Actions only, no prose.</li>
+    <li><strong>Risks / dependencies</strong> — one-liners.</li>
+    <li><strong>Evidence and references</strong> — collapsed by default.</li>
+  </ol>
+</section>
+
+<!-- ============ ITEM 01 ============ -->
+<section id="item-01" class="tab-pane">
+  <h2>01 — Connection stuck when CSP doesn't propose a slot</h2>
+
+  <!-- CLASSIFICATION -->
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>Nothing defines a slot-proposal SLA</strong> — not the OS, not the spec, not the code, not the app UI, not the notification stack.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr class="group"><td colspan="3">Backend</td></tr>
+      <tr>
+        <td>OS</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">Only <code>P74 = 72h</code> for the whole <code>PENDING_INSTALL</code> window; no slot-proposal sub-SLA.</td>
+      </tr>
+      <tr>
+        <td>Spec (ES PRD)</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">UI reminder only (<code>SLOT_PROPOSAL_URGENT</code> at +1h); no state-machine expiry path.</td>
+      </tr>
+      <tr>
+        <td>Code (TAS)</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">No <code>TIMER_TASK_EXPIRED</code> from <code>AWAITING_SLOT_PROPOSAL</code>; guard blocks pre-arrival expiry.</td>
+      </tr>
+      <tr class="group"><td colspan="3">CSP-facing communication</td></tr>
+      <tr>
+        <td>Partner app UI</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">No countdown / no warning state on the task card.</td>
+      </tr>
+      <tr>
+        <td>PN / CleverTap</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">No CT event configured for warning or reassignment.</td>
+      </tr>
+      <tr class="group"><td colspan="3">Prod</td></tr>
+      <tr>
+        <td>Behaviour today</td><td class="define-yn no">✗ Broken</td>
+        <td class="define-note">10 candidates stuck &gt; 87 h, oldest <strong>6.5 days</strong>; even the existing UI reminder doesn't fire (scheduler off).</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Parameters used in this item</h3>
+  <table>
+    <thead><tr><th style="width: 170px;">Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>P74</code></td><td>CL <strong>install window</strong> — 72h hard cap on how long a connection can sit in <code>PENDING_INSTALL</code>. The overall envelope inside which this item's new 4h slot-proposal SLA lives.</td></tr>
+      <tr><td><code>P78</code></td><td>CL <strong>install retry cap</strong> — 3 retries before retry-exhaustion forces permanent deactivation. Determines how many times this item's reroute can fire on a given connection.</td></tr>
+      <tr><td><code>P51</code></td><td>DAS <strong>decline cooldown</strong> — 4h. After a CSP "exits" via this item's path (or declines), that CSP is excluded from being re-assigned the same connection for 4h.</td></tr>
+      <tr><td><code>P41</code></td><td>DAS <strong>acceptance window</strong> — 2h. The post-reroute acceptance window for the <em>next</em> CSP, once this item's reroute fires.</td></tr>
+      <tr><td><strong>4h SLA (new)</strong></td><td>This item's introduced <strong>slot-proposal SLA</strong> — lives entirely in the ES PRD, not OS. Times out if the CSP doesn't propose a slot within 4 hours of receiving the booking. Warning at T+3h, reroute at T+4h.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- BACKEND FLOW -->
+  <h3>Backend flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">ALLOCATION_ACCEPTED</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">AWAITING_SLOT_PROPOSAL</div>
+        <div class="arrow-label">CSP does nothing</div>
+        <div class="arrow">↓</div>
+        <div class="node error">∞ STUCK FOREVER</div>
+        <div style="font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.5rem; text-align: center;">no timer · no exit · no reroute</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want &mdash; SLA = 4 h</div>
+      <div class="flow">
+        <div class="node">ALLOCATION_ACCEPTED</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">AWAITING_SLOT_PROPOSAL <small>4h timer running</small></div>
+        <div class="arrow">↓ T+3h (1h before expiry)</div>
+        <div class="node new">⚠ WARNING <small>PN to CSP</small></div>
+        <div class="arrow">↓ T+4h, no slot</div>
+        <div class="node error">INSTALLATION_FAILED <small>TIMEOUT_SLOT_PROPOSAL</small></div>
+        <div class="arrow-label">CL T3 · DAS reroute · P51 cooldown on old CSP</div>
+        <div class="arrow">↓</div>
+        <div class="node success">NEW CSP TAKES IT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPEC (PM HAND-OFF) -->
+  <h3>Spec &mdash; handed to tech</h3>
+
+  <h4>Today</h4>
+  <ul>
+    <li>CSP is allocated; candidate enters <code>AWAITING_SLOT_PROPOSAL</code>.</li>
+    <li>No SLA — the candidate sits indefinitely if the CSP doesn't act.</li>
+    <li>Neither the CSP nor the customer is informed about any deadline.</li>
+  </ul>
+
+  <h4>Want</h4>
+  <p><strong>SLA:</strong> the slot must be proposed within <strong>4 hours</strong> of the candidate entering <code>AWAITING_SLOT_PROPOSAL</code>. The CSP is warned at the <strong>3-hour</strong> mark (i.e. 1 hour before SLA expiry — last-call style).</p>
+
+  <p><strong>Timeline of what the CSP sees:</strong></p>
+  <table class="comm-table">
+    <thead><tr><th>When</th><th>Backend</th><th>Notification (PN via CleverTap)</th><th>Partner app UI</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>T + 0</td>
+        <td>Candidate enters <code>AWAITING_SLOT_PROPOSAL</code>; 4h SLA starts</td>
+        <td>(existing assignment PN)</td>
+        <td>Task appears with <strong>"4h to propose"</strong> countdown</td>
+      </tr>
+      <tr class="new-pn">
+        <td>T + 3h</td>
+        <td>Warning fires (no state change)</td>
+        <td><strong>NEW</strong> CT event <code>slot_proposal_warning</code><br>→ PN (placeholder copy — product to finalise): <em>"1 hour left to propose a slot, else this booking goes to another partner."</em></td>
+        <td>Task card switches to <strong>warning state</strong> (amber border, prominent "Propose slot" CTA)</td>
+      </tr>
+      <tr class="new-pn">
+        <td>T + 4h</td>
+        <td>Candidate exits <code>AWAITING_SLOT_PROPOSAL</code> via the existing system-driven <code>INSTALLATION_FAILED</code> (reason <code>TIMEOUT_SLOT_PROPOSAL</code>) → CL T3 retry → DAS reroute → P51 cooldown on the failing CSP. Customer is reassigned to a different CSP.</td>
+        <td><strong>NEW</strong> CT event <code>slot_proposal_expired</code><br>→ PN (placeholder copy — product to finalise): <em>"Your booking was reassigned because no slot was proposed in 4 hours."</em></td>
+        <td>Task disappears from active list; appears in history with <strong>"Reassigned"</strong> badge</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>If the SLA expires, the candidate exits <code>AWAITING_SLOT_PROPOSAL</code> via the system-driven equivalent of <code>INSTALLATION_FAILED</code> with reason <code>TIMEOUT_SLOT_PROPOSAL</code>. This then flows through the <strong>existing</strong> downstream path: CL T3 retry → DAS reroute → P51 cooldown on the failing CSP. The customer is reassigned to a different CSP without any further action from anyone. No new OS-level concept is introduced.</p>
+
+  <h4>Edge cases (well-scoped)</h4>
+  <ol style="padding-left: 1.4rem;">
+    <li><strong>CSP proposes the slot just before T+4h</strong> (e.g. T+3:59:30). Within window — counts as proposed; the 4h timer is cancelled.</li>
+    <li><strong>CSP attempts to propose just after T+4h fires.</strong> Rejected — the candidate has already exited <code>AWAITING_SLOT_PROPOSAL</code>; the partner app shows the "Reassigned" badge.</li>
+    <li><strong>CSP marks <code>REPORT_INSTALLATION_FAILED</code> before T+4h.</strong> Existing voluntary-exit path. Both timers cancel; no PNs from this spec fire.</li>
+    <li><strong>Customer cancels before T+4h.</strong> Cancellation wins — candidate moves to <code>CANCELLED_BY_CUSTOMER</code>. Both timers cancel; no PNs from this spec fire.</li>
+    <li><strong>Single-CSP zone</strong> — today reassignment loops back to the same CSP. Once <a href="#item-02" class="tab-link" data-tab="item-02">Item 02</a> ships (P51 cooldown bypass removed), single-CSP zones correctly fail to allocate; the booking sits unallocated and Capacity OS sees a supply deficit. Behaviour change is intentional and consistent with OS L540 (<em>"service vacuum accepted"</em>).</li>
+    <li><strong>P78 retry cap = 3.</strong> If three consecutive CSPs each ignore the booking for 4h, retries exhaust (3 × 4h = 12h) and the connection deactivates via T12. Confirm this is the intended terminal for "no CSP wanted this anywhere."</li>
+    <li><strong>CSP proposes the slot in the seconds between the T+3h warning being scheduled and the PN firing.</strong> The warning PN is <strong>suppressed</strong> — the CSP doesn't get a confusing "1 hour left" notification after they've already proposed the slot.</li>
+  </ol>
+
+  <h4>Out of scope</h4>
+  <ul>
+    <li><strong>Customer-side visibility into install progress.</strong> Customer-app concern, not this spec.</li>
+    <li><strong>Backfill for connections already stuck</strong> at launch — handle via one-off ops, not retroactively.</li>
+  </ul>
+
+  <!-- RISKS -->
+  <h3>Risks / dependencies</h3>
+  <ul class="risks">
+    <li><strong>Hard prerequisite on the scheduler infrastructure landing.</strong> <code>AWS_SCHEDULER_ENABLED</code> is <code>false</code> in prod for TAS / CLOS / DAS today; the prod EventBridge dispatcher (Lambda + IAM role + bearer token) was never provisioned. Without it, no timers fire — neither the existing CL P74 backstop nor this item's new 4h SLA. <strong>This item cannot ship until <a href="#item-06" class="tab-link" data-tab="item-06">Item 06</a> (CLOS scheduler) and <a href="#item-07" class="tab-link" data-tab="item-07">Item 07</a> (DAS scheduler) land in prod</strong> — those items deliver the same scheduler-infrastructure fix this one depends on. See the README's cross-item rollout-sequencing note.</li>
+    <li><strong>Single-CSP zones</strong> depend on <a href="#item-02" class="tab-link" data-tab="item-02">Item 02</a>. Without it, reassignment in single-CSP zones routes back to the same CSP. With it, those zones correctly stay unallocated until the supply problem is resolved.</li>
+    <li><strong>P78 retry cap = 3.</strong> Three ignored 4h cycles ⇒ 12h to <code>T12 → PENDING_DEACTIVATION</code>. Confirm that is the intended terminal.</li>
+    <li><strong>Warning PN race conditions</strong> (edge cases 7, 8) — the notification dispatcher must check candidate state at firing time and suppress the PN if the candidate has already moved past <code>AWAITING_SLOT_PROPOSAL</code>.</li>
+    <li><strong>Customer is not notified</strong> that their booking has been reassigned (per Out-of-scope decision). If product wants customer-side messaging, that's a separate item.</li>
+    <li><strong>Timer alignment.</strong> <code>T_slot_proposal_window = 4h = P51 cooldown</code> — keeps the failed CSP excluded throughout the immediate reroute attempt.</li>
+  </ul>
+
+  <!-- WHAT THE SPEC AND CODE SAY TODAY (visible, exhaustive) -->
+  <h3>What the existing spec and code say today</h3>
+
+  <h4>OS</h4>
+  <p><code>Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §S5 L456:</p>
+<pre><code>P74 / T_install_window — Max time in PENDING_INSTALL before
+system-triggered INSTALLATION_FAILED — 72 hours</code></pre>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">That's the only PENDING_INSTALL timer — too coarse to catch a CSP ignoring slot proposal for hours. No slot-proposal sub-SLA anywhere in CL OS or D&amp;A OS. This item does not add one — the 4h SLA lives entirely in the ES PRD.</p>
+
+  <h4>ES PRD (v2.5, current latest)</h4>
+  <p><code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> L536:</p>
+<pre><code>AWAITING_SLOT_PROPOSAL: "Partner must propose a slot
+(up to ES_INSTALL_MAX_SLOTS_CONFIG_PER_DAY per day)."</code></pre>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">Spec defines a <code>SLOT_PROPOSAL_URGENT</code> reminder (UI nudge at +1h, attention-only) but no SLA-driven exit. <code>INSTALLATION_EXPIRED</code> (L672) is reachable only from post-arrival states; pre-arrival expiry is not in the spec.</p>
+
+  <h4>Code today (for tech context — not the fix)</h4>
+  <ul>
+    <li>TAS attempts to schedule a <code>SLOT_PROPOSAL_URGENT</code> attention at +1h on entry to <code>AWAITING_SLOT_PROPOSAL</code>. Even this doesn't fire in prod because <code>AWS_SCHEDULER_ENABLED</code> is <code>false</code> (<code>application-prod.yml:18</code>) — the prod EventBridge dispatcher was never provisioned.</li>
+    <li>The state machine has no <code>TIMER_TASK_EXPIRED → INSTALLATION_EXPIRED</code> transition from <code>AWAITING_SLOT_PROPOSAL</code>; the guard <code>GUARD-ES-INSTALL-19</code> explicitly rejects pre-arrival expiry; the expiry method is a no-op pending DIFF I (deferred).</li>
+  </ul>
+
+  <h4>Prod evidence</h4>
+  <p>10 candidates currently stuck in <code>AWAITING_SLOT_PROPOSAL</code> &gt; 87h; oldest <strong>6.5 days</strong>. Sample (last 7 days):</p>
+  <table>
+    <thead><tr><th>connection_id</th><th>CSP</th><th>hrs stuck</th><th>proposed_slot</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono">f38c4c02-…</span></td><td><span class="mono">a0a7e3</span></td><td><strong>157.7</strong></td><td>null</td></tr>
+      <tr><td><span class="mono">c69c160c-…</span></td><td><span class="mono">a0a7d3</span></td><td>144.8</td><td>null</td></tr>
+      <tr><td><span class="mono">eaaf8fcc-…</span></td><td><span class="mono">a0a7e3</span></td><td>142.6</td><td>null</td></tr>
+      <tr><td><span class="mono">6c14d4d3-…</span></td><td><span class="mono">a0a7g4</span></td><td>141.0</td><td>null</td></tr>
+      <tr><td><span class="mono">acb05f7d-…</span></td><td><span class="mono">a0a7b0</span></td><td>139.8</td><td>null</td></tr>
+      <tr><td colspan="4" style="font-style: italic; color: var(--ink-soft);">…5 more, all &gt; 87h since create, all with <code>proposed_slot_date = null</code>.</td></tr>
+    </tbody>
+  </table>
+<pre><code>SELECT execution_candidate_id, connection_id, csp_id,
+       ROUND(EXTRACT(EPOCH FROM (NOW() - created_at))/3600, 1) AS hrs_stuck,
+       proposed_slot_date
+FROM csp_tas_service.install_execution_candidates
+WHERE current_state='AWAITING_SLOT_PROPOSAL' AND task_status='OPEN'
+  AND created_at &gt;= NOW() - INTERVAL '7 days'
+ORDER BY created_at ASC;</code></pre>
+
+  <h3>References</h3>
+  <ul>
+    <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §S5 L456 (P74 = 72h backstop). <strong>No OS change in this item.</strong></li>
+    <li><strong>Spec:</strong> <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> (current latest) — L536 (single-slot, no SLA exit), L672 (INSTALLATION_EXPIRED post-arrival only), L93–94 (OPEN-PARAM-2), L138 (AMENDMENT-03 DIFF A documentation-only).</li>
+    <li><strong>Code evidence (not the fix):</strong> <code>InstallationStateMachine.java:87,226–230</code> · <code>InstallationGuards.java:212–226</code> (<code>GUARD-ES-INSTALL-19</code>) · <code>CandidateWorkflowServiceImpl.java:986–1002</code> (inert expireCandidate) · <code>application.yml:261</code> (slot-proposal-urgent-hours: 1h) · <code>application-prod.yml:18</code> (<code>AWS_SCHEDULER_ENABLED: false</code>).</li>
+    <li><strong>Notification:</strong> <code>csp-notification-service</code> (existing) · new CleverTap events: <code>slot_proposal_warning</code>, <code>slot_proposal_expired</code>.</li>
+    <li><strong>Related findings:</strong> <code>cl-timer-enforcement-gap</code> (memory) — BUG-1 (scheduler off in prod, see Out-of-scope), BUG-3 (DIFF I deferred), BUG-8 (DAS single-CSP cooldown bypass — see Item 02).</li>
+    <li><strong>Sample connection IDs for retesting:</strong> <code>f38c4c02-…</code> (157.7h stuck), <code>c69c160c-…</code> (144.8h), <code>eaaf8fcc-…</code> (142.6h), plus 7 more in the same window.</li>
+    <li><strong>Source MD (PM working notes):</strong> <code>items/01-no-slot-action-stuck.md</code></li>
+  </ul>
+
+  <h3>Investigation log</h3>
+  <ul>
+    <li><strong>2026-05-29 — filed.</strong> 10 candidates currently stuck &gt; 87h, oldest 6.5 days. Gap across spec, code, partner app, and PN/CT.</li>
+    <li><strong>2026-05-29 — revised per new PM-spec guideline.</strong> Rewrote §8 as a well-scoped human-readable spec with 10 enumerated edge cases and per-surface pre/post diffs. <strong>Removed the proposed new OS parameter</strong> — the SLA now lives entirely in the ES PRD; per the guideline to minimise OS changes. Scheduler infrastructure moved out of the fix plan into Out-of-scope + Risks as a Tier-0 dependency. Spec references updated v2.4 → v2.5 (current latest). All previously collapsed sections (evidence, source quotes, references) made visible for tech handoff.</li>
+  </ul>
+</section>
+
+<!-- ============ PLACEHOLDERS ============ -->
+<section id="item-02" class="tab-pane">
+  <h2>02 — Same CSP re-assigned in single-CSP zones (P51 cooldown bypass)</h2>
+
+  <!-- CLASSIFICATION -->
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type bug">
+        BUG
+        <div class="classify-subtype">Impl miss</div>
+      </div>
+      <div class="classify-headline">
+        <strong>The OS says NO, the code says YES.</strong> In single-CSP zones the DAS routing engine deliberately bypasses the P51 cooldown and re-routes a failed-install booking back to the same CSP — sometimes within seconds.
+        <br><br>
+        <strong>Two coupled fixes must ship together:</strong>
+        <br>(1) Remove the <code>SINGLE_CSP_ZONE_CONTINUITY</code> bypass in the routing engine.
+        <br>(2) Wire the missing <code>incrementAssignmentCount</code> call on DAS's install-failure path (<code>InboundEventProcessingServiceImpl.handleClStateChanged</code>) so the P195 ping-pong counter advances. Today it doesn't — counter sits at <code>{}</code> on every allocation row in prod. OS L572 explicitly says P195 covers <em>"…or fail the same connection"</em>; the code violates this. The P195 value itself is read from AWS Parameter Store at runtime — not hardcoded in DAS — so this fix is pure plumbing.
+        <br><br>
+        Either fix in isolation leaves a loop open. Together: each CSP can be re-assigned the same connection up to the P195 cap, with a 4-hour gap (P51), then permanently excluded.
+        <br><span style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.4rem; display: inline-block;"><strong>Sub-classification: Implementation miss.</strong> Spec is correct; tech owns both technical fixes.</span>
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr class="group"><td colspan="3">OS &amp; Spec say the bug is the bug</td></tr>
+      <tr>
+        <td>OS (DAS)</td><td class="define-yn yes">✓ Yes</td>
+        <td class="define-note">L176 (absolute): <em>"cannot be re-assigned the same connection within cooldown."</em> CONTINUITY mode (L298–322) relaxes <code>P46</code> cap only. L540 explicitly says <em>"service vacuum accepted"</em> for single-CSP / ineligible-CSP.</td>
+      </tr>
+      <tr>
+        <td>Spec (DAS PRD)</td><td class="define-yn yes">✓ Yes</td>
+        <td class="define-note">State machine has no <code>DECLINED → ASSIGNED-to-same-CSP</code> path. The <code>B-FLW-02</code> change-id the code cites is about a different feature (<code>candidate_csps[]</code> pre-filter).</td>
+      </tr>
+      <tr class="group"><td colspan="3">Code &amp; prod are wrong</td></tr>
+      <tr>
+        <td>Code (DAS) — bypass</td><td class="define-yn no">✗ Violates</td>
+        <td class="define-note"><code>RoutingEngineServiceImpl:108–135</code> explicit re-include tagged <code>SINGLE_CSP_ZONE_CONTINUITY</code>. Violates OS L176. Introduced in PR #184 / commit <code>82d24be6</code> by Raushan Kapoor (2026-05-09); empty commit body.</td>
+      </tr>
+      <tr>
+        <td>Code (DAS) — P195 increment</td><td class="define-yn no">✗ Missing</td>
+        <td class="define-note"><code>InboundEventProcessingServiceImpl:418–441</code> handles install-failure reroute but never calls <code>AllocationServiceImpl.incrementAssignmentCount</code>. Violates OS L572. The counter the routing engine's P195 predicate reads stays at zero forever.</td>
+      </tr>
+      <tr>
+        <td>Prod today</td><td class="define-yn no">✗ Wrong</td>
+        <td class="define-note">Same CSP re-routed <strong>3 times in 68 seconds</strong> on <code>d1e0bd49-…</code>; <strong>27 of 39 bypass-affected connections (69%) in last 14d ended retry-exhausted</strong>; median gap between install-failures on the same connection is <strong>34 seconds</strong> (min 7 sec) — the rapid-reject misuse pattern.</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3>Parameters used in this item</h3>
+  <table>
+    <thead><tr><th style="width: 200px;">Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>P51</code></td><td>DAS <strong>decline cooldown</strong> — 4h. After a CSP declines or marks install failed on a connection, that CSP <strong>cannot be re-assigned the same connection</strong> for 4 hours. The absolute rule this item's bug violates.</td></tr>
+      <tr><td><code>P46</code></td><td>DAS <strong>capacity cap</strong> — CSP-level cap on concurrent active allocations. OS's CONTINUITY mode (L298–322) sanctions a relaxation of <em>this</em> (via <code>P_DA_CONTINUITY_CAP_RATIO</code>) in single-CSP zones. It does <strong>not</strong> sanction relaxing P51.</td></tr>
+      <tr><td><code>P50</code></td><td>DAS <strong>routing retries</strong> — 5 attempts. Max attempts the routing engine makes to find an eligible CSP before declaring routing-failure. The correct fall-through when P51 keeps the single CSP excluded.</td></tr>
+      <tr><td><code>P75</code></td><td>CL <strong>request expiry</strong> — 7d. The backstop: if a connection sits <code>REQUESTED</code> (no successful allocation) for 7 days, CLOS deactivates it. The OS-sanctioned final resolution when the supply problem genuinely can't be fixed.</td></tr>
+      <tr><td><code>P195</code></td><td>DAS <strong>ping-pong cap</strong> — value sourced from AWS Parameter Store (<code>P195_SAME_CONNECTION_REASSIGN_LIMIT</code>); current canonical value <strong>3</strong> (code default in <code>DemandAllocationParameters.java:100</code>; OS doc L572 still shows older <code>2</code> default — minor doc-drift, not blocking). Max number of times the same connection can be assigned to the same CSP across its lifecycle (includes retries and reallocations). Per OS L572: <em>"Prevents infinite ping-pong when limited CSPs repeatedly decline or fail the same connection."</em> Predicate logic at <code>RoutingEngineServiceImpl:333</code> is correctly wired; the counter-increment trigger is missing on the install-failure path — the second fix this item carries.</td></tr>
+      <tr><td><code>P78</code></td><td>CL <strong>install retry cap</strong> — 3. With P195 inert in prod today, this is the only thing bounding the rapid-reject loop. After 3 install-failure events on the same connection, CL fires T12 → <code>PENDING_DEACTIVATION</code> (<code>RETRY_EXHAUSTION</code>).</td></tr>
+    </tbody>
+  </table>
+
+  <!-- FLOWS -->
+  <h3>Backend flow — today vs. OS-aligned</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">ALLOCATION_ACCEPTED → CSP A</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">CSP A declines / install fails</div>
+        <div class="arrow">↓</div>
+        <div class="node">P51 cooldown applied to CSP A</div>
+        <div class="arrow">↓</div>
+        <div class="node">Routing engine excludes CSP A (P51_COOLDOWN)</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">eligibleSet = empty</div>
+        <div class="arrow bad">↓</div>
+        <div class="node error">⚠ SINGLE_CSP_ZONE_CONTINUITY BYPASS</div>
+        <div class="arrow-label">re-include the cooled-down CSP</div>
+        <div class="arrow bad">↓</div>
+        <div class="node error">ASSIGNED to CSP A AGAIN</div>
+        <div style="font-size: 0.78rem; color: var(--no); margin-top: 0.5rem; text-align: center; font-weight: 600;">loop until P78=3 retries exhaust</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want (OS-aligned)</div>
+      <div class="flow">
+        <div class="node">ALLOCATION_ACCEPTED → CSP A</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">CSP A declines / install fails</div>
+        <div class="arrow">↓</div>
+        <div class="node">P51 cooldown applied to CSP A</div>
+        <div class="arrow">↓</div>
+        <div class="node">Routing engine excludes CSP A (P51_COOLDOWN)</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">eligibleSet = empty</div>
+        <div class="arrow">↓</div>
+        <div class="node new">RoutingResult.FAILURE</div>
+        <div class="arrow-label">P50 retries (each still excludes CSP A)</div>
+        <div class="arrow">↓ exhausted</div>
+        <div class="node new">ALLOC_STATE_ROUTING_FAILURE emitted</div>
+        <div class="arrow-label">+ SINGLE_PROVIDER_CONTINUITY_ACTIVE → Capacity OS</div>
+        <div class="arrow">↓ P51 expires (4h)</div>
+        <div class="node success">CSP A eligible again → re-attempt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVIDENCE -->
+  <h3>Smoking gun — prod, last 7 days</h3>
+  <table>
+    <thead>
+      <tr><th>connection_id</th><th>zone</th><th>CSP</th><th>declines in cooldown list</th><th>tightest gap</th><th>currently assigned</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="mono">a4a1aaeb-…</span></td><td><span class="mono">zone_3167</span></td><td><span class="mono">a0b3l5</span></td><td>3 (today 00:07, 02:11, 02:18)</td><td><strong style="color: var(--no);">7 min</strong></td><td>yes, <span class="mono">a0b3l5</span></td></tr>
+      <tr><td><span class="mono">d1e0bd49-…</span></td><td><span class="mono">zone_3425</span></td><td><span class="mono">a0a7c1</span></td><td>3 (05-27 17:26, 17:27, 17:27)</td><td><strong style="color: var(--no);">36 seconds</strong></td><td>yes, <span class="mono">a0a7c1</span></td></tr>
+      <tr><td><span class="mono">f5c17758-…</span></td><td><span class="mono">zone_3372</span></td><td><span class="mono">a0a7b3</span></td><td>2 (05-28 05:24, 08:36)</td><td>3 h</td><td>yes, <span class="mono">a0a7b3</span></td></tr>
+      <tr><td><span class="mono">e6e3346b-…</span></td><td><span class="mono">zone_3250</span></td><td><span class="mono">a0a7a7</span></td><td>3 (05-23 04:39, 04:43, 05-26 17:00)</td><td>4 min</td><td>yes, <span class="mono">a0a7a7</span></td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);"><code>P51 = 4 h</code>. Every "tightest gap" above is well inside the cooldown — i.e. the OS-mandated wait is being ignored.</p>
+
+  <!-- SPEC — the behaviour we want, in plain English. Tech then implements per the "Tech owns" block below. -->
+  <h3>Spec &mdash; handed to tech</h3>
+
+  <h4>Today</h4>
+  <ul>
+    <li>When a CSP marks installation failed, the system correctly applies a <strong>4-hour cooldown</strong> for that CSP on that connection.</li>
+    <li>The routing engine correctly excludes cooldowned CSPs from re-selection — except in zones with only one eligible CSP, where the <code>SINGLE_CSP_ZONE_CONTINUITY</code> bypass silently re-includes the cooled-down CSP and sends the booking right back to the same partner (sometimes within seconds).</li>
+    <li>The <strong>P195 ping-pong counter</strong> that should cap "how many times the same CSP gets the same booking" silently doesn't increment on the install-failure path. So even outside the single-CSP-zone bypass, the system has no protection against a CSP being re-tried beyond the P195 cap. In prod today, <code>assignment_count_per_csp = {}</code> on every allocation row — the counter literally never advances.</li>
+    <li>Net effect: a CSP can rapid-reject install-failures and have the booking come right back. The loop is bounded only by CL P78 = 3 (terminal at the 4th install-failure event), typically within minutes.</li>
+  </ul>
+
+  <h4>Want</h4>
+  <ul>
+    <li>When a CSP marks installation failed, the 4-hour cooldown applies <strong>absolutely</strong> — including in zones where only one CSP is eligible. No exceptions.</li>
+    <li>The <strong>P195 ping-pong cap</strong> applies absolutely on install-failure: once a CSP hits the P195 cap on a given connection, that CSP is permanently excluded from this connection's routing pool. The OS sanctions this in L572 — <em>"Prevents infinite ping-pong when limited CSPs repeatedly decline or fail the same connection."</em> Combined with P51, each CSP gets up to the P195 cap's worth of attempts per connection-lifetime, with a 4-hour gap between them. The cap's exact value is read from AWS Parameter Store; tech does not hardcode it.</li>
+    <li>If no other CSP is eligible (during the cooldown window, or after P195 exhaustion), the booking stays unallocated. The customer waits. This is consistent with OS L540 (<em>"service vacuum accepted"</em>) — the OS expects Capacity OS to address the supply problem, not for DAS to paper over it.</li>
+  </ul>
+
+  <h4>Edge cases (well-scoped, business only)</h4>
+  <ol style="padding-left: 1.4rem;">
+    <li><strong>Zone has 2 or more eligible CSPs, one is cooldowned.</strong> Routing picks one of the others. (No change from today's correct behaviour.)</li>
+    <li><strong>Zone has only one eligible CSP, and that CSP just failed install.</strong> Booking stays unallocated for 4 hours. The customer is not assigned a new partner during the cooldown — intentional per OS.</li>
+    <li><strong>After 4 hours the cooldown expires (single-CSP zone, P195 count below cap).</strong> The CSP becomes eligible again; routing may re-select them. A subsequent install-failure applies a fresh 4-hour cooldown and bumps the P195 count.</li>
+    <li><strong>Once the P195 cap is reached.</strong> P195 excludes the CSP permanently from this connection's routing pool. In a single-CSP zone, routing engine finds no eligible CSPs → <code>ALLOC_STATE_ROUTING_FAILURE</code> emitted → connection stays UNASSIGNED → CL P75 (7d) eventually deactivates. In a multi-CSP zone, the routing engine picks a different CSP.</li>
+    <li><strong>CSP fails install on multiple connections in the same zone.</strong> Each connection has its own independent cooldown and P195 counter — both are scoped per <em>(CSP, connection)</em>, not per CSP.</li>
+    <li><strong>D&amp;A's own routing retries (P50) exhaust while the cooldown is still active.</strong> The connection moves to <code>ROUTING_FAILURE</code> via the existing path. No new behaviour from this fix.</li>
+  </ol>
+
+  <h4>Out of scope</h4>
+  <ul>
+    <li><strong>Customer notification</strong> that their booking is on hold during the cooldown. Not in this item.</li>
+    <li><strong>CSP notification</strong> that they declined and are on cooldown (no PN to the CSP). Not in this item.</li>
+    <li><strong>Exit OS S4 escalation behaviour</strong> on routing failure. Exit OS is not implemented today; separate matter, not a dependency for this fix.</li>
+  </ul>
+
+  <!-- RISKS -->
+  <h3>Risks / dependencies</h3>
+  <ul class="risks">
+    <li><strong>Both fixes must ship together.</strong> Removing the bypass alone leaves the rapid-reject vector partially open (CSP fails install, waits out 4h cooldown, gets re-selected, fails again — bounded only by CL P78 = 3). Wiring P195 alone is overridden by the bypass (which re-includes the cooled-down CSP regardless of the P195 predicate). Together: the P195 cap (value per AWS Parameter Store) actually bounds per-CSP attempts, with a 4h gap between them — the OS-intended behaviour at OS L572.</li>
+    <li><strong>Customer impact data.</strong> In the last 14 days, <strong>27 of 39 connections (69%)</strong> that hit the <code>SINGLE_CSP_ZONE_CONTINUITY</code> bypass ended retry-exhausted (<code>PENDING_DEACTIVATION</code> with <code>retry_exhausted=true</code>). Median gap between consecutive install-failures: <strong>34 seconds</strong>. Minimum: <strong>7 seconds</strong>. The bypass + missing P195 combo is actively killing bookings.</li>
+    <li><strong>Single-CSP zones will see longer customer waits (visibly).</strong> Once both fixes ship, low-supply zones where the lone CSP refuses installs will have bookings sit <code>UNASSIGNED</code> after the second install-failure rather than thrashing for ~3 minutes until P78 kills them. This is the OS-mandated behaviour (L540 — <em>"service vacuum accepted"</em>) but it is a visible product change. The OS expects <strong>Capacity OS</strong> to resolve the supply problem, not DAS to paper over it.</li>
+    <li><strong>Closes the loop on Item 01.</strong> Item 01's retrigger plan calls out that single-CSP zones would loop because of this bug. Fixing this item removes that caveat.</li>
+    <li><strong>No schema change.</strong> <code>V17__cooldown_audit_columns.sql</code> (<code>cooldown_bypassed</code>, <code>cooldown_bypass_reason</code>) can stay — they'll be <code>false</code> / <code>null</code> after the fix. The <code>assignment_count_per_csp</code> column is already in place; the fix just starts populating it.</li>
+    <li><strong>Test fallout.</strong> Search <code>RoutingEngineServiceImplTest</code> and friends for <code>cooldownBypass</code> / <code>SINGLE_CSP_ZONE_CONTINUITY</code> — those tests assert the buggy behaviour and must be updated/removed. Also add tests that verify <code>assignment_count_per_csp</code> advances on every <code>handleClStateChanged</code> call with <code>entry_reason=RETRY</code>.</li>
+  </ul>
+
+  <!-- WHAT THE OS, SPEC AND CODE SAY (visible, exhaustive) -->
+  <h3>What the OS, spec and code say</h3>
+
+  <h4>OS — the rule (already correct, this is what tech must restore)</h4>
+  <p><code>Demand_Allocation_OS_v1_9_1_LOCKED.md</code> L176, the absolute rule:</p>
+<pre><code>Declined CSP is subject to P51 cooldown for that specific
+connection (cannot be re-assigned the same connection
+within cooldown).</code></pre>
+  <p>L298–322 (Single-Provider Continuity Mode) — sanctions a single-CSP-zone relaxation only for the <strong>P46 capacity cap</strong>; nothing about P51. L540 (routing-outcome table):</p>
+<pre><code>Single-CSP zone, CSP is SUSPENDED/FPV → CONTINUITY killed
+→ Fail → ZERO allocation, service vacuum accepted</code></pre>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">i.e. service vacuum is the OS-sanctioned outcome when the only CSP is unavailable — Capacity OS owns the supply problem (per L317 emission of <code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code> + <code>ZONE_SUPPLY_DEFICIT_SIGNAL</code>).</p>
+
+  <h4>DAS PRD — also correct, no bypass anywhere</h4>
+  <p>DAS PRD state machine (<code>yaml-prd/demand-allocation-prd-v1.2.yaml</code> L394–429) has no <code>DECLINED → ASSIGNED-to-same-CSP</code> path. The code comment cites change-id <code>B-FLW-02</code> from <code>yaml-prd/diff-demand-allocation-prd-v1.1-to-v1.2.yaml</code>, but reading the actual <code>B-FLW-02</code> diff:</p>
+<pre><code>type: MODIFY_FLOW_STEP_TARGETS
+path: "flows.allocation_engine_flow.steps[...].next"
+reason: "three flow edges that previously jumped directly to
+eligibility_gate must now route through the new pre-filter."</code></pre>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">That change is about the customer-app <code>candidate_csps[]</code> per-address pre-filter (shipped 2026-04-27). It says nothing about cooldown, P51, or single-CSP re-include — the citation is unrelated.</p>
+
+  <h3>References</h3>
+  <ul>
+    <li><strong>OS:</strong> <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> L176 (P51 absolute rule), L298–322 (CONTINUITY = P46 only), L317 (Capacity OS escalation signals), L539–540 (service vacuum accepted), <strong>L572 (P195 ping-pong cap, "or fail the same connection")</strong>.</li>
+    <li><strong>Spec:</strong> <code>yaml-prd/demand-allocation-prd-v1.2.yaml</code> (state machine L394–429) · <code>yaml-prd/diff-demand-allocation-prd-v1.1-to-v1.2.yaml</code> (B-FLW-02 — actually about an unrelated <code>candidate_csps[]</code> pre-filter change).</li>
+    <li><strong>Code (DAS) — bypass deviation:</strong> <code>RoutingEngineServiceImpl.java:108–135</code> · <code>:99–100</code> (the correct P51 exclusion the bypass undoes).</li>
+    <li><strong>Code (DAS) — P195 missing increment:</strong> <code>InboundEventProcessingServiceImpl.java:418–441</code> (install-failure handler — needs <code>incrementAssignmentCount</code> call before re-route) · <code>AllocationServiceImpl.java:193–213</code> (<code>incrementAssignmentCount</code> helper — exists, not called from this site) · <code>RoutingEngineServiceImpl.java:333</code> (the P195 predicate waiting for the counter to advance).</li>
+    <li><strong>Code (correct, keep):</strong> <code>InboundEventProcessingServiceImpl.java:429</code> (P51 cooldown write on install-failure path) · <code>AllocationServiceImpl.java:174–191</code> (<code>addDeclineCooldown</code> helper).</li>
+    <li><strong>Provenance:</strong> PR #184 <code>DAS-reallocation-logic-fix</code> · commit <code>82d24be6</code> <em>"DAS v1.5 changes"</em> by Raushan Kapoor (2026-05-09) · migration <code>V17__cooldown_audit_columns.sql</code>.</li>
+    <li><strong>Sample connection IDs (smoking gun in last 7 days):</strong> <code>a4a1aaeb-…</code> (zone_3167, csp <code>a0b3l5</code>, 3× in 2h) · <code>d1e0bd49-…</code> (zone_3425, csp <code>a0a7c1</code>, 3× in 68 seconds, deactivated at 4th attempt) · <code>f5c17758-…</code> (zone_3372, csp <code>a0a7b3</code>) · <code>e6e3346b-…</code> (zone_3250, csp <code>a0a7a7</code>).</li>
+    <li><strong>Related:</strong> <code>cl-timer-enforcement-gap</code> BUG-8 (the bypass finding) · Item 01 (closes its single-CSP-zone caveat once this fix lands).</li>
+    <li><strong>Source MD (PM working notes):</strong> <code>items/02-same-csp-loop-single-zone.md</code></li>
+  </ul>
+
+  <h3>Investigation log</h3>
+  <ul>
+    <li><strong>2026-05-29 — filed.</strong> Investigated against <code>main</code> (<code>f671132a</code>); bypass code unchanged since PR #184. 4 fresh same-CSP-repeat cases in last 7 days, including same CSP re-assigned <strong>3 times in 68 seconds</strong>. Classified as Bug.</li>
+    <li><strong>2026-05-29 — updated.</strong> Per PM: dropped the optional NOTIF/communication step (out of scope) and the Exit OS observability step (Exit OS doesn't exist today).</li>
+    <li><strong>2026-05-29 — re-classified per new project guideline.</strong> Bug sub-type added: <strong>Implementation miss</strong>. Spec is correct; tech owns the technical solution. Section split into Tech-owns and PM-owns blocks.</li>
+  </ul>
+</section>
+<section id="item-03" class="tab-pane">
+  <h2>03 — Propose 2 slots + customer can counter-propose</h2>
+
+  <!-- CLASSIFICATION -->
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>Two missing capabilities:</strong> CSP can propose only one slot, and the customer has no way to put forward their own slot directly. <br><span style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.4rem; display: inline-block;">Fully ES-domain — <strong>no OS change needed.</strong> PM delivers the spec; tech designs the implementation.</span>
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr>
+        <td>OS</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
+        <td class="define-note">Slot-proposal cardinality is ES-domain; not in CL/D&amp;A/Quality OS.</td>
+      </tr>
+      <tr>
+        <td>Spec (ES PRD v2.5)</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">Singular "a slot"; no customer counter-propose transition.</td>
+      </tr>
+      <tr>
+        <td>TAS model + handler</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">Single proposed slot stored; customer-confirm handler rejects anything that doesn't match the single proposed slot. (Evidence for tech; not a fix instruction.)</td>
+      </tr>
+      <tr>
+        <td>Partner app UI</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">Single-slot picker today (the reason V057 dropped slot 2).</td>
+      </tr>
+      <tr>
+        <td>Customer app UI</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">No counter-propose path; only "accept" or "reschedule."</td>
+      </tr>
+      <tr>
+        <td>Prod today</td><td class="define-yn no">✗ Unused</td>
+        <td class="define-note">Last 30 days: 0 candidates with <code>confirmed_slot_number = 2</code> (consistent with single-slot today).</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- FLOWS -->
+  <h3>State-machine flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">AWAITING_SLOT_PROPOSAL</div>
+        <div class="arrow">↓ PROPOSE_SLOT <small>(1 slot)</small></div>
+        <div class="node">SLOT_SELECTED</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">AWAITING_CUSTOMER_SLOT_CONFIRMATION</div>
+        <div class="arrow">↓ customer chooses</div>
+        <div class="node success" style="font-size: 0.78rem;">Accept</div>
+        <div class="arrow">↓</div>
+        <div class="node success">SLOT_CONFIRMED_BY_CUSTOMER</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want</div>
+      <div class="flow">
+        <div class="node">AWAITING_SLOT_PROPOSAL</div>
+        <div class="arrow">↓ PROPOSE_SLOT <small>(<strong>2 slots</strong>: slot1 + slot2)</small></div>
+        <div class="node">SLOT_SELECTED</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">AWAITING_CUSTOMER_SLOT_CONFIRMATION</div>
+        <div class="arrow">↓ customer chooses one of three</div>
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center;">
+          <div class="node success" style="font-size: 0.78rem;">CSP slot 1</div>
+          <div class="node success" style="font-size: 0.78rem;">CSP slot 2</div>
+          <div class="node new" style="font-size: 0.78rem;">Own counter ★</div>
+        </div>
+        <div class="arrow">↓</div>
+        <div class="node success">SLOT_CONFIRMED_BY_CUSTOMER</div>
+        <div class="arrow-label">slot_confirmation_source = CSP_SLOT_1 | CSP_SLOT_2 | CUSTOMER_COUNTER</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPEC (PM HAND-OFF) -->
+  <h3>Spec &mdash; handed to tech</h3>
+
+  <h4>Today</h4>
+  <ul>
+    <li>CSP submits exactly one slot (date + time range).</li>
+    <li>Candidate enters <code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code>.</li>
+    <li>Customer can confirm; candidate moves to <code>SLOT_CONFIRMED_BY_CUSTOMER</code>; <code>slot_confirmation_source = CUSTOMER</code>.</li>
+  </ul>
+
+  <h4>Want</h4>
+
+  <p><strong>CSP side — slot proposal (fixed grid):</strong></p>
+  <p>The CSP picks <strong>exactly two slots from a fixed grid</strong> of <em>(date × time-block)</em> options:</p>
+  <ul>
+    <li><strong>Date options (3):</strong> today, tomorrow, day after tomorrow. The window is anchored to the calendar — at 8 PM today, today may show zero future slots; the window does <strong>not</strong> slide forward to compensate.</li>
+    <li><strong>Time-block options (3, all 3-hour windows):</strong> 10 AM – 1 PM, 1 PM – 4 PM, 4 PM – 7 PM.</li>
+    <li><strong>Future-only filter:</strong> A slot is visible to the CSP only if its start time is in the future. At 10 Jun 11 AM, the 10 Jun 10 AM – 1 PM block is hidden (already in progress); 10 Jun 1–4 PM, 10 Jun 4–7 PM, all 11 Jun slots, all 12 Jun slots are visible.</li>
+    <li><strong>Pair rule:</strong> the two chosen slots must be <strong>distinct</strong> (not the same date + same time-block). Same date with different time-blocks is allowed (e.g. <em>Jun 10 1–4 PM</em> + <em>Jun 10 4–7 PM</em>). Same time-block on different dates is allowed.</li>
+    <li><strong>No free-form windows on the CSP side.</strong> The CSP cannot type a custom <code>start_time</code> / <code>end_time</code> — they pick from the 9 fixed grid cells (filtered to future-only). <code>end &gt; start</code> and "no past slots" are enforced by the picker itself, not by submission-time validation.</li>
+    <li>Candidate transitions through <code>SLOT_SELECTED → AWAITING_CUSTOMER_SLOT_CONFIRMATION</code> as today; only the carried payload changes.</li>
+  </ul>
+
+  <p><strong>Customer side — three paths, all land in <code>SLOT_CONFIRMED_BY_CUSTOMER</code>:</strong></p>
+  <div class="caveat">
+    The customer side is <strong>NOT</strong> constrained to the CSP's fixed grid. The customer can counter-propose any future date + any time of day, defined and validated by the customer-app side. The asymmetry is deliberate — the CSP's grid keeps partner UI simple; the customer's free-form picker accommodates anyone whose preferred time falls outside the 10 AM – 7 PM window or beyond the 3-day calendar window.
+  </div>
+  <table>
+    <thead><tr><th>Customer action</th><th>Confirmed slot</th><th><code>slot_confirmation_source</code></th></tr></thead>
+    <tbody>
+      <tr><td>Accepts CSP slot 1</td><td>CSP slot 1's <code>{date, start, end}</code></td><td><code>CSP_SLOT_1</code></td></tr>
+      <tr><td>Accepts CSP slot 2</td><td>CSP slot 2's <code>{date, start, end}</code></td><td><code>CSP_SLOT_2</code></td></tr>
+      <tr><td>Counter-proposes own slot</td><td>customer's chosen <code>{date, start, end}</code></td><td><code>CUSTOMER_COUNTER</code></td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>CSP visibility:</strong> partner app shows the confirmed slot + the <code>slot_confirmation_source</code> so the CSP knows which path the customer took. The CSP simply executes against whatever was confirmed — there is no "you must re-propose" return path.</p>
+
+  <p style="margin-top: 1rem;"><strong>Re-assignment carry-forward.</strong> If a CSP fails after the customer has confirmed a slot (e.g. CSP1 marks installation failed) and DAS routes the booking to a new CSP (CSP2), the customer's previously-confirmed slot is <strong>persisted at the connection level</strong> so it survives the re-assignment. When CSP2 is allocated:</p>
+  <ul>
+    <li><strong>If the confirmed slot is still at least 1 hour away from now()</strong> — CSP2 is shown the customer's confirmed slot up-front, with two choices:
+      <ul>
+        <li><strong>Proceed</strong> — accept the customer's slot. The install proceeds at that time. The confirmed slot is preserved on CSP2's candidate with <code>slot_confirmation_source = INHERITED</code>.</li>
+        <li><strong>Propose my own 2 slots</strong> — start the normal 2-slot proposal flow. The customer's previous confirmation is <strong>discarded</strong>; the customer goes through the normal 3-choice flow against CSP2's 2 new slots (<code>CSP_SLOT_1 / CSP_SLOT_2 / CUSTOMER_COUNTER</code>).</li>
+      </ul>
+    </li>
+    <li><strong>If the confirmed slot is less than 1 hour away</strong> or already in the past — the inherited slot is treated as unusable. CSP2 sees the normal 2-slot proposal screen with no inherited information shown.</li>
+  </ul>
+  <p>This carry-forward applies on <strong>every</strong> re-assignment (CSP2, CSP3, …). The customer's confirmed slot keeps travelling forward to each new CSP as long as it remains at least 1 hour away. The first CSP to "Proceed" locks it in.</p>
+
+  <p><strong>Updated enum:</strong> <code>slot_confirmation_source</code> values are now <code>CSP_SLOT_1 | CSP_SLOT_2 | CUSTOMER_COUNTER | <strong>INHERITED</strong></code>.</p>
+
+  <div class="flow" style="margin-top: 0.8rem;">
+    <div class="sub-head good" style="margin-bottom: 0.4rem;">Re-assignment branch</div>
+    <div class="node">New CSP allocated after previous CSP failed</div>
+    <div class="arrow">↓</div>
+    <div class="node warn">Customer slot still ≥ 1h from now()?</div>
+    <div style="display: flex; gap: 2rem; margin-top: 0.5rem; align-items: flex-start;">
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div class="arrow">↓ yes</div>
+        <div class="node new">Show inherited slot to new CSP</div>
+        <div class="arrow">↓</div>
+        <div style="display: flex; gap: 0.5rem;">
+          <div class="node success" style="font-size: 0.78rem;">Proceed</div>
+          <div class="node" style="font-size: 0.78rem;">Propose own 2 slots</div>
+        </div>
+        <div class="arrow-label" style="max-width: 320px;">Proceed → SLOT_CONFIRMED_BY_CUSTOMER (source=<code>INHERITED</code>) · Propose → normal Item 03 flow, inherited slot discarded</div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div class="arrow">↓ no</div>
+        <div class="node">Normal 2-slot proposal flow</div>
+        <div class="arrow-label">(no inherited info shown)</div>
+      </div>
+    </div>
+  </div>
+
+  <h4>Edge cases (well-scoped)</h4>
+  <ol style="padding-left: 1.4rem;">
+    <li><strong>CSP picks 0, 1, or 3+ slots</strong> &mdash; rejected, <em>"Please propose exactly 2 slots."</em></li>
+    <li><strong>CSP picks the same grid cell twice</strong> (same date + same time-block) &mdash; rejected; customer needs a real choice between two distinct options.</li>
+    <li><strong>CSP picks 2 cells on the same date, different time-blocks</strong> &mdash; allowed (e.g. <em>Jun 10 1–4 PM</em> + <em>Jun 10 4–7 PM</em>).</li>
+    <li><strong>CSP picks 2 cells on different dates</strong> &mdash; allowed (common case).</li>
+    <li><strong>CSP opens slot-proposal late in the day</strong> (e.g. 8 PM Jun 10). Window anchored to today + 2 days — Jun 10 shows 0 future slots, Jun 11 + Jun 12 each show 3. Effectively 6 cells visible. Window does <strong>not</strong> slide forward to give a third day's worth.</li>
+    <li><strong>CSP opens slot-proposal right after 1 PM on Jun 10.</strong> Jun 10 10 AM – 1 PM is hidden (in the past); Jun 10 1–4 PM just started — also hidden (start time not strictly future); Jun 10 4–7 PM and all Jun 11 / Jun 12 slots remain visible.</li>
+    <li><strong>Customer counter-proposal in the past</strong> &mdash; rejected at customer app; no event reaches backend.</li>
+    <li><strong>Customer counter-proposal far in future</strong> &mdash; <strong>no cap on the customer side.</strong> Customer picks from a free-form picker — they can counter weeks or months ahead if they wish. (Asymmetric with CSP's 3-day grid by design.)</li>
+    <li><strong>Customer counter-proposal with <code>end ≤ start</code></strong> &mdash; rejected at customer app.</li>
+    <li><strong>Customer's counter slot happens to coincide with one of CSP's slots</strong> (same date + start + end) &mdash; <strong>always recorded as <code>CUSTOMER_COUNTER</code>.</strong> The customer's choice is authoritative — what they entered in the counter-propose flow becomes the confirmed slot, regardless of whether it happens to equal one of the CSP's slots.</li>
+    <li><strong>CSP wants to re-propose / change their two slots</strong> after submission &mdash; out of scope today. Once submitted, booking waits for the customer to act.</li>
+    <li><strong>Customer doesn't act at all</strong> &mdash; out of scope here; any prompt / auto-confirm / nudge behaviour is the customer app's concern.</li>
+    <li><strong>Customer flips between options in the app before final submit</strong> &mdash; only final submission matters; backend sees one <code>CUSTOMER_SLOT_CONFIRMED</code>.</li>
+    <li><strong>Allocation cancellation</strong> (CL deactivation / D&amp;A reallocation / customer cancel) <strong>while in <code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code></strong> &mdash; cancellation wins; pending slot choice discarded. No change from today.</li>
+    <li><strong>CSP1 fails, customer's confirmed slot is 4 hours away.</strong> CSP2 is allocated; CSP2 sees the inherited slot up-front with <em>Proceed</em> + <em>Propose my own 2 slots</em> CTAs.</li>
+    <li><strong>CSP1 fails, customer's confirmed slot is 30 minutes away</strong> (below the 1-hour buffer). The inherited slot is treated as unusable; CSP2 sees the normal 2-slot proposal screen with no inherited info.</li>
+    <li><strong>CSP1 fails, customer's confirmed slot is exactly 59 minutes away.</strong> Below the 1-hour threshold &mdash; same as above; CSP2 sees the fresh proposal screen.</li>
+    <li><strong>CSP1 fails, customer's confirmed slot has already passed</strong> (slot was earlier today, install never happened). Inherited slot discarded; CSP2 sees the fresh proposal screen.</li>
+    <li><strong>CSP2 taps "Proceed" on the inherited slot.</strong> CSP2's candidate moves to <code>SLOT_CONFIRMED_BY_CUSTOMER</code> with <code>slot_confirmation_source = INHERITED</code>. The customer's confirmed slot is preserved at the connection level (unchanged).</li>
+    <li><strong>CSP2 taps "Propose my own 2 slots."</strong> The inherited slot is discarded. The customer goes through the normal Item 03 flow against CSP2's 2 new slots — 3 choices (CSP slot 1 / CSP slot 2 / counter). Whichever slot the customer confirms now becomes the new connection-level confirmed slot.</li>
+    <li><strong>CSP2 proceeds; then CSP2 also fails.</strong> CSP3 is allocated. The same carry-forward logic applies: if the inherited slot (unchanged from when CSP2 inherited it) is still ≥ 1h from now(), CSP3 sees the same <em>Proceed</em> / <em>Propose own</em> screen.</li>
+    <li><strong>CSP2 proposes new slots; customer counter-proposes a fresh slot via CSP2; then CSP2 also fails.</strong> The customer's <em>new</em> counter-proposed slot is what travels forward to CSP3 (the latest confirmed slot is what's persisted at the connection level).</li>
+    <li><strong>CSP2 ignores the inherited-slot screen entirely</strong> (doesn't tap either CTA). Item 01's 4-hour SLA applies — Proceed-or-Propose counts as "the CSP must act"; if 4 hours pass with no action, the system re-assigns to CSP3 (and the inherited slot continues to travel forward if still ≥ 1h away).</li>
+  </ol>
+
+
+  <h4>Out of scope</h4>
+  <ul>
+    <li>Customer auto-confirm-on-timeout (customer-app domain; the existing PRD's <code>SLOT_AUTO_CONFIRMED</code> entry doesn't match real behaviour and is a separate clean-up item).</li>
+    <li>Customer-reschedule-back-to-CSP (does not exist today; the existing PRD's <code>CUSTOMER_RESCHEDULE</code> entry doesn't match real behaviour and is a separate clean-up item).</li>
+    <li>CSP re-propose / change-of-slots after submission (edge case 11).</li>
+    <li>OS changes — none required; entire change is in the ES PRD and the two apps.</li>
+  </ul>
+
+  <!-- RISKS -->
+  <h3>Risks / dependencies</h3>
+  <ul class="risks">
+    <li><strong>Partner-app UX is the make-or-break factor.</strong> V057's history shows partners didn't fill slot 2 when given the option. Picker must enforce 2-slot entry (block submit, pre-fill suggestions).</li>
+    <li><strong>Backward compatibility on <code>CUSTOMER_SLOT_CONFIRMED</code>.</strong> Two-release rollout: backend first with tolerant fallback (match-by-equality if <code>selection_source</code> absent), then customer app sends the flag, then backend relies on it.</li>
+    <li><strong>Auto-confirm + reschedule entries in v2.5 PRD don't match reality.</strong> Worth flagging as a separate PRD-hygiene item.</li>
+    <li><strong>No DAS / CL impact.</strong> Fully ES- and app-internal.</li>
+    <li><strong>Communication.</strong> This item does not introduce any new PN / CleverTap events. A "customer counter-proposed" notification to the CSP would be a separate item if desired.</li>
+  </ul>
+
+  <!-- WHAT THE SPEC AND CODE SAY TODAY (visible, exhaustive) -->
+  <h3>What the existing spec and code say today</h3>
+
+  <h4>ES PRD (v2.5, current latest)</h4>
+  <p><code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> L536–540, L569–580:</p>
+<pre><code>AWAITING_SLOT_PROPOSAL: "Partner must propose a slot
+(up to ES_INSTALL_MAX_SLOTS_CONFIG_PER_DAY per day)."
+  - to: SLOT_SELECTED
+    trigger: "Internal — partner selects slot date + time range"
+
+AWAITING_CUSTOMER_SLOT_CONFIRMATION:
+  - to: SLOT_CONFIRMED_BY_CUSTOMER  (customer-app signal)
+  # no customer-counter-propose transition
+  # (Spec also has SLOT_AUTO_CONFIRMED and a customer-reschedule
+  #  transition; per PM, neither matches real behaviour — separate
+  #  PRD-hygiene item, not this one.)</code></pre>
+
+  <h4>Schema history</h4>
+  <p>Migration <code>V057__rename_slot_columns_to_proposed_and_confirmed.sql</code> explicitly dropped the 2-slot model:</p>
+<pre><code>-- V057: Replace slot1_/slot2_ with proposed_slot_/confirmed_slot_.
+-- The two-slot model was unused (slot2 always NULL in practice).
+ALTER TABLE install_execution_candidates
+    RENAME COLUMN slot1_date TO proposed_slot_date;
+...
+ALTER TABLE install_execution_candidates
+    DROP COLUMN slot2_date,
+    DROP COLUMN slot2_time_range_start,
+    DROP COLUMN slot2_time_range_end;</code></pre>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">This is why our spec must <strong>require</strong> 2 slots at submission rather than <em>allow</em> them — partners ignored the optional slot 2 last time around.</p>
+
+  <h4>Current behaviour in code (for tech context — not the fix)</h4>
+  <ul>
+    <li>Partner submits via a DTO that carries one <code>{date, start, end}</code>; backend persists into the single <code>proposed_slot_*</code> column set.</li>
+    <li>Customer-confirm handler matches the customer's payload against that single proposed slot; any payload that doesn't exactly match is <strong>rejected</strong> and the candidate stays in <code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code>. So the customer-app today cannot send a counter-proposed slot at all.</li>
+    <li>The candidate's <code>confirmed_slot_number</code> column is hard-coded to <code>1</code> on confirmation; <code>slot_confirmation_source</code> is set to <code>CUSTOMER</code>.</li>
+  </ul>
+
+  <h4>Prod evidence (last 30 days)</h4>
+  <table>
+    <tbody>
+      <tr><th>Candidates with a proposed slot</th><td>162</td></tr>
+      <tr><th>Candidates with <code>confirmed_slot_number</code> set</th><td>147</td></tr>
+      <tr><th>Candidates with <code>confirmed_slot_number = 2</code></th><td><strong>0</strong></td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">Zero candidates ever used slot 2 — confirms the single-slot world described above.</p>
+
+  <h3>References</h3>
+  <ul>
+    <li><strong>OS:</strong> silent — slot-proposal cardinality is ES-domain.</li>
+    <li><strong>Spec:</strong> <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> (current latest, uploaded 2026-05-27) — L536–540 (singular "slot"), L569–580 (customer transitions, no counter-propose).</li>
+    <li><strong>Migration:</strong> <code>V057__rename_slot_columns_to_proposed_and_confirmed.sql</code> (2-slot model dropped because partners didn't use slot 2).</li>
+    <li><strong>Code evidence (not the fix):</strong> TAS schema, DTO, and customer-confirm handler all single-slot.</li>
+    <li><strong>Source MD (PM working notes):</strong> <code>items/03-two-slots-and-counter-proposal.md</code></li>
+  </ul>
+
+  <h3>Investigation log</h3>
+  <ul>
+    <li><strong>2026-05-29 — filed.</strong> Spec gap across ES PRD + both apps. PM owns the spec.</li>
+    <li><strong>2026-05-29 — revised (PM corrections).</strong> Removed "Reschedule" and "Auto (12h)" from both Today and Want flows — auto-confirm is customer-app side; the reschedule transition does not exist as a real flow. Rewrote spec section as well-scoped human-readable behaviour spec (15 enumerated edge cases, pre/post diff per surface). Switched spec references from v2.4 to v2.5. Confirmed no OS change is needed.</li>
+  </ul>
+</section>
+<section id="item-04" class="tab-pane">
+  <h2>04 — Full-page notification for Rohit (technician) on assignment</h2>
+
+  <!-- CLASSIFICATION -->
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>Notification UX upgrade.</strong> Today the technician gets a standard banner PN when assigned; we want a full-page notification (FPN) — same heavy-hitting treatment as the CSP gets when allocated — so it can't be missed and Rohit acts on the booking promptly.
+        <br><span style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.4rem; display: inline-block;">Fully app + CleverTap-side. <strong>No backend, no PRD, no OS change.</strong></span>
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr>
+        <td>OS</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
+        <td class="define-note">Notification UX is not an OS-level concern.</td>
+      </tr>
+      <tr>
+        <td>Spec (ES PRD v2.5)</td><td class="define-yn" style="color: var(--ink-faint);">— Partial</td>
+        <td class="define-note">Underlying event <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> and state <code>TECHNICIAN_ASSIGNED</code> already exist; the PRD doesn't prescribe notification treatment (PN vs FPN).</td>
+      </tr>
+      <tr>
+        <td>Backend (TAS, notification-service)</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
+        <td class="define-note">No code change — TAS already emits the event; notification-service already forwards it to CleverTap.</td>
+      </tr>
+      <tr>
+        <td>CleverTap config</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">Campaign currently configured as a standard PN; needs FPN configuration.</td>
+      </tr>
+      <tr>
+        <td>Technician app</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">FPN handler not wired for the technician-assignment event. (Capability exists in the codebase via CSP-app fork — just isn't connected for this trigger.)</td>
+      </tr>
+      <tr>
+        <td>Partner (CSP) app</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
+        <td class="define-note">No change.</td>
+      </tr>
+      <tr>
+        <td>Prod today</td><td class="define-yn no">✗ Observable</td>
+        <td class="define-note">Technicians receive a standard banner PN; bookings sometimes sit unacknowledged.</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- FLOWS -->
+  <h3>Notification flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">CSP assigns technician</div>
+        <div class="arrow">↓ ES_INSTALL_TECHNICIAN_ASSIGNED</div>
+        <div class="node">notification-service → CleverTap</div>
+        <div class="arrow">↓ standard PN</div>
+        <div class="node warn">Banner in Rohit's notification tray</div>
+        <div class="arrow-label">Easily missed / swiped away; not always acted on</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want</div>
+      <div class="flow">
+        <div class="node">CSP assigns technician</div>
+        <div class="arrow">↓ ES_INSTALL_TECHNICIAN_ASSIGNED <small>(same event, no backend change)</small></div>
+        <div class="node">notification-service → CleverTap</div>
+        <div class="arrow">↓ FPN <small>(replaces standard PN)</small></div>
+        <div class="node new">Full-page takeover in Technician app</div>
+        <div class="arrow">↓ Rohit taps CTA</div>
+        <div class="node success">Booking detail screen</div>
+        <div class="arrow-label">Persistent — re-appears on next app open until acknowledged</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPEC -->
+  <h3>Spec &mdash; handed to tech</h3>
+
+  <h4>Today</h4>
+  <ul>
+    <li>CSP assigns a technician via the partner app → backend records <code>TECHNICIAN_ASSIGNED</code> and emits <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code>.</li>
+    <li>Technician receives a <strong>standard PN</strong> as a banner. He may or may not tap it; easily missed.</li>
+  </ul>
+
+  <h4>Want</h4>
+  <p><strong>Trigger:</strong> every time a candidate transitions into <code>TECHNICIAN_ASSIGNED</code> — i.e. on the first technician assignment <strong>and</strong> on every subsequent re-assignment (when the CSP changes the technician mid-flow).</p>
+
+  <p><strong>What the technician sees:</strong></p>
+  <table class="comm-table">
+    <thead><tr><th>When</th><th>Backend</th><th>Notification (CleverTap)</th><th>Technician app UI</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Moment of assignment</td>
+        <td>Candidate enters <code>TECHNICIAN_ASSIGNED</code>; existing event fires (no change)</td>
+        <td><strong>Replaced:</strong> campaign is now FPN-typed (not standard PN)</td>
+        <td>App open → full-page overlay immediately. App closed → next app launch opens the FPN.</td>
+      </tr>
+      <tr>
+        <td>Technician taps the CTA on the FPN</td>
+        <td>No state change</td>
+        <td>(no event)</td>
+        <td>FPN dismisses; booking detail screen is shown.</td>
+      </tr>
+      <tr>
+        <td>Technician swipes / dismisses without tapping CTA</td>
+        <td>No state change</td>
+        <td>(no re-trigger needed)</td>
+        <td><strong>FPN re-appears on next app open</strong> — persistent until acknowledged.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p><strong>FPN content</strong> (mirrors the CSP allocation FPN): booking essentials — customer name, install address (or short locality), confirmed slot if one is already locked in — and a single primary CTA (exact label TBD by product copy).</p>
+
+  <p><strong>Replaces, not adds.</strong> The standard PN that fires today must be removed from the campaign. Only one notification per assignment.</p>
+
+  <h4>Edge cases (well-scoped)</h4>
+  <ol style="padding-left: 1.4rem;">
+    <li><strong>Technician opens app after the assignment happened</strong> (no FPN delivered yet). FPN fires immediately on open.</li>
+    <li><strong>Technician is offline at the moment of assignment.</strong> FPN is queued by CleverTap and surfaces when the device next reaches the network and opens the app. FPN is persistent — the next app open shows it regardless.</li>
+    <li><strong>CSP re-assigns the booking from technician A to technician B.</strong> B gets a fresh FPN. A's pending FPN (if not yet acknowledged) becomes invalid — A's app should clear it on next refresh because A is no longer the assigned technician. No new "un-assigned" notification is sent to A.</li>
+    <li><strong>CSP changes the technician multiple times rapidly.</strong> Each new technician gets an FPN; previously-assigned technicians' FPNs clear on next refresh.</li>
+    <li><strong>Customer cancels the booking before the technician acknowledges the FPN.</strong> Booking is cancelled; the technician's FPN clears on next app refresh.</li>
+    <li><strong>Connection is cancelled or fails upstream</strong> (CL deactivation, D&amp;A reallocation, etc.) <strong>before the technician acknowledges.</strong> Same as customer cancellation — FPN clears on next refresh.</li>
+    <li><strong>Technician acknowledges; then the booking is reassigned to a different technician.</strong> The acknowledgement is recorded against the original technician, but the booking is now with someone else; original technician's app removes the booking from the active list on next refresh.</li>
+    <li><strong>Technician dismisses the FPN by tapping outside or back button</strong> (without tapping the CTA). FPN counts as not acknowledged — re-appears on next app open.</li>
+  </ol>
+
+  <h4>Notes for tech</h4>
+  <ul>
+    <li><strong>FPN CTA copy</strong> (label + any subtitle): owned by the <strong>design copy team</strong>, not a dev blocker. Tech proceeds with a placeholder; copy team locks the final text in their normal track.</li>
+    <li><strong>Acknowledgement reporting: fire-and-forget.</strong> No backend event, no CleverTap event on FPN-ack in this item. Matches today's PN behaviour. If we later want ack-rate / time-to-ack tracking, that's a separate item.</li>
+  </ul>
+
+  <h4>Out of scope</h4>
+  <ul>
+    <li><strong>SLA / escalation when the technician doesn't acknowledge.</strong> PM-confirmed: no SLA in this item. FPN stays persistent. If we later want CSP-side escalation or auto-reassignment, that's a separate item.</li>
+    <li><strong>FPN treatment for other technician-facing events</strong> (customer slot confirmed, slot rescheduled, customer cancellation, day-of-install reminder). PM-confirmed: only the assignment event in this item.</li>
+    <li><strong>Backend reporting of "FPN acknowledged."</strong> PM-resolved: fire-and-forget. Not in scope.</li>
+  </ul>
+
+  <!-- RISKS -->
+  <h3>Risks / dependencies</h3>
+  <ul class="risks">
+    <li><strong>Technician-app FPN capability.</strong> The capability exists in the codebase (inherited from the CSP-app fork) but tech needs to confirm it's wired and not stripped out in the technician build before the CleverTap campaign is flipped.</li>
+    <li><strong>Rollout sequencing.</strong> Ship the technician-app update that handles FPNs first → confirm rollout coverage across devices → then flip the CleverTap campaign from PN to FPN. Otherwise older builds will silently miss the notification.</li>
+    <li><strong>Stale FPN clearing on re-assignment</strong> (edge case 3). Without the app clearing a stale FPN, the previously-assigned technician sees a confusing FPN for a booking they no longer have.</li>
+    <li><strong>No SLA today.</strong> If technicians routinely ignore FPNs and bookings stall, we'll need an escalation item later. Worth tracking acknowledgement rates after launch.</li>
+  </ul>
+
+  <h3>What the existing spec and code say today</h3>
+
+  <h4>ES PRD (v2.5)</h4>
+  <p>The state machine has the entry into <code>TECHNICIAN_ASSIGNED</code> via the <code>ASSIGN_TECHNICIAN</code> trigger; the outbound event <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> fires on this transition and is consumed by <code>csp-notification-service</code>. The PRD does not prescribe whether the resulting notification is a banner PN or an FPN — that lives in the CleverTap campaign + the receiving app's handler.</p>
+
+  <h4>Backend (no change)</h4>
+  <p><code>csp-tas-service</code> emits <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> with the technician's identity in the payload. <code>csp-notification-service</code> consumes the event and dispatches a CleverTap event today configured as a standard PN.</p>
+
+  <h4>Technician app</h4>
+  <p>The Technician app is a fork of the CSP app (<code>technician-app-development</code> branch). It inherits the FPN-rendering capability from the CSP app but the FPN handler is not currently wired for the technician-assignment event.</p>
+
+  <h3>References</h3>
+  <ul>
+    <li><strong>OS:</strong> silent — notification UX is not OS-level.</li>
+    <li><strong>Spec:</strong> <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> — state-machine entry <code>TECHNICIAN_ASSIGNED</code>; outbound event <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code>.</li>
+    <li><strong>Backend (no change):</strong> <code>csp-tas-service</code> emits the event; <code>csp-notification-service</code> forwards to CleverTap.</li>
+    <li><strong>Apps:</strong> <code>technician-app-development</code> branch (fork of CSP app). Reference UX: the CSP app's allocation FPN.</li>
+    <li><strong>CleverTap:</strong> existing campaign keyed off <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> (currently standard PN).</li>
+    <li><strong>Source MD (PM working notes):</strong> <code>items/04-fpn-for-rohit-on-technician-assignment.md</code></li>
+  </ul>
+
+  <h3>Investigation log</h3>
+  <ul>
+    <li><strong>2026-05-29 — filed.</strong> Gap in notification UX for technician on assignment. PM-confirmed all 4 behavioural questions: (1) no SLA — FPN persistent until acknowledged; (2) FPN replaces standard PN (not both); (3) every assignment incl. re-assignments; (4) only on the technician-assignment trigger (other events not in scope). Two remaining open questions flagged: FPN CTA copy (defer to product copy team) and whether to report acknowledgement to backend (default no). Spec is fully app + CleverTap-side; no OS, no DAS, no TAS code, no CL code change.</li>
+  </ul>
+</section>
+<section id="item-05" class="tab-pane">
+  <h2>05 — Bifurcate "cancelled by customer" vs "cancelled by system"</h2>
+
+  <!-- CLASSIFICATION -->
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>Cancellation cause is lost on the way to TAS.</strong> Today, every cancellation — customer-initiated or system-initiated — lands in <code>CANCELLED_BY_UPSTREAM</code> with reason <code>DEACTIVATION</code>. The <code>CANCELLED_BY_CUSTOMER</code> terminal exists in the spec and the state machine but has <strong>never been reached in production</strong>. Root mechanism: CL correctly emits the cause on <code>CL_DEACTIVATION_INITIATED</code>, but TAS's inbound record drops that field at deserialization, so the handler can't branch on it.
+        <br><span style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.4rem; display: inline-block;">Fix is in two places: <strong>customer backend</strong> stops lumping system-cancels into the customer-cancel signal at source; <strong>TAS</strong> stops dropping the cause field and routes by it. <strong>No OS change.</strong> No new TAS terminal states.</span>
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr>
+        <td>OS</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
+        <td class="define-note">Cancellation source tagging at the customer-backend layer is not an OS-level concern.</td>
+      </tr>
+      <tr>
+        <td>Spec (ES PRD v2.5)</td><td class="define-yn" style="color: var(--warn);">— Partial</td>
+        <td class="define-note">Both terminal states + outbound events exist (<code>CANCELLED_BY_CUSTOMER</code> / <code>CANCELLED_BY_UPSTREAM</code>); spec doesn't yet document the customer-backend system-cancel as an upstream-cancel cause.</td>
+      </tr>
+      <tr>
+        <td>Customer backend</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">Routes both customer-initiated and system-initiated cancels through the same <code>/events/user-cancellation</code> path on CL. The cause is collapsed at the source.</td>
+      </tr>
+      <tr>
+        <td>CL service</td><td class="define-yn" style="color: var(--warn);">— Partial</td>
+        <td class="define-note">Records <code>deactivation_reason</code> correctly and emits it on <code>CL_DEACTIVATION_INITIATED</code>. If the customer backend bifurcates upstream, CL is already capable of propagating it.</td>
+      </tr>
+      <tr>
+        <td>TAS handler</td><td class="define-yn no">✗ No</td>
+        <td class="define-note">TAS's <code>ClDeactivationInitiated</code> record only deserializes 4 fields (<code>eventId, correlationId, causationId, connectionId</code>); the <code>deactivation_reason</code> from CL is silently dropped. Handler hard-codes <code>reason="DEACTIVATION"</code> and always calls <code>cancelByUpstream(...)</code>.</td>
+      </tr>
+      <tr>
+        <td>Partner app + notifications</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
+        <td class="define-note">No differentiated UX or PN today; not in scope for this item.</td>
+      </tr>
+      <tr>
+        <td>Prod today</td><td class="define-yn no">✗ All collapsed</td>
+        <td class="define-note">Last 14 days: <strong>61 of 61</strong> cancellations → <code>CANCELLED_BY_UPSTREAM</code> with reason <code>DEACTIVATION</code>. <strong>0</strong> candidates ever in <code>CANCELLED_BY_CUSTOMER</code> across the whole database.</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- WORKFLOW: how TAS knows about cancellation today -->
+  <h3>How TAS knows about cancellation today (actual workflow)</h3>
+  <p style="font-size: 0.9rem;">Tracing the path end-to-end against live code (CL service + TAS service on <code>main</code>):</p>
+  <div class="flow">
+    <div class="node">Customer app</div>
+    <div class="arrow">↓ user taps "Cancel booking"</div>
+    <div class="node">Customer backend <small>(booking-service / i2e1)</small></div>
+    <div class="arrow">↓ HTTP POST <code>/events/user-cancellation</code> with <code>UserCancellation</code> payload</div>
+    <div class="node">CL service — <code>handleUserCancellation</code></div>
+    <div class="arrow-label">CL transitions PENDING_INSTALL → PENDING_DEACTIVATION (T13) or REQUESTED → DEACTIVATED (T9); sets <code>deactivation_reason = "USER_CANCELLATION"</code></div>
+    <div class="arrow">↓ CL emits <code>CL_DEACTIVATION_INITIATED</code> with full payload<br><small>{ connection_id, deactivation_reason="USER_CANCELLATION", actor_type="USER_INITIATED", … }</small></div>
+    <div class="node">Routing-registry HTTP delivery</div>
+    <div class="arrow">↓</div>
+    <div class="node warn">TAS <code>InboundEventController</code> → <code>ClDeactivationInitiated</code> handler</div>
+    <div class="arrow-label" style="color: var(--no);">⚠ TAS's <code>ClDeactivationInitiated</code> record only deserializes 4 fields: <code>eventId, correlationId, causationId, connectionId</code>. The <code>deactivation_reason</code> and <code>actor_type</code> from CL are silently <strong>dropped at the TAS HTTP boundary.</strong></div>
+    <div class="arrow">↓ handler hard-codes <code>reason = "DEACTIVATION"</code>, calls <code>cancelByUpstream(...)</code></div>
+    <div class="node error">CANCELLED_BY_UPSTREAM <small>(every cancellation, regardless of cause)</small></div>
+  </div>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">
+    Prod confirms: <strong>61 of 61</strong> recent cancellations (last 14 days) landed in <code>CANCELLED_BY_UPSTREAM</code> with <code>reason_code = "DEACTIVATION"</code>. <strong>Zero candidates have ever reached the <code>CANCELLED_BY_CUSTOMER</code> terminal in the entire database</strong> — that path exists in the spec and in the TAS state machine, but never fires in practice because the cause is dropped before the handler can branch on it.
+  </p>
+
+  <!-- FLOWS -->
+  <h3>Cancellation flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node warn">Customer actively cancels via app</div>
+        <div class="node warn">OR Customer backend watchdog gives up<br><small>(stuck booking, all CSPs declined, auto-expiry, …)</small></div>
+        <div class="arrow">↓ both routed through customer backend → CL <code>/events/user-cancellation</code></div>
+        <div class="node">CL emits <code>CL_DEACTIVATION_INITIATED</code><br><small>(with deactivation_reason set correctly — but lost at TAS boundary)</small></div>
+        <div class="arrow">↓</div>
+        <div class="node error">CANCELLED_BY_UPSTREAM <small>(reason = "DEACTIVATION")</small></div>
+        <div class="arrow-label">CSP world can't tell which cause; <code>CANCELLED_BY_CUSTOMER</code> is dead code</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want</div>
+      <div class="flow">
+        <div class="node">Customer actively cancels via app</div>
+        <div class="arrow">↓ customer-initiated signal (carries cause through to TAS)</div>
+        <div class="node">CL emits <code>CL_DEACTIVATION_INITIATED</code> with <code>deactivation_reason=USER_CANCELLATION</code></div>
+        <div class="arrow">↓ TAS reads cause, routes by reason</div>
+        <div class="node success">CANCELLED_BY_CUSTOMER</div>
+        <div style="height: 0.8rem;"></div>
+        <div class="node">Customer backend watchdog gives up</div>
+        <div class="arrow">↓ <strong>NEW:</strong> system-initiated signal (separate from user-cancellation)</div>
+        <div class="node">CL emits <code>CL_DEACTIVATION_INITIATED</code> with system-cause reason</div>
+        <div class="arrow">↓ TAS reads cause, routes by reason</div>
+        <div class="node new">CANCELLED_BY_UPSTREAM <small>(reason carries the specific system cause)</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPEC -->
+  <h3>Spec &mdash; handed to tech</h3>
+
+  <h4>Today</h4>
+  <ul>
+    <li>The customer backend routes <strong>both</strong> customer-initiated and system-initiated cancellations through the same path — a POST to CL's <code>/events/user-cancellation</code> endpoint.</li>
+    <li>CL correctly records the cancellation reason on the connection and emits <code>CL_DEACTIVATION_INITIATED</code> with the reason in the payload — but <strong>TAS's deserialized record drops the reason field.</strong></li>
+    <li>TAS's handler hard-codes <code>reason="DEACTIVATION"</code> and always calls <code>cancelByUpstream(...)</code>. Every cancellation lands in <code>CANCELLED_BY_UPSTREAM</code>.</li>
+    <li>The <code>CANCELLED_BY_CUSTOMER</code> terminal exists in the spec and state machine but is <strong>never reached in production</strong> (zero rows in the database, ever). The customer-cancel branch is effectively dead code.</li>
+  </ul>
+
+  <h4>Want</h4>
+  <ul>
+    <li><strong>Customer backend:</strong> stop lumping system-cancels into the customer-cancel signal. Either use distinct endpoints / events for customer-initiated vs system-initiated, or carry a cause flag the install side can read. <em>(Bifurcation mechanism: tech's call.)</em></li>
+    <li><strong>TAS:</strong> stop dropping the cause. Extend the inbound <code>ClDeactivationInitiated</code> record to keep the <code>deactivation_reason</code> (and ideally <code>actor_type</code>) that CL is already emitting. Update the handler to branch:
+      <ul>
+        <li><code>deactivation_reason = USER_CANCELLATION</code> → <code>cancelByCustomer(...)</code> → <code>CANCELLED_BY_CUSTOMER</code>.</li>
+        <li>Anything else → <code>cancelByUpstream(...)</code> → <code>CANCELLED_BY_UPSTREAM</code> (with the reason carried through to <code>reason_code</code>).</li>
+      </ul>
+    </li>
+    <li><strong>No new terminal states. No state-machine changes.</strong> Existing transitions already cover both branches.</li>
+    <li><strong>No PN / partner-app / customer-app change</strong> in this item — bifurcated data simply becomes available for future PN work to consume.</li>
+  </ul>
+
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">The exhaustive list of scenarios that qualify as "system-initiated" is owned by — and already defined in — the <strong>customer backend</strong>. This spec only requires that whichever scenarios the customer backend already classifies as system-initiated route to <code>CANCELLED_BY_UPSTREAM</code> on the install side; the customer-initiated path continues to land in <code>CANCELLED_BY_CUSTOMER</code>.</p>
+
+  <h4>Edge cases (business)</h4>
+  <ol style="padding-left: 1.4rem;">
+    <li><strong>Customer cancels via the customer app.</strong> Lands in <code>CANCELLED_BY_CUSTOMER</code>. <em>(NEW outcome — today this incorrectly lands in <code>CANCELLED_BY_UPSTREAM</code> because TAS drops the cause field.)</em></li>
+    <li><strong>Booking auto-expires / stuck-at-stage / all-CSPs-declined.</strong> Customer backend's watchdog cancels. Lands in <code>CANCELLED_BY_UPSTREAM</code> with a system-cause <code>reason_code</code> (auto-expiry / stage-stagnation / supply-exhausted / etc., as the customer backend already classifies it). <em>(NEW reason granularity — today they also land in <code>CANCELLED_BY_UPSTREAM</code> but with the same generic <code>DEACTIVATION</code> reason as customer cancels.)</em></li>
+    <li><strong>CSP-side cancel paths</strong> (CL T11/T12 retry-exhaustion, D&amp;A REALLOCATION_PENDING, Exit OS, Enforcement) continue to land in <code>CANCELLED_BY_UPSTREAM</code> as today. No change to those.</li>
+    <li><strong>Cancellation signal arrives without a recognisable cause</strong> (malformed payload / unexpected source). Reject / log; <strong>do not default to <code>CANCELLED_BY_CUSTOMER</code></strong> (and do not default to <code>CANCELLED_BY_UPSTREAM</code> silently either — the fix is to make the cause explicit, not to pick a fallback).</li>
+  </ol>
+
+  <h4>Notes for tech</h4>
+  <ul>
+    <li><strong><code>reason_code</code> is a free-form string at the wire.</strong> PM is <strong>not</strong> enumerating a canonical sub-reason taxonomy in this item. The customer backend sends whatever string it has (e.g. <em>"auto-expired"</em>, <em>"stalled-at-tech-assign-5d"</em>, <em>"all-csps-declined"</em>); TAS records it as-is on the <code>CANCELLED_BY_UPSTREAM</code> candidate. The customer-vs-system bifurcation (the actual goal of this item) is satisfied by the cause-tagged route, not by the sub-reason. If later we need a locked enum for dashboards / differentiated PNs, that's a separate item.</li>
+  </ul>
+
+  <h4>Out of scope</h4>
+  <ul>
+    <li><strong>Differentiated PN behaviour</strong> for customer-cancel vs system-cancel. Future work; this item only plumbs the data through.</li>
+    <li><strong>Partner-app UI changes</strong> (e.g. labelling the cancellation cause in the partner's history). Future work.</li>
+    <li><strong>Customer-app changes.</strong> Customer-side experience is unchanged.</li>
+    <li><strong>New TAS terminal states or state-machine transitions</strong> — the existing <code>CANCELLED_BY_CUSTOMER</code> and <code>CANCELLED_BY_UPSTREAM</code> already cover the bifurcation.</li>
+    <li><strong>Specific event names / payload shapes</strong> at the customer-backend → install-side contract — tech's call.</li>
+  </ul>
+
+  <!-- RISKS -->
+  <h3>Risks / dependencies</h3>
+  <ul class="risks">
+    <li><strong>Cross-team coordination with the customer-backend team.</strong> The bifurcation has to be emitted at source — the install side can't infer it from the existing signal. Customer-backend team needs to identify all system-cancel sites in their codebase and emit the distinguished signal at each.</li>
+    <li><strong>Backfill / cutover.</strong> Existing bookings cancelled before this ships will continue to look like customer-cancels in TAS. Acceptable — historical data isn't retroactively re-classified.</li>
+    <li><strong>Dashboards / ops queries.</strong> Any internal dashboard that counts "customer cancellations" today is over-counting (because system-cancels are mis-classified). After this fix the customer-cancel count will drop and the upstream-cancel count will rise — communicate to ops so the swing isn't read as a customer-behaviour change.</li>
+    <li><strong>Idempotency</strong> between customer-app cancel and customer-backend system-cancel watchdog (when both fire close in time). Standard TAS idempotency should handle it; worth confirming during build.</li>
+    <li><strong>No downstream PN / app change in this item</strong> — but PM should track the follow-up items (differentiated PNs, partner-app UX) so the bifurcated data doesn't sit unused.</li>
+  </ul>
+
+  <!-- WHAT THE SPEC AND CODE SAY TODAY -->
+  <h3>What the existing spec and code say today</h3>
+
+  <h4>ES PRD (v2.5)</h4>
+  <p>Both terminal states are already defined in <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code>:</p>
+<pre><code>L818–822: CANCELLED_BY_CUSTOMER — "TERMINAL. Customer cancelled the booking —
+observed via CL_STATE_CHANGED (new_state=PENDING_DEACTIVATION,
+trigger=USER_CANCELLATION) per CL OS §5.1 T13, or direct CL USER_CANCELLATION event."
+
+L827–831: CANCELLED_BY_UPSTREAM — "TERMINAL. D&A REALLOCATION_PENDING
+(non-customer-cancel path), CL T11/T12 retry-exhaustion, Exit S3/S4/R2, or
+Enforcement SUSPENDED/TERMINATED cancelled the in-flight candidate.
+Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead."</code></pre>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">Outbound events also already exist: <code>ES_INSTALL_CANCELLED_BY_CUSTOMER</code> and <code>ES_INSTALL_CANCELLED_BY_UPSTREAM</code>. The gap is purely that the customer-backend system-cancel cause is currently routed into the customer-initiated path because the inbound trigger looks the same for both cases.</p>
+
+  <h4>Code today (for tech context — not the fix)</h4>
+  <p>TAS's <code>InboundEventProcessingServiceImpl</code> treats <code>CL_STATE_CHANGED</code> with <code>transitionType=USER_CANCELLATION</code> and <code>newState=PENDING_DEACTIVATION</code> as a customer cancel and calls <code>cancelByCustomer(...)</code>. The other upstream-driven handlers (<code>ReallocationPending</code>, <code>ExitStageChanged</code>, <code>EnforcementPostureUpdated</code>) already call <code>cancelByUpstream(...)</code> and land the candidate correctly in <code>CANCELLED_BY_UPSTREAM</code> for their respective causes. The handler for the customer-backend signal needs to learn the same trick.</p>
+
+  <h3>References</h3>
+  <ul>
+    <li><strong>OS:</strong> silent — cancellation source-tagging at the customer-backend is not OS-level.</li>
+    <li><strong>Spec:</strong> <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> — <code>CANCELLED_BY_CUSTOMER</code> (L818–822), <code>CANCELLED_BY_UPSTREAM</code> (L827–831), outbound events <code>ES_INSTALL_CANCELLED_BY_CUSTOMER</code> (L3449), <code>ES_INSTALL_CANCELLED_BY_UPSTREAM</code> (L3409).</li>
+    <li><strong>Code evidence (not the fix):</strong> TAS <code>InboundEventProcessingServiceImpl</code> — <code>CANCELLATION_TRIGGERS = Set.of("USER_CANCELLATION")</code> currently routes to <code>cancelByCustomer(...)</code>. <code>ReallocationPending</code> / <code>ExitStageChanged</code> / <code>EnforcementPostureUpdated</code> already call <code>cancelByUpstream(...)</code>.</li>
+    <li><strong>Customer backend:</strong> booking-service / i2e1. Cross-team change required.</li>
+    <li><strong>Source MD (PM working notes):</strong> <code>items/05-cancel-bifurcation-customer-vs-system.md</code></li>
+  </ul>
+
+  <h3>Investigation log</h3>
+  <ul>
+    <li><strong>2026-05-29 — filed.</strong> Gap in cancellation-source bifurcation between customer backend and install side. PM-confirmed 4 things: (1) "system-initiated cancel" covers booking auto-expiry + stage-stagnation timeouts (5 days at tech-assigned) + all-CSPs-declined + similar lifecycle stalls; (2) bifurcation mechanism (two events or one with cause) is tech's call; (3) TAS lands customer-cancels in <code>CANCELLED_BY_CUSTOMER</code> and system-cancels in <code>CANCELLED_BY_UPSTREAM</code> — both terminal states already exist; (4) no differentiated PN in this item — future work. One open question: canonical reason-code list.</li>
+  </ul>
+</section>
+<!-- ============ ITEM 06 ============ -->
+<section id="item-06" class="tab-pane">
+  <h2>06 — CLOS timeout scheduler unwired (P74 / P75 / P76 / P77 / P78 inert)</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
+      <div class="classify-headline">
+        <strong>CL OS defines the timers, the PRD defines the batches, the service code wires the batch methods + endpoints — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>.</strong> Zero system-driven CL transitions in prod in 90 days. <strong>50</strong> connections sit in <code>PENDING_INSTALL</code> past P74 (oldest 38 days). To make P74 retries safe, TAS also needs a co-fix to handle <code>T3</code> retries (today it no-ops on them).
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS (CL)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">P74 (72h) / P75 (7d) / P76 (90d) / P77 (45d&nbsp;PM, 30d&nbsp;OS-doc) / P78 (3 retries) — all with transitions T3 / T9 / T12 / timeouts.</td></tr>
+      <tr><td>PRD (CL v1.6)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">State machine + system-source transitions all listed. Implementation choice for how the sweep runs.</td></tr>
+      <tr><td>Code (CLOS — batches)</td><td class="define-yn yes">✓ Correct</td><td class="define-note"><code>SchedulingServiceImpl</code> five batch methods + <code>InternalTaskController</code> endpoints. Reachable; work when called manually.</td></tr>
+      <tr><td>Code (CLOS — scheduler)</td><td class="define-yn no">✗ Unwired</td><td class="define-note"><code>application-prod.yml:18</code> → <code>AWS_SCHEDULER_ENABLED: false</code>. <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> never called anywhere.</td></tr>
+      <tr><td>Code (TAS — co-fix)</td><td class="define-yn no">✗ Gap</td><td class="define-note"><code>UPSTREAM_RETRY_TRIGGERS = {T11, T12}</code> — <code>T3</code> not handled. Old install candidate would be orphaned on every P74 retry.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Wrong</td><td class="define-note">0 SYSTEM-source events in 90d. 50 PENDING_INSTALL stuck past P74. REQUESTED past P75 also stuck. PENDING_DEACTIVATION past P77 also stuck.</td></tr>
+    </table>
+  </div>
+
+  <h3>Parameters used in this item</h3>
+  <table>
+    <thead><tr><th style="width: 170px;">Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>P74</code></td><td>CL <strong>install window</strong> — 72h hard cap on how long a connection can sit in <code>PENDING_INSTALL</code> before the system either retries it or kills it.</td></tr>
+      <tr><td><code>P75</code></td><td>CL <strong>request expiry</strong> — 7-day cap on how long a connection can sit in <code>REQUESTED</code> (no CSP picked up yet) before auto-deactivation.</td></tr>
+      <tr><td><code>P76</code></td><td>CL <strong>pause max</strong> — 90-day cap on <code>PAUSED</code> before auto-deactivation.</td></tr>
+      <tr><td><code>P77</code></td><td>CL <strong>deactivation timeout</strong> — <strong>45 days</strong> cap on <code>PENDING_DEACTIVATION</code> before being forced to <code>DEACTIVATED</code>. Sourced from AWS param store (PM-confirmed canonical); OS doc still shows older 30d default — minor drift, not blocking.</td></tr>
+      <tr><td><code>P78</code></td><td>CL <strong>install retry cap</strong> — 3 retries before retry-exhaustion forces permanent deactivation (T12 path inside P74). Scope is <strong>global per-connection</strong> (counts <code>PENDING_INSTALL → REQUESTED</code> cycles regardless of which CSP each attempt is routed to) — per OS L460.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What the five timers should do</h3>
+  <table>
+    <thead><tr><th>Timer</th><th>Anchor</th><th>Threshold</th><th>Transition</th><th>Today</th></tr></thead>
+    <tbody>
+      <tr><td><strong>P74</strong></td><td><code>PENDING_INSTALL</code></td><td>72h since entry</td><td>If <code>retry_count &lt; P78</code> → <code>T3 → REQUESTED</code> (<code>entry_reason=RETRY</code>). Else → <code>T12 → PENDING_DEACTIVATION</code> (<code>RETRY_EXHAUSTION</code>).</td><td>Nothing fires.</td></tr>
+      <tr><td><strong>P75</strong></td><td><code>REQUESTED</code></td><td>7 days</td><td><code>T9 → DEACTIVATED</code> (<code>REQUEST_EXPIRED</code>).</td><td>Nothing fires.</td></tr>
+      <tr><td><strong>P76</strong></td><td><code>PAUSED</code></td><td>90 days</td><td><code>→ DEACTIVATED</code> (<code>PAUSE_MAX_EXCEEDED</code>).</td><td>Nothing fires.</td></tr>
+      <tr><td><strong>P77</strong></td><td><code>PENDING_DEACTIVATION</code></td><td>45 days (canonical; from AWS param store)</td><td><code>→ DEACTIVATED</code> (<code>DEACTIVATION_TIMEOUT</code>).</td><td>Nothing fires.</td></tr>
+      <tr><td><strong>P78</strong></td><td>(cap inside P74)</td><td><code>retry_count ≥ 3</code></td><td>Selects P74's exhausted branch (T12).</td><td>Same as P74.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What more is required in the install service (TAS) — co-fix</h3>
+  <p>Today, when CL fires a <code>T3</code> retry, TAS no-ops because its <code>UPSTREAM_RETRY_TRIGGERS</code> set only contains T11 / T12 — <code>T3</code> is missing. Without this fix, the first P74 retry orphans 50 install candidates in prod.</p>
+  <table>
+    <thead><tr><th>When CL emits</th><th>Today TAS</th><th>Should</th></tr></thead>
+    <tbody>
+      <tr><td><code>CL_STATE_CHANGED transitionType=T3</code> (P74 retry)</td><td>Logs "no action required"; old candidate stays OPEN</td><td>Close the current install candidate (<code>CANCELLED_BY_UPSTREAM</code>, reason <code>RETRY</code>). When DAS reroutes and emits a fresh <code>ALLOCATION_ACCEPTED</code>, a clean new candidate is created.</td></tr>
+    </tbody>
+  </table>
+  <p>P75 / P76 / P77 do not need TAS interventions (install candidate is either non-existent or already terminal when those fire).</p>
+
+  <h3>Edge cases (business)</h3>
+  <ol>
+    <li>P74 fires after a CSP-reported install failure. CL already processed the explicit failure (T11). Sweep skips.</li>
+    <li>CSP slot was set for T+24h but no-show happens. P74 anchors on PENDING_INSTALL entry, not on slot. Fires at T+72h regardless. (PM-noted, not changing.)</li>
+    <li>Connection re-enters PENDING_INSTALL after a decline. The new <code>entry_timestamp</code> resets the P74 clock — second 72h count starts fresh.</li>
+    <li>P75 fires while a stale TAS candidate from a previous allocation still exists. Mitigated by the T3 co-fix above.</li>
+    <li>P77 fires while ACS still holds router. ACS retrieval flow runs independently; P77 hard-caps the wait.</li>
+    <li>Retry count already at P78 when P74 fires. Exhausted branch (T12 → PENDING_DEACTIVATION).</li>
+  </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong>Sweep cadence:</strong> tech's choice, up to <strong>15-minute granularity</strong>. PM accepts the implication that timers can fire up to a sweep-period late (e.g. P75 may fire up to 15 min after the 7-day mark).</li>
+    <li><strong>Retry-cap scope:</strong> P78 stays global per-connection (per OS L460, current code matches). No per-CSP scoping in this item.</li>
+    <li><strong>P77 value:</strong> 45 days is canonical (AWS param store). The OS doc table still shows the older 30d default — minor doc-drift, optional follow-up on the next OS-doc revision; not blocking.</li>
+  </ul>
+
+  <h3>Out of scope</h3>
+  <ul>
+    <li>CSP / customer notifications around timeout firings ("your booking is in retry," "your request expired") — separate item if PM wants.</li>
+    <li>Exit OS S4 routing on RETRY_EXHAUSTION / REQUEST_EXPIRED — Exit OS not implemented today.</li>
+    <li>Backfilling the 50 stuck PENDING_INSTALL connections on first sweep activation — ops decision (controlled mass-deactivation vs staged manual reconciliation).</li>
+  </ul>
+
+  <h3>Risks / interactions</h3>
+  <ul class="risks">
+    <li><strong>First sweep activation = flood.</strong> 50 stuck PENDING_INSTALL + unknown REQUESTED / PAUSED / PENDING_DEACTIVATION rows. Tech runs first sweep in controlled window.</li>
+    <li><strong>TAS co-fix must ship before CLOS scheduler is activated.</strong> Recommended sequence: TAS T3-handling lands in prod → qa-verify no orphans → flip the CLOS scheduler.</li>
+    <li><strong>Hard sequencing with Items 07 + 08.</strong> Recommended overall rollout: Item 08 → Item 07 → Item 06. P74-T3 retry's reroute would otherwise repeat Item 08's symptoms on retried connections.</li>
+    <li><strong>Downstream "transition-not-seen-before-in-prod" sweep.</strong> When CL system events start emitting, TAS / DAS / Quality / ACS each see T3 / T9 / T12 / pause / deactivation timeouts for the first time. Each consumer should be audited for "do I handle this? am I a no-op? do I crash?"</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> — P74 / P75 / P76 / P77 / P78.</li>
+        <li><strong>PRD:</strong> <code>yaml-prd/connection-lifecycle-prd-v1.6.yaml</code>.</li>
+        <li><strong>Code (CLOS):</strong> <code>application-prod.yml:18</code> · <code>SchedulingServiceImpl.java</code> (the five batches) · <code>InternalTaskController.java</code> (the endpoints) · <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> (never called).</li>
+        <li><strong>Code (TAS co-fix site):</strong> <code>ClStateChangedHandler.java</code> — <code>UPSTREAM_RETRY_TRIGGERS</code>.</li>
+        <li><strong>Prior investigation:</strong> CL Timer Enforcement Gap notes, BUG-1.</li>
+        <li><strong>Source MD:</strong> <code>items/06-clos-scheduler-unwired.md</code></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 07 ============ -->
+<section id="item-07" class="tab-pane">
+  <h2>07 — DAS allocation scheduler unwired (P41 acceptance sweep, P191 reroute)</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
+      <div class="classify-headline">
+        <strong>Same scheduler-wiring failure as Item 06 — this time on DAS.</strong> <code>AWS_SCHEDULER_ENABLED: false</code> in DAS's <code>application-prod.yml</code>; <code>scheduleRecurring(...)</code> never called; six sweep batches (P41, P191, reallocation-dwell, override watchdog, conversion-eval, exposure-recalc) all sit unused. Prod: <strong>66/66</strong> ASSIGNED rows past P41 (2h) never reclaimed; <strong>230</strong> UNASSIGNED rows never re-routed by P191. <strong style="color: var(--bug);">Hard-blocked on Item 08</strong> — activating P41 before Item 08 ships would reclaim 274 live in-flight installs.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS (DAS)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">P41 = 7200s. P50 = 5 retries. P191 = held-state reroute. DECLINE_PATTERN(TIMEOUT) on P41 fire.</td></tr>
+      <tr><td>PRD (DAS v1.2)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">State machine includes timeout transitions; <code>trigger_source = SYSTEM</code>.</td></tr>
+      <tr><td>Code (DAS — batches)</td><td class="define-yn yes">✓ Correct</td><td class="define-note"><code>BatchTriggerServiceImpl</code> six sweeps + <code>BatchTriggerController</code> endpoints. Work when called manually.</td></tr>
+      <tr><td>Code (DAS — scheduler)</td><td class="define-yn no">✗ Unwired</td><td class="define-note">Same root cause as CLOS — <code>AWS_SCHEDULER_ENABLED: false</code>, <code>scheduleRecurring(...)</code> never called.</td></tr>
+      <tr><td>Item 08 dependency</td><td class="define-yn no">✗ Blocking</td><td class="define-note">Without Item 08, every successful allocation sits in ASSIGNED; P41 sweep would reclaim all 274 live in-flight installs as if timed out.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Wrong</td><td class="define-note">66/66 ASSIGNED &gt;2h not reclaimed. 230 UNASSIGNED &gt;24h not rerouted. 0 DECLINE_PATTERN(TIMEOUT) in 90d.</td></tr>
+    </table>
+  </div>
+
+  <h3>Parameters used in this item</h3>
+  <table>
+    <thead><tr><th style="width: 200px;">Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>P41</code></td><td>DAS <strong>acceptance window</strong> — 2h cap on how long an allocation can sit in <code>ASSIGNED</code> before the system reclaims it to <code>UNASSIGNED</code> and re-routes. The headline sweep this item turns on.</td></tr>
+      <tr><td><code>P50</code></td><td>DAS <strong>routing retries</strong> — 5 attempts. Max attempts the routing engine makes to find an eligible CSP for one allocation before declaring routing-failure.</td></tr>
+      <tr><td><code>P51</code></td><td>DAS <strong>decline cooldown</strong> — 4h. After a CSP declines a connection — <strong>explicit decline OR P41 timeout</strong> — that CSP cannot be re-assigned the same connection for this duration. (OS L872 / FM-DAO-02 explicitly mandates the timeout-also-triggers-cooldown semantics.) Item 02 fixed a bypass.</td></tr>
+      <tr><td><code>P191</code></td><td>DAS <strong>held-allocation reroute</strong> — cadence on which <code>UNASSIGNED</code> allocations that have exhausted P50 are re-attempted. Kicks in when initial routing couldn't find anyone (e.g. all eligible CSPs in P51 cooldown).</td></tr>
+      <tr><td><code>P_DA_REALLOCATION_MAX_DWELL</code></td><td>DAS <strong>reallocation dwell</strong> — 72h cap on <code>REALLOCATION_PENDING</code>. One of the four other sweep batches that share the wiring root cause but are out of scope for this item's spec.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What the two PM-scoped sweeps should do</h3>
+  <table>
+    <thead><tr><th>Sweep</th><th>Anchor</th><th>Threshold</th><th>What fires</th><th>Today</th></tr></thead>
+    <tbody>
+      <tr><td><strong>P41 acceptance</strong></td><td><code>ASSIGNED</code></td><td>2h since entry</td><td><code>ASSIGNED → UNASSIGNED</code>; <code>csp_id</code> cleared; emit <code>DECLINE_PATTERN(pattern_type=TIMEOUT)</code> to Quality OS. Re-enters routing on next pipeline run.</td><td>Nothing fires; 66 connections stuck.</td></tr>
+      <tr><td><strong>P191 held reroute</strong></td><td><code>UNASSIGNED</code> after P50 exhaustion</td><td>Per OS held-state max</td><td>Re-enter routing pipeline. If now eligible CSP exists → ASSIGNED. Else extend held-state.</td><td>Nothing fires; 230 UNASSIGNED rows rotting.</td></tr>
+    </tbody>
+  </table>
+  <p>The other four DAS sweep batches (<code>reallocation_dwell</code>, <code>override_watchdog</code>, <code>conversion_eval</code>, <code>exposure_recalc</code>) share the same wiring root cause and should be co-wired by tech but are out of scope from PM's spec deliverable.</p>
+
+  <h3>What more is required for these to work — the Item 08 prerequisite</h3>
+  <div class="caveat">
+    <strong>Item 07 cannot ship before Item 08.</strong> Today every allocation sits in <code>ASSIGNED</code> because nobody wires the auto-accept (Item 08). If Item 07's P41 sweep is activated under that condition, the first sweep run reclaims <strong>all 274 live, in-progress installs</strong> back to <code>UNASSIGNED</code>. Mass mis-routing.
+  </div>
+  <table>
+    <thead><tr><th>Scenario</th><th>If 07 ships without 08</th><th>If 08 first, then 07</th></tr></thead>
+    <tbody>
+      <tr><td>274 live ASSIGNED rows (partner mid-install)</td><td>All reclaimed to UNASSIGNED — partner loses booking; customer install halts.</td><td>All sit in ACCEPTED; sweep reads only ASSIGNED-anchored rows; skipped. Safe.</td></tr>
+      <tr><td>Future allocations</td><td>Auto-accept never lands → P41 reclaims every new allocation 2h later → loop.</td><td>ACCEPTED reached quickly; P41 is rare safety net for actual wiring failures.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Other install-service interventions:</strong> none beyond Item 08. Downstream consumers already handle <code>DECLINE_PATTERN(TIMEOUT)</code> the same way as <code>EXPLICIT_DECLINE</code>; UNASSIGNED → ASSIGNED via reroute is the same path as the original routing.</p>
+
+  <h3>Edge cases (business)</h3>
+  <ol>
+    <li>Same CSP reclaimed by P41, then immediately re-routed back to the same zone. Per OS L872 / FM-DAO-02, the timed-out CSP enters P51 cooldown for that connection — routing engine excludes them on the next pass (assuming Item 02's cooldown-bypass fix has shipped). If the zone has other eligible CSPs, one of them gets the booking; if not, OS L540 applies (service vacuum accepted). The existing pattern handler already triggers P51 on <code>DECLINE_PATTERN</code> — no new gating needed.</li>
+    <li>P191 on a connection whose original assignee is now suspended (FPV). Routing pipeline already excludes suspended CSPs (OS L540); pipeline returns ineligible; UNASSIGNED stays; P191 extends held-state.</li>
+    <li>P191 on a connection UNASSIGNED &gt;P75 (7d). CLOS will deactivate the parent connection via its own sweep — the two sweeps independently touch their own state machines; cascade arrives via existing path.</li>
+  </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong>P51 cooldown on P41 timeout:</strong> OS L872 (FM-DAO-02) mandates that the timed-out CSP enters P51 cooldown for that connection — same as an explicit decline. The existing <code>DECLINE_PATTERN</code> handler already triggers P51 from the <code>EXPLICIT_DECLINE</code> path; emitting <code>DECLINE_PATTERN(pattern_type=TIMEOUT)</code> through the same handler is sufficient. <strong>No new gating on <code>pattern_type</code> needed.</strong></li>
+    <li><strong>Sweep cadence:</strong> tech's choice, up to <strong>15-minute granularity</strong> (PM accepts the implication that P41 may fire up to a sweep-period late).</li>
+    <li><strong>P191 customer-facing escalation</strong> (e.g. SMS the customer "we couldn't find an installer" after N days UNASSIGNED): <strong>out of scope</strong> for this item. Today an UNASSIGNED row sits silently; that stays the case after this fix. If we want a customer-facing escalation later, it is a new item.</li>
+  </ul>
+
+  <h3>Out of scope</h3>
+  <ul>
+    <li>The other 4 DAS sweep batches (reallocation_dwell, override_watchdog, conversion_eval, exposure_recalc). Tech co-wires; not part of behavioural spec.</li>
+    <li>Quality OS / Enforcement OS consumer changes for <code>DECLINE_PATTERN(TIMEOUT)</code>. Same path as EXPLICIT_DECLINE.</li>
+    <li>Backfilling the 230 UNASSIGNED rows on first P191 sweep — phased rollout / rate-limit decision.</li>
+  </ul>
+
+  <h3>Risks / interactions</h3>
+  <ul class="risks">
+    <li><strong>Hard prerequisite: Item 08.</strong> Recommended rollout sequence: 08 → 07 → 06.</li>
+    <li>First P41 sweep — even after Item 08 there may be a small backlog of genuine wiring-failure ASSIGNED rows. Controlled-window first run.</li>
+    <li>First P191 sweep — 230 stuck UNASSIGNED will all attempt reroute simultaneously. Load spike on routing pipeline; phase or rate-limit.</li>
+    <li>Item 02 interaction — Open Q1 above overlaps with the Item 02 cooldown-bypass fix. Treat as one block during rollout if Open Q1 = "timeout counts as decline."</li>
+    <li>Single-CSP zones — once P41 reclaims a single-CSP-zone allocation, Item 02's fix keeps the cooldown active; reroute correctly fails with ROUTING_FAILURE (OS L540 service-vacuum-accepted). Consistent.</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> — P41, P50, P51, P191, DECLINE_PATTERN, L540.</li>
+        <li><strong>PRD:</strong> <code>yaml-prd/demand-allocation-prd-v1.2.yaml</code>.</li>
+        <li><strong>Code (DAS):</strong> <code>application-prod.yml:18</code> · <code>BatchTriggerServiceImpl.java</code> · <code>BatchTriggerController.java</code> · <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> (never called).</li>
+        <li><strong>Hard dependency:</strong> Item 08 (DAS state never reaches ACCEPTED).</li>
+        <li><strong>Source MD:</strong> <code>items/07-das-scheduler-unwired.md</code></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 08 ============ -->
+<section id="item-08" class="tab-pane">
+  <h2>08 — DAS allocation state never reaches ACCEPTED (post-AMENDMENT-02 wiring orphan)</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>Not a §4.1-vs-§4.3 OS contradiction.</strong> Real story: AMENDMENT-02 (Apr 2026) deleted the explicit CSP-accept call (<code>/actions/accept</code>) and declared acceptance "automatic on assignment" — but never named a backend sender for the auto-accept. DAS has the receiver (<code>POST /api/demand-allocation/csps/{cspId}/accept</code> + <code>AllocationServiceImpl.acceptAllocation(...)</code>) fully wired; <strong>no service calls it</strong>. Result in prod: <strong>0 rows in ACCEPTED, ever.</strong> 504/504 stuck at ASSIGNED/UNASSIGNED. <code>acceptance_timestamp</code> NULL on every row. INV-DAO-03 stickiness inert (no rows to protect).
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS (DAS §4.1, §4.3, INV-DAO-03)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">State machine has ACCEPTED; routing pipeline emits ALLOCATION_ACCEPTED; INV-DAO-03 mandates stickiness post-ACCEPTED.</td></tr>
+      <tr><td>PRD (DAS v1.2)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">State + field + state-machine validation all present.</td></tr>
+      <tr><td>AMENDMENT-02 (Installation Flow)</td><td class="define-yn partial">⚠ Partial</td><td class="define-note">Says "automatic on assignment" — <strong>does not name the sender.</strong> This is the spec-side gap.</td></tr>
+      <tr><td>Integration spec (<code>app-specs/das-install-integration-flow.md</code>)</td><td class="define-yn partial">⚠ Stale</td><td class="define-note">Names <code>InstallDasClient.notifyAccepted()</code> as sender — that class does not exist in any service.</td></tr>
+      <tr><td>Code (DAS receiver)</td><td class="define-yn yes">✓ Works</td><td class="define-note"><code>AllocationServiceImpl.acceptAllocation:42–53</code> + <code>AllocationController.java:31–39</code>. Validated transition + timestamp write. Endpoint reachable.</td></tr>
+      <tr><td>Code (sender)</td><td class="define-yn no">✗ Missing</td><td class="define-note">Zero callers across all services. Gateway deliberately removed its accept call per AMENDMENT-02 (<code>install-api-contract.md:145</code>). TAS doesn't signal either.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Wrong</td><td class="define-note">504 rows; 0 ACCEPTED; 0 ACTIVE; 0 REALLOCATION_PENDING; 0 REASSIGNED. <code>acceptance_timestamp</code> NULL on all.</td></tr>
+    </table>
+  </div>
+
+  <h3>Parameter used in this item</h3>
+  <table>
+    <thead><tr><th style="width: 100px;">Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>P41</code></td><td>DAS <strong>acceptance window</strong> — 2h. The safety-net timer (Item 07) that reclaims <code>ASSIGNED → UNASSIGNED</code> if acceptance never lands. Item 08 must close the wiring so P41 sees only genuine wiring-failure rows, not every live install.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What we want — PM-defined invariant (tech picks mechanism)</h3>
+  <div class="caveat">
+    <strong>Behavioural invariant:</strong> every allocation that the routing pipeline successfully selects a CSP for must reach <code>allocation_state = ACCEPTED</code> with <code>acceptance_timestamp</code> set on the standard happy path — quickly enough that Item 07's P41 sweep (2h) does not trip on a healthy install. P41 is the safety net for the rare case where the auto-accept didn't land — <em>not</em> the primary mechanism.
+  </div>
+  <p>Concrete observable conditions after the fix:</p>
+  <ol>
+    <li>After <code>ALLOCATION_ACCEPTED</code> is emitted, DB row's <code>allocation_state</code> reaches <code>ACCEPTED</code> within seconds (or a single transaction).</li>
+    <li><code>acceptance_timestamp</code> is non-null for every connection past the acceptance moment.</li>
+    <li>INV-DAO-03 stickiness enforceable — once ACCEPTED, no silent re-route except via REALLOCATION_PENDING.</li>
+    <li><code>ASSIGNED</code> only observed transiently, or as leftover of a genuine wiring failure that Item 07's P41 sweep will reclaim.</li>
+  </ol>
+
+  <h3>What more is required — tech-owned mechanism choice</h3>
+  <p>For completeness — three plausible mechanisms, listed so the spec records the choice unambiguously once tech picks. <strong>Tech picks; PM ships the spec amendment to match.</strong></p>
+  <table>
+    <thead><tr><th>Mechanism</th><th>Changes in DAS</th><th>Changes in TAS / Gateway</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. DAS-internal atomic write</strong></td><td>Routing pipeline writes <code>state=ACCEPTED</code> + timestamp in the same transaction that emits ALLOCATION_ACCEPTED</td><td>Nothing</td><td>Closest to AMENDMENT-02's "automatic" intent. No cross-service wire. No race.</td></tr>
+      <tr><td><strong>B. TAS signals</strong></td><td>Receiver stays as-is</td><td>TAS calls DAS <code>/csps/{cspId}/accept</code> on ALLOCATION_ACCEPTED ingest</td><td>Matches the stale integration-spec doc's intent. Adds a TAS→DAS coupling.</td></tr>
+      <tr><td><strong>C. Gateway signals</strong></td><td>Receiver stays as-is</td><td>Gateway re-adds the call on first partner-app touch</td><td>Pre-AMENDMENT-02 model. Rejected by AMENDMENT-02 because it ties DAS state to UI events. Listed for completeness.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>PM's deliverable</strong> after tech picks: (a) amend AMENDMENT-02 (or follow-up integration note) recording the chosen sender; (b) update or retire <code>app-specs/das-install-integration-flow.md</code>.</p>
+
+  <h3>Edge cases (business)</h3>
+  <ol>
+    <li>ALLOCATION_ACCEPTED emits but the auto-accept signal fails (network / consumer crash). Item 07's P41 is the safety net — reclaim at 2h. Mechanism A eliminates this case by construction.</li>
+    <li>Customer cancels before the install reaches ACCEPTED. The cancellation path (Item 05) takes the connection to a terminal state through CL → TAS → DAS in the usual order; the allocation transitions to its terminal state regardless of which auto-accept mechanism is in flight.</li>
+    <li>CSP declines slot proposal explicitly. Separate path — <code>declineAllocation(...)</code> endpoint exists (also unused today, paired removal in AMENDMENT-02). Item 08 doesn't change explicit decline.</li>
+    <li>Re-routing of a row already in ACCEPTED (CSP suspended). INV-DAO-03 → REALLOCATION_PENDING → REASSIGNED. Path currently dead (0 ACCEPTED rows); becomes live as soon as ACCEPTED rows start appearing.</li>
+    <li>T3 retry (Item 06's P74 retry path) lands a new ASSIGNED row. Same auto-accept flow runs again. No special-casing.</li>
+  </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong>No AMENDMENT-02 follow-up note required from PM.</strong> PM-resolved: once the mechanism is coded, the <strong>code itself is the source of truth.</strong> Don't gate the build on a PM-written amendment addendum.</li>
+    <li><strong>Stale <code>app-specs/das-install-integration-flow.md</code>: tech's call after mechanism is picked.</strong> PM-resolved: defer. Once tech picks DAS-internal atomic write / TAS-signal / Gateway-signal, tech decides whether to retire (delete) or update the doc — based on whether they actually reference it. PM doesn't pre-decide.</li>
+  </ul>
+
+  <h3>Out of scope</h3>
+  <ul>
+    <li>Mechanism choice (A / B / C). Tech-owned per PM.</li>
+    <li>INV-DAO-03 stickiness enforcement testing. Tech adds explicit tests once ACCEPTED rows start appearing.</li>
+    <li>The downstream DAS terminal states (ACTIVE, REALLOCATION_PENDING, REASSIGNED) — all become reachable once ACCEPTED is reachable. No separate fix.</li>
+    <li>Item 02 (P51 cooldown bypass). Unrelated.</li>
+  </ul>
+
+  <h3>Risks / interactions</h3>
+  <ul class="risks">
+    <li><strong>Hard prerequisite for Item 07.</strong> Item 08 must ship first. Otherwise Item 07's P41 sweep destroys 274 live installs.</li>
+    <li><strong>Backfill decision for the 274 currently-ASSIGNED rows.</strong> They are live in-progress installs mis-stated in DAS. Tech decides: one-shot UPDATE to ACCEPTED with <code>acceptance_timestamp=now()</code> (safer), or let Item 07's P41 sweep reclaim them (harmful — partner mid-install). PM should be told the choice before rollout.</li>
+    <li><strong>Datadog dashboards become accurate for the first time.</strong> All P41-timeout-rate / acceptance-latency metrics currently key off <code>entry_timestamp</code> on ASSIGNED. Post-fix, dashboards become meaningful.</li>
+    <li><strong>INV-DAO-03 becomes live.</strong> Routing engine should add an explicit assertion: no code path silently re-routes an ACCEPTED row outside REALLOCATION_PENDING.</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> §4.1, §4.3, INV-DAO-03, P41.</li>
+        <li><strong>AMENDMENT-02:</strong> "Booking acceptance is automatic on assignment; <code>/actions/accept</code> removed."</li>
+        <li><strong>Stale integration spec:</strong> <code>app-specs/das-install-integration-flow.md</code> §2.3 — names <code>InstallDasClient.notifyAccepted()</code> (does not exist).</li>
+        <li><strong>DAS code:</strong> <code>AllocationServiceImpl.java:42–53</code> (acceptAllocation — works) · <code>AllocationController.java:31–39</code> (endpoint — exposed) · <code>RoutingEngineServiceImpl.java</code> (emits ALLOCATION_ACCEPTED; does NOT write state to ACCEPTED).</li>
+        <li><strong>Gateway "did its half" docs:</strong> <code>services/csp-gateway-service/docs/install-api-contract.md:145</code> · <code>frontend-amendment-02-handoff.md:14</code>.</li>
+        <li><strong>Prod DB:</strong> <code>SELECT allocation_state, COUNT(*) FROM csp_demand_allocation_service.connection_allocations GROUP BY allocation_state;</code> → 230 UNASSIGNED, 274 ASSIGNED, 0 everything else.</li>
+        <li><strong>Hard dependant:</strong> Item 07.</li>
+        <li><strong>Source MD:</strong> <code>items/08-das-state-never-accepted.md</code></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 09 ============ -->
+<section id="item-09" class="tab-pane">
+  <h2>09 — Show address-locality + landmark + voice direction in the CSP App</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>Customer app shipped a new capture flow (3-field address + landmark type/name + 30-sec voice). Customer captures it; CSP / Rohit cannot see most of it.</strong> Verified against the live <code>development</code> branch: the install drilldown's §4 Location <code>SectionCard</code> (<code>InstallDrilldownContent.kt:233-289</code>) shows only stacked <code>streetHomeAddress()</code> + "View on map" link — no landmark, no locality, no voice. The FPN overlay (<code>FpnOverlay.kt</code>) already has a <code>landmark: String</code> field — but it's a single free-text string fed from FCM <code>task.extraData.landMark</code>, not the new structured <code>landmarkType</code> + <code>landmarkInput</code>. Per PM: scope is CSP-side surface + CSP App (backend persistence stays with the upstream Customer PRD); surface on both install drilldown and FPN allocation overlay; voice-playback UX is design-team-owned; legacy bookings (all 4 fields null) render exactly as today.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS</td><td class="define-yn">n/a</td><td class="define-note">Address / landmark / voice UX is not an OS-level concern.</td></tr>
+      <tr><td>Customer-side PRD</td><td class="define-yn yes">✓ Yes</td><td class="define-note"><code>PRD_ Address + Landmark + Voice Onboarding.pdf</code> — §6 recording rules, §7 input schema, §9 data model, §12 acceptance criteria ("Partner App receives same data").</td></tr>
+      <tr><td>Customer App (UI)</td><td class="define-yn yes">✓ Shipped</td><td class="define-note">PR 1 + PR 2 on <code>feature/chat</code>. Capture flow is live.</td></tr>
+      <tr><td>Backend persistence (booking-service / customer-backend)</td><td class="define-yn partial">⏳ Pending</td><td class="define-note">Tracked by upstream Customer PRD's ship status. <strong>Out of scope for this item.</strong></td></tr>
+      <tr><td>CSP App (model — <code>TaskDetail</code>)</td><td class="define-yn no">✗ Missing</td><td class="define-note">AMENDMENT-03 address fields present (<code>addressHome</code> / <code>addressStreet</code> / <code>addressCity</code> / <code>addressPincode</code> / <code>addressLat/Lng</code>); the 4 new fields missing. Possibly also <code>localityInput</code> (see Open Q1).</td></tr>
+      <tr><td>CSP App (drilldown render)</td><td class="define-yn no">✗ Missing</td><td class="define-note"><code>InstallDrilldownContent.kt:233-289</code> renders only <code>streetHomeAddress()</code> + "View on map". No landmark, no locality, no voice.</td></tr>
+      <tr><td>CSP App (FPN overlay render)</td><td class="define-yn partial">⚠ Partial</td><td class="define-note"><code>FpnOverlayData.landmark: String</code> already exists (line 59), fed from FCM <code>task.extraData.landMark</code> (free text) via <code>FpnPayload.landMark()</code>. New structured type+name need to flow through this slot — reuse-or-extend is Open Q5. No voice slot today.</td></tr>
+      <tr><td>Design team</td><td class="define-yn partial">⏳ Pending</td><td class="define-note">Voice-playback UX shape is design-owned per PM.</td></tr>
+    </table>
+  </div>
+
+  <h3>What the CSP / technician sees today vs. want</h3>
+  <table>
+    <thead><tr><th style="width: 220px;">Surface</th><th>Today</th><th>Want</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>FPN allocation overlay</strong> (<code>FpnOverlay</code>)</td>
+        <td>Address (3 lines max) + a single free-text landmark row already exists (today fed from FCM <code>task.extraData.landMark</code>). No locality. No voice.</td>
+        <td>Same overlay extended so the landmark row carries the customer-typed <code>landmarkInput</code> (with a type-driven icon ahead of it) and a new voice-direction control appears when <code>voiceFilePath</code> is non-null. Locality line above or below the address — design's call.</td>
+      </tr>
+      <tr>
+        <td><strong>Install drilldown</strong> — §4 Location <code>SectionCard</code> (<code>InstallDrilldownContent.kt:233-289</code>)</td>
+        <td><code>streetHomeAddress()</code> stacked + "View on map" link. <strong>No landmark, no locality, no voice.</strong></td>
+        <td>Inside the same SectionCard (no new card), add: locality line · landmark line (type icon + name) · voice-direction control (when present). All collapsed gracefully when the underlying fields are null (backfill mode).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Backfill rule (critical)</h3>
+  <div class="caveat">
+    <strong>If <code>landmark_type</code>, <code>landmark_input</code>, <code>voice_file_path</code>, <code>voice_duration_seconds</code> are all null (or the API doesn't yet serve them — pre-rollout bookings), the CSP App renders the address exactly as it does today.</strong> No "Landmark: not provided" text. No empty voice tile. No new section heading. The partner's view of an old booking is byte-for-byte identical to today. This is what keeps the rollout safe while backend persistence rolls out independently per the upstream PRD.
+  </div>
+
+  <h3>Edge cases (business)</h3>
+  <ol>
+    <li>Customer captured landmark but skipped voice. Voice fields null/0; landmark renders; voice control hidden. Backfill rule does <strong>not</strong> kick in (partial data is genuine data).</li>
+    <li>Customer recorded voice but picked "Other" with blank name. Voice plays; landmark renders as <code>OTHER</code> icon + empty name (or just the icon).</li>
+    <li>Customer uses wrong-address recovery mid-install (address / landmark / voice can change after the booking is already allocated). CSP App picks up updated values on next drilldown refresh. No live-push requirement in this item — eventual consistency is acceptable.</li>
+    <li>Voice file URL returns 404 / network fail. Playback control shows a small error state with retry; partner can still see all text fields.</li>
+    <li>Voice file URL slow on 2G. Per PRD acceptance criteria, playback should pre-cache on drilldown open or stream gracefully. Design picks the pattern.</li>
+    <li>Customer's language is English; CSP's is Hindi (or vice-versa). CSP App's label locale wins; landmark <em>name</em> (free text) shown as-typed; landmark <em>type label</em> rendered in CSP's locale.</li>
+    <li><code>voice_file_path</code> present but <code>voice_duration_seconds = 0</code> (data inconsistency). Treat as voice-absent — hide the playback control. Defensive.</li>
+    <li>Landmark type is a future enum value the CSP App doesn't recognise. Fall back to <code>OTHER</code> icon and render the name as-is. Don't crash.</li>
+    <li>Two partners (CSP self + assigned Rohit) open the drilldown. Both see the same data. No coordination requirement.</li>
+    <li>Partner shares the customer details via WhatsApp. Share text continues to use <code>streetHomeAddress()</code> — landmark + voice are NOT added to the share text. Audio over WhatsApp is its own scope.</li>
+  </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong><code>localityInput</code> vs existing <code>locality</code></strong> — PM-deferred: tech / customer-backend team to confirm whether the customer's typed <code>localityInput</code> (PRD §7, Required) is the <em>same</em> semantic field as the CSP-App's existing top-level <code>TaskDetail.locality</code> (today used for the home-card preview), or a <em>different</em> one (e.g. server-derived from lat/lng). If same → drop a new locality field, the existing one carries it. If different → add the customer-typed value to the address block and keep the existing top-level field for the card. <strong>PM doesn't need to pre-decide.</strong></li>
+    <li><strong>FPN overlay landmark + voice density</strong> — PM-deferred to the <strong>design team</strong>. The spec mandates that both surfaces (FPN overlay + drilldown) carry the new fields; how densely the FPN renders them (full vs condensed) is a design call.</li>
+    <li><strong><code>CustomerDetailsScreen</code> (install wizard, third surface that also renders address)</strong> — <strong>strictly out of scope.</strong> Only drilldown + FPN overlay in this item. The partner has typically already arrived at the address by the time they see <code>CustomerDetailsScreen</code>; consistency on landmark / voice there is not worth this item's scope. If it becomes an issue later, a separate item.</li>
+    <li><strong>CleverTap instrumentation on voice playback — emit play / pause / complete events.</strong> PM-confirmed: add a small CT event family (one event, three actions) on voice clip play / pause / completion. Lets us measure later whether the feature reduces "couldn't find the house" install delays. Lightweight; folds into the existing CT pipeline.</li>
+    <li><strong>FPN landmark wire — reuse single <code>landmark</code> String vs extend the schema</strong> — PM-deferred. Tech picks once the customer-backend team's actual FCM payload shape is visible. Spec records both options:
+      <ul>
+        <li><strong>Extend</strong> (separate <code>landmarkType</code> + <code>landmarkInput</code> fields end-to-end) — type→icon decision stays client-side, icon catalogue evolves without server churn. More plumbing.</li>
+        <li><strong>Reuse</strong> (server composes the display string into the existing single field) — less plumbing, but couples icon decisions to server output.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>Out of scope</h3>
+  <ul>
+    <li>Customer-side capture UX (already shipped — PR 1 + PR 2 on feature/chat).</li>
+    <li>Customer-backend / booking-service persistence — tracked by upstream PRD.</li>
+    <li>C2 nudge audio (PRD §10) — customer-side.</li>
+    <li>WhatsApp share text augmentation.</li>
+    <li>Voice-playback UX details (inline button vs row vs modal) — <strong>design team owns</strong>. This item gives design the behavioural requirements; design picks the shape.</li>
+    <li>Pre-loaded nearby places by category at chat-flow entry (PRD §9 last bullet) — customer-side.</li>
+    <li>Backend landmark normalisation / dedup against a place database — future improvement, backend.</li>
+    <li>Wrong-address recovery customer-side UI (PRD's "Address Confirm" screen).</li>
+  </ul>
+
+  <h3>Risks / dependencies</h3>
+  <ul class="risks">
+    <li><strong>Hard dependency on backend persistence rollout.</strong> CSP App's new fields stay null until the customer-backend persists the new schema and the CSP-OS gateway echoes them. The backfill rule keeps the rollout safe — without it the partner would see "not provided" on every existing booking for weeks.</li>
+    <li><strong>Surface contract sign-off is the binding step.</strong> Land the SC amendment first; then frontend + backend in parallel.</li>
+    <li><strong>Voice file storage + auth.</strong> Customer-side team picks storage backend (S3 + pre-signed URLs is the natural fit). CSP App needs the same auth pattern as existing image assets (e.g. NetBox photos). Confirm with customer-side team before SC freeze.</li>
+    <li><strong>Audio cache lifecycle.</strong> Tech / design decide how long a voice clip is cached on the device (e.g. until booking is terminal, or 24h after first play). Affects storage footprint on low-end devices.</li>
+    <li><strong>Design-team latency.</strong> Item lists behavioural requirements but leaves voice-control UX shape to design. Tech can build data plumbing in parallel.</li>
+    <li><strong>Language toggle.</strong> Customer-side strings are in <code>ChatStrings.kt</code>; CSP App has its own labels-file pattern — mirror the type-label strings there.</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>Upstream PRD:</strong> <code>C:\Users\ashis\Downloads\PRD_ Address + Landmark + Voice Onboarding.pdf</code> — §6 recording rules, §7 inputs, §9 data model + cross-app sync, §12 acceptance criteria.</li>
+        <li><strong>Reference design (customer side):</strong> <code>https://abhishekgarg-wiom.github.io/Onboarding_customer/v3/</code></li>
+        <li><strong>Customer-side PRs:</strong> PR 1 + PR 2 on <code>feature/chat</code> (Customer App).</li>
+        <li><strong>CSP App — exact render sites (verified against <code>development</code> branch):</strong>
+          <ul>
+            <li><code>core/model/.../TaskDetail.kt:100-145</code> — AMENDMENT-03 model block to extend with the 4 new fields.</li>
+            <li><code>feature/home/.../drilldowns/install/InstallDrilldownContent.kt:233-289</code> — §4 Location <code>SectionCard</code>, current render site for the address.</li>
+            <li><code>feature/home/.../FpnOverlay.kt:54-71</code> — <code>FpnOverlayData</code> data class (already has <code>landmark: String</code>).</li>
+            <li><code>feature/home/.../FpnOverlay.kt:280-300</code> — landmark and address render rows.</li>
+            <li><code>app/.../fpn/FpnPayload.kt:64-92</code> — <code>landMark()</code> extractor (the existing wire from FCM <code>task.extraData.landMark</code>).</li>
+            <li><code>feature/installation/.../CustomerDetailsScreen.kt:162-169</code> — third surface (install wizard); see Open Q3 for whether to extend.</li>
+          </ul>
+        </li>
+        <li><strong>Helper to leave alone:</strong> <code>TaskDetail.streetHomeAddress()</code> — landmark is rendered separately, not appended here.</li>
+        <li><strong>Source MD:</strong> <code>items/09-voice-directions-csp-app.md</code></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<footer>
+  P2 Installation Items &middot; 2026-05-29 &middot; <code>C:\Users\ashis\p2-installation-items\</code>
+</footer>
+
+</div>
+
+<script>
+  function activate(id) {
+    document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.toggle('active', p.id === id); });
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === id); });
+    if (history.replaceState) history.replaceState(null, '', '#' + id);
+    try { localStorage.setItem('p2-active-tab', id); } catch (e) {}
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.addEventListener('click', function() { activate(b.dataset.tab); }); });
+  document.querySelectorAll('a.tab-link').forEach(function(a) { a.addEventListener('click', function(e) { e.preventDefault(); activate(a.dataset.tab); }); });
+  (function() {
+    var hash = (location.hash || '').slice(1);
+    var stored = null; try { stored = localStorage.getItem('p2-active-tab'); } catch (e) {}
+    var initial = 'overview';
+    if (hash && document.getElementById(hash)) initial = hash;
+    else if (stored && document.getElementById(stored)) initial = stored;
+    activate(initial);
+  })();
+</script>
+</body>
+</html>
