@@ -295,7 +295,7 @@
         <td><a href="#item-10" class="tab-link" data-tab="item-10">Change-team-member workflow post technician assignment</a></td>
         <td><span class="pill gap">GAP</span></td>
         <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--warn);">ES&nbsp;partial</span> &middot; <span style="color: var(--warn);">BE&nbsp;mixed</span> &middot; <span style="color: var(--no);">App✗</span></span></td>
-        <td>tas-service (install + restore allowed-actions), gateway, CSP App, depends on Item 04 for FPN</td>
+        <td>tas-service (install + restore allowed-actions), gateway, CSP App, depends on Item 04 for FPN <em>(install only)</em></td>
       </tr>
     </tbody>
   </table>
@@ -1799,7 +1799,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <div class="classify-head">
       <div class="classify-type">GAP</div>
       <div class="classify-headline">
-        <strong>Same workflow, three different stories across Install, Restore, and NBREC.</strong> NBREC has a clean unified <code>assignTask</code> endpoint that handles both initial and reassignment, with a tracked <code>reassignmentCount</code>. Install has the backend self-loop (<code>InstallationStateMachine.java:182</code> — <em>"reassign"</em>) but the gateway hides it: <code>TasCandidateQueryServiceImpl.resolveAllowedActions:118</code> returns only <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code>, so the CSP App has no UX to swap. Restore added the self-loop explicitly in v1.7-DIFF-A1 (<em>"CSP can swap technician without intermediate recall"</em>); gateway exposure to verify. Result: a CSP who wants to swap a technician on an install today has no in-app path. PM-scope: keep per-service vocabulary; just add the missing exposure points + UI. Allowed mid-work; new tech gets the FPN (depends on Item 04).
+        <strong>Same workflow, three different stories across Install, Restore, and NBREC.</strong> NBREC has a clean unified <code>assignTask</code> endpoint that handles both initial and reassignment, with a tracked <code>reassignmentCount</code>. Install has the backend self-loop (<code>InstallationStateMachine.java:182</code> — <em>"reassign"</em>) but the gateway hides it: <code>TasCandidateQueryServiceImpl.resolveAllowedActions:118</code> returns only <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code>, so the CSP App has no UX to swap. Restore added the self-loop explicitly in v1.7-DIFF-A1 (<em>"CSP can swap technician without intermediate recall"</em>); gateway exposure to verify. Result: a CSP who wants to swap a technician on an install today has no in-app path. PM-scope: keep per-service vocabulary; just add the missing exposure points + UI. Allowed mid-work; new team member is notified via the family's existing assignment-notification path — <strong>for Install only</strong>, this is the FPN treatment from Item 04 (<em>"every assignment incl. re-assignments"</em>, Item 04 scope); for Restore and NBREC, they use their own per-family notification.
       </div>
     </div>
     <table class="define-table">
@@ -1836,10 +1836,10 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <h3>Edge cases (business)</h3>
   <ol>
-    <li><strong>CSP swaps after the assigned technician has already arrived at site.</strong> Allowed per PM. New tech gets the FPN; previous tech's app removes the booking from active list on next refresh. Any wizard-state from the previous tech (selfie, OTP, photos) needs reconciliation — tech-design call per family.</li>
+    <li><strong>CSP swaps after the assigned technician has already arrived at site.</strong> Allowed per PM. New team member is notified via the family's existing assignment-notification path (FPN for Install per <a href="#item-04" class="tab-link" data-tab="item-04">Item 04</a>; per-family notification for Restore / NBREC). Previous tech's app removes the booking from active list on next refresh. Any wizard-state from the previous tech (selfie, OTP, photos) needs reconciliation — tech-design call per family.</li>
     <li><strong>CSP swaps while a customer call is in progress</strong> (IVR dual-PIN model). Existing call stays bound to the old tech's PIN. New tech uses their own PIN going forward. No call migration; consistent with IVR design.</li>
     <li><strong>CSP changes back to themselves (SELF / un-assign).</strong> NBREC handles via <code>AssigneeType.SELF</code>. Install + Restore have no SELF concept today — PM to confirm whether self-unassign is in scope (probably separate item).</li>
-    <li><strong>Rapid sequential swaps</strong> (A → B → C in seconds). Each swap fires a fresh FPN, increments the counter (if tracked). No rate limit; partner UI debounces if needed.</li>
+    <li><strong>Rapid sequential swaps</strong> (A → B → C in seconds). Each swap fires a fresh assignment notification to the new pick (FPN for Install per Item 04; per-family notification elsewhere) and increments the counter (if tracked). No rate limit; partner UI debounces if needed.</li>
     <li><strong>Booking cancelled / fails upstream while CSP is mid-picker.</strong> Cancellation wins. Picker closes; task disappears.</li>
     <li><strong>Task in a non-assignable state</strong> (e.g. Install <code>AWAITING_SLOT_PROPOSAL</code> — no tech yet). CTA suppressed; use the existing initial-assign CTA. Rule: CTA visible iff a team member is currently assigned AND state is not terminal.</li>
     <li><strong>CSP App offline.</strong> Action queues like any other; fires on next online window. Backend may reject if the task has reached terminal state in the meantime — surface a graceful failure.</li>
@@ -1857,7 +1857,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <h3>Risks / dependencies</h3>
   <ul class="risks">
-    <li><strong>Hard dependency on <a href="#item-04" class="tab-link" data-tab="item-04">Item 04</a>.</strong> Without FPN-on-re-assignment, the new tech won't be notified on swap. Item 04 must ship before or alongside this item.</li>
+    <li><strong>Hard dependency on <a href="#item-04" class="tab-link" data-tab="item-04">Item 04</a> — Install only.</strong> For the <strong>Install</strong> family, FPN-on-re-assignment relies on Item 04's <em>"every assignment incl. re-assignments"</em> scope; Item 04 must ship before or alongside this item for install swaps to fire an FPN to the new tech. <strong>Restore and NBREC are outside Item 04's scope</strong> — they each use their own per-family assignment notification, which this item just extends to fire on swap too. If PM wants FPN treatment on Restore/NBREC swaps as well, file a separate item analogous to Item 04 for those families.</li>
     <li><strong>Install is a one-line fix.</strong> Add <code>ASSIGN_TECHNICIAN</code> to <code>TasCandidateQueryServiceImpl:118</code>. State machine + workflow already support it.</li>
     <li><strong>Restore needs a 5-minute verification</strong> of <code>AllowedActionsResolver</code> before any work. Likely already done.</li>
     <li><strong>Mid-work swap product risk.</strong> Allowing swap after arrival means the customer may see two techs. Previous tech's wizard state needs reconciliation. PM accepted this risk; tech should sanity-check per family.</li>
@@ -1874,7 +1874,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
         <li><strong>NBREC backend (reference, no change):</strong> <code>CandidateCommandServiceImpl.java:223-285</code> (<code>assignTask</code> handles initial + reassign via <code>assigned_at != null</code>).</li>
         <li><strong>Gateway:</strong> <code>TaskDrilldown.java:26</code> (<code>can_reassign</code> field) · <code>HomeFacadeService.java:303</code> (always <code>null</code>).</li>
         <li><strong>CSP App:</strong> <code>core/model/.../TaskDetail.kt:49</code> (<code>canReassign: Boolean = false</code>).</li>
-        <li><strong>Related items:</strong> Item 04 (FPN on re-assignment — hard dependency).</li>
+        <li><strong>Related items:</strong> Item 04 (Install-only technician-assignment FPN — hard dependency for FPN-on-swap in the Install family; does <strong>not</strong> extend to Restore / NBREC, which use their own per-family assignment notification paths).</li>
         <li><strong>Source MD:</strong> <code>items/10-change-team-member-workflow.md</code></li>
       </ul>
     </div>
