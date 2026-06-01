@@ -2,7 +2,7 @@
 
 **Owner:** Ashis · **Started:** 2026-05-29 · **Target audience:** Wiom CSP tech for implementation
 
-9 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff.
+10 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff.
 
 ## How the PM team writes items
 
@@ -61,6 +61,7 @@ Every BUG item's classification card carries this sub-type. GAP items don't need
 | 07 | [DAS allocation scheduler unwired (P41 + P191 inert)](items/07-das-scheduler-unwired.md) | Bug · Impl-miss | — | csp-demand-allocation-service (scheduler infra) — **hard-blocked on Item 08** | Open |
 | 08 | [DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)](items/08-das-state-never-accepted.md) | Gap | — | csp-demand-allocation-service / csp-tas-service / csp-gateway-service (tech-picks mechanism); AMENDMENT-02 follow-up (PM) | Open |
 | 09 | [Show address-locality + landmark + voice direction in the CSP App](items/09-voice-directions-csp-app.md) | Gap | — | CSP App (model + drilldown + FPN overlay), design team | Open |
+| 10 | [Change-team-member workflow post technician assignment](items/10-change-team-member-workflow.md) | Gap | — | csp-tas-service (install allowed-actions · restore verify · nbrec parity), csp-gateway-service (SC `can_reassign`), CSP App (UI), csp-notification-service / CleverTap (FPN on swap — depends on Item 04) | Open |
 
 ## Cross-item rollout sequencing
 
