@@ -204,7 +204,7 @@
     <strong>Owner:</strong> Ashish Raj &middot;
     <strong>Started:</strong> 2026-05-29 &middot;
     <strong>For:</strong> Wiom CSP Tech &middot;
-    <span id="status-counter">11 items &middot; grouped into 3 ownership buckets</span>
+    <span id="status-counter">16 items &middot; grouped into 3 ownership buckets</span>
   </div>
 </header>
 
@@ -222,6 +222,11 @@
     <button class="tab-btn" data-tab="item-09"><span class="num">09</span>Voice + landmark</button>
     <button class="tab-btn" data-tab="item-10"><span class="num">10</span>Change team member</button>
     <button class="tab-btn" data-tab="item-11"><span class="num">11</span>IVR 2.0 routing</button>
+    <button class="tab-btn" data-tab="item-12"><span class="num">12</span>Capacity skip-T2</button>
+    <button class="tab-btn" data-tab="item-13"><span class="num">13</span>Quality signal outbox</button>
+    <button class="tab-btn" data-tab="item-14"><span class="num">14</span>CAEO customer_id</button>
+    <button class="tab-btn" data-tab="item-15"><span class="num">15</span>Sub-reason blank</button>
+    <button class="tab-btn" data-tab="item-16"><span class="num">16</span>DAS single-CSP zone</button>
   </div>
 </nav>
 
@@ -235,7 +240,7 @@
   <div style="border: 1px solid var(--yes); border-left: 4px solid var(--yes); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1rem; background: var(--yes-bg);">
     <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
       <span style="font-size: 1.1rem; font-weight: 800; color: var(--yes); letter-spacing: 0.01em;">Bucket 1 &mdash; Go-ahead from Vaibhav</span>
-      <span style="font-size: 0.85rem; color: var(--ink-soft);">5 items</span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">10 items</span>
     </div>
     <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>No OS change required &mdash; pure ES / app / backend wiring.</strong> Vaibhav (Quality OS PM) needs to confirm "no OS amendment required" for each; once confirmed, items move directly into tech sequencing.</p>
     <ul style="margin: 0; padding-left: 1.2rem;">
@@ -244,6 +249,11 @@
       <li><a href="#item-08" class="tab-link" data-tab="item-08"><strong>08</strong> &mdash; DAS allocation state frozen at <code>ASSIGNED</code> / <code>UNASSIGNED</code>, never reaches <code>ACCEPTED</code> / <code>ACTIVE</code></a></li>
       <li><a href="#item-09" class="tab-link" data-tab="item-09"><strong>09</strong> &mdash; Voice directions + address-locality + landmark on the CSP / technician app</a></li>
       <li><a href="#item-10" class="tab-link" data-tab="item-10"><strong>10</strong> &mdash; Change-team-member workflow post technician assignment</a></li>
+      <li><a href="#item-12" class="tab-link" data-tab="item-12"><strong>12</strong> &mdash; Capacity OS code skips connection increment after installation <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
+      <li><a href="#item-13" class="tab-link" data-tab="item-13"><strong>13</strong> &mdash; <code>CL_INSTALLATION_QUALITY_SIGNAL</code> outbox FAILED — CL never delivers to Quality OS <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
+      <li><a href="#item-14" class="tab-link" data-tab="item-14"><strong>14</strong> &mdash; CAEO <code>customer_id</code> column has CSP-ID for installation task <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
+      <li><a href="#item-15" class="tab-link" data-tab="item-15"><strong>15</strong> &mdash; <code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code> <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
+      <li><a href="#item-16" class="tab-link" data-tab="item-16"><strong>16</strong> &mdash; DAS doesn't publish supply-side events when a zone has only one CSP <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
     </ul>
   </div>
 
@@ -358,6 +368,41 @@
         <td><span class="pill gap">GAP</span></td>
         <td><span class="bucket-tag b2">Bucket 2</span></td>
         <td>IVR routing-table refactor (Exotel applet + masked-number scheme) &mdash; <a href="https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html" target="_blank" rel="noopener">full external spec</a></td>
+      </tr>
+      <tr>
+        <td><strong>12</strong></td>
+        <td><a href="#item-12" class="tab-link" data-tab="item-12">Capacity OS code skips connection increment after installation</a></td>
+        <td><span class="pill bug">BUG</span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
+        <td><span class="mono">csp-capacity-coverage-service</span> (one behavioral fix)</td>
+      </tr>
+      <tr>
+        <td><strong>13</strong></td>
+        <td><a href="#item-13" class="tab-link" data-tab="item-13"><code>CL_INSTALLATION_QUALITY_SIGNAL</code> outbox FAILED — CL never delivers to Quality OS</a></td>
+        <td><span class="pill bug">BUG</span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
+        <td><span class="mono">csp-connection-lifecycle-service</span> (outbox delivery) &middot; OS housekeeping (retire stale §9.1 row)</td>
+      </tr>
+      <tr>
+        <td><strong>14</strong></td>
+        <td><a href="#item-14" class="tab-link" data-tab="item-14">CAEO <code>customer_id</code> column has CSP-ID for installation task</a></td>
+        <td><span class="pill bug">BUG</span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
+        <td><span class="mono">csp-customer-access-service</span> (single line fix)</td>
+      </tr>
+      <tr>
+        <td><strong>15</strong></td>
+        <td><a href="#item-15" class="tab-link" data-tab="item-15"><code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code></a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
+        <td>Partner App (sub-reason picker), <span class="mono">csp-tas-service</span> (handler), ES PRD</td>
+      </tr>
+      <tr>
+        <td><strong>16</strong></td>
+        <td><a href="#item-16" class="tab-link" data-tab="item-16">DAS doesn't publish supply-side events when a zone has only one CSP</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
+        <td><span class="mono">csp-demand-allocation-service</span> (continuity-mode detection + 3 publisher call sites)</td>
       </tr>
     </tbody>
   </table>
@@ -1997,6 +2042,421 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <li>Memory: <code>ivr_calling_es_project.md</code> &mdash; companion IVR-Calling capability ES (v2.1, 971 lines) wrapping the existing IVR microservice. Defines the 4 endpoints (<code>/sim-inventory</code>, <code>/calls</code>, <code>/internal/calls</code>, <code>/events</code>) and the resolver chain (connection_id → CL → booking-service → mobile).</li>
     <li>Memory: <code>ivr_call_investigation.md</code> &mdash; root-cause investigation behind 5 partner complaints (Rohit-login mismatch) that motivated the redesign.</li>
   </ul>
+</section>
+
+<!-- ============ ITEM 12 ============ -->
+<section id="item-12" class="tab-pane">
+  <h2>12 — Capacity OS code skips connection increment after installation</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
+      <div class="classify-headline">
+        <strong>OS says "Capacity OS counts +1 on T2".</strong> Code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — INITIAL installs (the normal happy-path) are silently dropped. <strong>18–64 % drift</strong> on <code>zones.active_connection_count</code> across 9 zones. <strong>Not CSP-app-visible</strong> — affects internal routing decisions only.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS (CL §4.3 T2 L250, §4.1 L202, §6.3 L508; Capacity §2.5)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">Four explicit citations: "Capacity OS (active count +1)" on T2. No exclusivity to RESUME.</td></tr>
+      <tr><td>PRD (Capacity)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">Spec describes the counter as a real-time mirror of CL <code>ACTIVE</code> rows in the zone.</td></tr>
+      <tr><td>Code (Capacity OS)</td><td class="define-yn no">✗ Wrong</td><td class="define-note"><code>InboundEventProcessingServiceImpl:446-461</code> guards the increment with <code>if ("RESUME".equals(event.activationSource()))</code>. INITIAL installs hit the <code>else</code> branch with a debug log <code>LOG_CONNECTION_ACTIVATION_SKIP</code>.</td></tr>
+      <tr><td>CSP-app visibility</td><td class="define-yn yes">✓ Unaffected</td><td class="define-note">Partner-app count comes from CL directly (<code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code>), bypassing Capacity OS. Partner sees the correct number.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Drifted</td><td class="define-note">a0a7b6 / zone_3331: CL says 143 ACTIVE; Capacity counter says 511 (and grows). Drift 18–64 % across 9 zones.</td></tr>
+    </table>
+  </div>
+
+  <h3>Backend flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">T2 fires (CL: PENDING_INSTALL → ACTIVE)</div>
+        <div class="arrow">↓</div>
+        <div class="node">CL emits <code>CL_CONNECTION_ACTIVATED</code><br><small>activation_source = INITIAL</small></div>
+        <div class="arrow">↓</div>
+        <div class="node warn">Capacity OS receives event</div>
+        <div class="arrow-label">if (activationSource == "RESUME")</div>
+        <div class="arrow">↓ else branch</div>
+        <div class="node error">SKIP — counter unchanged</div>
+        <div style="font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.5rem; text-align: center;">debug log only · counter drifts</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want</div>
+      <div class="flow">
+        <div class="node">T2 fires (CL: PENDING_INSTALL → ACTIVE)</div>
+        <div class="arrow">↓</div>
+        <div class="node">CL emits <code>CL_CONNECTION_ACTIVATED</code><br><small>activation_source = INITIAL or RESUME</small></div>
+        <div class="arrow">↓</div>
+        <div class="node">Capacity OS receives event</div>
+        <div class="arrow-label">unconditional</div>
+        <div class="arrow">↓</div>
+        <div class="node success">active_connection_count += 1</div>
+        <div style="font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.5rem; text-align: center;">counter matches CL truth</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>What this affects (and doesn't)</h3>
+  <table>
+    <thead><tr><th>Surface</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><strong>CSP app</strong> (active-connection chip + earnings drilldown)</td><td><span style="color: var(--yes);">No effect</span> — partner-app reads CL directly via <code>CspConnectionQueryController.getCspSummary</code> (<code>countByCspIdAndCurrentState</code>). Bypasses Capacity OS.</td></tr>
+      <tr><td><strong>Load-ratio computation</strong> (<code>BatchEvaluationServiceImpl:105</code>)</td><td><span style="color: var(--no);">Affected</span> — feeds P46 cap calibration cycles. Inflated counter → load ratio under-states real headroom → cap-expansion decisions miscalibrated.</td></tr>
+      <tr><td><strong>Zone-retire guard</strong> (<code>ZoneServiceImpl:136</code> <code>guardActiveConnectionCountZeroForRetire</code>)</td><td><span style="color: var(--no);">Affected</span> — a zone with 0 real ACTIVE can be blocked from retirement if the drifted counter is non-zero.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The fix</h3>
+  <ol class="fix-plan">
+    <li><span class="svc-tag code">Code</span><span class="step-text">In <code>csp-capacity-coverage-service / InboundEventProcessingServiceImpl.java:446</code>, remove the <code>if ("RESUME".equals(event.activationSource()))</code> guard. Increment <code>zone.activeConnectionCount</code> on every <code>CL_CONNECTION_ACTIVATED</code> event regardless of source.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">One-time reconciliation: re-sync each zone's <code>active_connection_count</code> against <code>SELECT count(*) FROM csp_connection_lifecycle.connections WHERE current_state='ACTIVE'</code> grouped by zone. Run as ops-controlled migration; not auto-self-heal.</span></li>
+  </ol>
+
+  <h3>Risks / notes</h3>
+  <ul class="risks">
+    <li><strong>One-time backfill is needed.</strong> Removing the guard alone fixes future T2 fires but doesn't repair the existing 18–64 % drift. Reconciliation has to run separately.</li>
+    <li><strong>P46 cap-calibration cycles will move once corrected.</strong> Tech / ops should pause auto-calibration during the backfill window so a single false signal doesn't trigger fleet-wide cap changes.</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> §4.3 T2 L250 + §4.1 L202 + §6.3 L508; <code>os/Capacity_Coverage_OS_LOCKED.md</code> §2.5.</li>
+        <li><strong>Code (bug site):</strong> <code>services/csp-capacity-coverage-service/.../InboundEventProcessingServiceImpl.java:446-461</code>.</li>
+        <li><strong>Code (CSP-app path, evidence that this is back-office only):</strong> <code>services/csp-connection-lifecycle-service/.../CspConnectionQueryController.java:62</code> + <code>services/csp-gateway-service/.../AssuranceStripFacadeService.java:520-525</code>.</li>
+        <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-85d1-40f6-a6cd-f94ab7742789</code> — CL=143 ACTIVE for a0a7b6, Capacity zone_3331 counter=511.</li>
+        <li><strong>Source MD:</strong> <code>items/12-capacity-skip-t2-increment.md</code> <em>(to be added — currently only lives in the connection-audit HTML)</em></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 13 ============ -->
+<section id="item-13" class="tab-pane">
+  <h2>13 — <code>CL_INSTALLATION_QUALITY_SIGNAL</code> outbox FAILED &mdash; CL never delivers to Quality OS</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
+      <div class="classify-headline">
+        <strong>CL emits the signal at T2; outbox status sits at <code>FAILED</code>; Quality OS never receives it.</strong> Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> events ever processed in prod. <strong>Important nuance for filing:</strong> the consumer metric this signal was designed for (<code>P_IQ_ONTIME_RATE</code>, the old Installation Integrity domain) was retired in Quality OS v1.16 (line 131: <em>"RETIRED in v1.16 — replaced by M1 Install Ratio"</em>). The replacement M1 metric is fed by <code>TAS_INSTALL_TERMINAL</code>, which is working. So the right fix is two-part: tech repairs delivery if anything still needs the payload; PM/OS retires the stale §9.1 row in Quality OS.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS (CL §6.3)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">"CL emits <code>CL_INSTALLATION_QUALITY_SIGNAL</code> exactly once per connection lifetime on T2 success."</td></tr>
+      <tr><td>OS (Quality §9.1 L1023)</td><td class="define-yn partial">⚠ Stale</td><td class="define-note">Row still names "Installation Integrity domain: first-time-right, on-time, rework, retry" — but those fields fed <code>P_IQ_ONTIME_RATE</code> which v1.16 retired.</td></tr>
+      <tr><td>Code (CL emit)</td><td class="define-yn yes">✓ Wired</td><td class="define-note">Signal IS produced at T2 (outbox row written at 2026-06-02 07:03:48.532 UTC for the audited connection).</td></tr>
+      <tr><td>Code (CL outbox dispatcher)</td><td class="define-yn no">✗ FAILED</td><td class="define-note">Outbox row status = <code>FAILED</code>, <code>completed_at = null</code>, no error context recorded. Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows ever processed in Quality OS prod history.</td></tr>
+      <tr><td>Code (Quality receiver)</td><td class="define-yn yes">✓ Subscribed</td><td class="define-note"><code>/cl-installation-quality-signal</code> endpoint exists and is wired into <code>application.yml</code> consumer list.</td></tr>
+      <tr><td>Functional impact today</td><td class="define-yn partial">⚠ Orphaned</td><td class="define-note">Even if delivery is repaired, the consumer metric is retired — no current Quality OS metric uses these fields. M1 (Install Ratio) is fed by <code>TAS_INSTALL_TERMINAL</code> and is working.</td></tr>
+    </table>
+  </div>
+
+  <h3>Backend flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">T2 fires (CL: PENDING_INSTALL → ACTIVE)</div>
+        <div class="arrow">↓</div>
+        <div class="node">CL writes outbox row<br><code>CL_INSTALLATION_QUALITY_SIGNAL</code></div>
+        <div class="arrow">↓</div>
+        <div class="node warn">CL outbox dispatcher picks up row</div>
+        <div class="arrow">↓</div>
+        <div class="node error">status = FAILED<br><small>no completed_at, no error context</small></div>
+        <div class="arrow-label">never retried, never delivered</div>
+        <div class="arrow">↓</div>
+        <div class="node error">Quality OS: 0 events ever received</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want — two parallel tracks</div>
+      <div class="flow">
+        <div class="node">T2 fires</div>
+        <div class="arrow">↓</div>
+        <div class="node">CL writes outbox row</div>
+        <div class="arrow">↓</div>
+        <div class="node new">CL dispatcher delivers cleanly<br><small>(tech track — fix outbox)</small></div>
+        <div class="arrow">↓</div>
+        <div class="node new">Quality §9.1 row: either retire, or repurpose payload for an active v1.16 metric<br><small>(PM/OS track)</small></div>
+        <div class="arrow">↓</div>
+        <div class="node success">No orphan signals; OS = code</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Two-track fix</h3>
+  <ol class="fix-plan">
+    <li><span class="svc-tag code">Code</span><span class="step-text"><strong>Tech track — diagnose outbox FAILED.</strong> In <code>csp-connection-lifecycle-service</code>, investigate why the dispatcher leaves <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows in <code>FAILED</code> with no error context. Likely candidates: routing-registry config mismatch, consumer-endpoint 4xx swallowed, dispatcher swallowing exception. Add error capture so future failures are debuggable.</span></li>
+    <li><span class="svc-tag os">OS</span><span class="step-text"><strong>PM/OS track — Quality §9.1 housekeeping.</strong> Quality OS v1.16.4 line 1023 still lists this signal as input to the "Installation Integrity domain (FTR, on-time, rework, retry)" — but v1.16 line 131 already retired <code>P_IQ_ONTIME_RATE</code>. Either retire the §9.1 row + the CL emission, or repurpose the payload for a v1.16-active metric. Vaibhav owns the call.</span></li>
+  </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong>Severity ≠ urgency.</strong> The outbox failure is real, but its consumer is retired. Repairing delivery without the OS track lands the data in a no-op consumer. Pair these in one ticket so neither half ships alone.</li>
+    <li><strong>M1 (Install Ratio) is NOT broken by this.</strong> M1 is sourced from <code>TAS_INSTALL_TERMINAL</code> (303 events processed in prod) + <code>ES_INSTALL_CUSTOMER_SLOT_CONFIRMED</code> (47). Verified for the audited connection.</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> §6.3 L1023 (CL emit contract); <code>os/quality-update/1_Quality_OS_v1_16_4_Amendment.md</code> line 131 (P_IQ_ONTIME_RATE retired) + line 1023 (stale §9.1 row) + §5.1a.M1 (replacement metric definition).</li>
+        <li><strong>Prod:</strong> outbox row for connection <code>f285e07f-…</code> at 2026-06-02 07:03:48.532 UTC, status <code>FAILED</code>; 0 <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows in Quality OS prod history.</li>
+        <li><strong>Source MD:</strong> <code>items/13-cl-installation-quality-signal-outbox-failed.md</code> <em>(to be added)</em></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 14 ============ -->
+<section id="item-14" class="tab-pane">
+  <h2>14 — CAEO <code>customer_id</code> column has CSP-ID for installation task</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
+      <div class="classify-headline">
+        <strong>CAEO writes the CSP-ID into its <code>customer_id</code> column on T2.</strong> Root cause: <code>CL_CONNECTION_ACTIVATED</code> doesn't carry <code>customer_id</code> at all, and the dev plugged <code>cspId</code> in as a placeholder. <strong>Cosmetic, no functional impact</strong> — no downstream consumer queries CAEO entitlement by <code>customer_id</code> (<code>findByCustomerId</code> is defined but never called); Visibility / Support Resolution discard the field when reading CAEO rows. Filed as a low-priority cleanup so the column means what it says.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS</td><td class="define-yn yes">✓ Yes</td><td class="define-note">CL OS outbound contract for <code>CL_CONNECTION_ACTIVATED</code> does not include <code>customer_id</code>. That is the upstream root cause — CAEO has no customer-id to write at this transition.</td></tr>
+      <tr><td>Code (CAEO consumer)</td><td class="define-yn no">✗ Wrong</td><td class="define-note"><code>InboundEventProcessingServiceImpl:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> instead of leaving the field <code>null</code> until a proper customer-id source is wired. Author: Aryan Gaurav, Apr 10 2026, commit "using string".</td></tr>
+      <tr><td>Downstream consumers</td><td class="define-yn yes">✓ Unaffected</td><td class="define-note">No service queries CAEO by <code>customer_id</code>. <code>findByCustomerId</code> method exists; never called from anywhere in the monorepo. Visibility OS / Support Resolution OS read CAEO rows by <code>connection_id</code>; <code>customer_id</code> column is discarded on the way out.</td></tr>
+      <tr><td>Prod scope</td><td class="define-yn partial">⚠ Limited</td><td class="define-note">50 of 19,573 CAEO rows have CSP-IDs in <code>customer_id</code> — only install-context writes are affected.</td></tr>
+    </table>
+  </div>
+
+  <h3>Backend flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">T2 fires</div>
+        <div class="arrow">↓</div>
+        <div class="node">CL emits <code>CL_CONNECTION_ACTIVATED</code><br><small>(no customer_id in payload)</small></div>
+        <div class="arrow">↓</div>
+        <div class="node warn">CAEO consumer handler</div>
+        <div class="arrow-label">line 82: .customerId(event.cspId())</div>
+        <div class="arrow">↓</div>
+        <div class="node error">CAEO row: customer_id = &lt;cspId&gt;<br><small>field semantically wrong</small></div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want</div>
+      <div class="flow">
+        <div class="node">T2 fires</div>
+        <div class="arrow">↓</div>
+        <div class="node">CL emits <code>CL_CONNECTION_ACTIVATED</code></div>
+        <div class="arrow">↓</div>
+        <div class="node">CAEO consumer handler</div>
+        <div class="arrow-label">line 82: .customerId(null)</div>
+        <div class="arrow">↓</div>
+        <div class="node success">CAEO row: customer_id = NULL<br><small>field correctly absent until a real customer-id source exists</small></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>The fix</h3>
+  <ol class="fix-plan">
+    <li><span class="svc-tag code">Code</span><span class="step-text">In <code>csp-customer-access-service / InboundEventProcessingServiceImpl.java:82</code>, replace <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> with <code>.customerId(null)</code> for the install-context handler. Leave the column <code>null</code> until a real customer-id flows in.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">One-time data backfill: <code>UPDATE customer_access_entitlement SET customer_id = NULL WHERE customer_id IN (SELECT csp_id FROM &lt;csp_directory&gt;)</code>. 50 rows.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">Remove the dead <code>findByCustomerId</code> repository method (or leave a TODO if a future use case is anticipated — PM call).</span></li>
+  </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong>Don't expand scope.</strong> Sourcing a real <code>customer_id</code> for CAEO on T2 is a different and bigger discussion (touches CL outbound contract). This item is just "stop putting the wrong value in".</li>
+    <li><strong>No customer-impact risk from the backfill.</strong> Nothing reads the column today.</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>Code (bug site):</strong> <code>services/csp-customer-access-service/.../InboundEventProcessingServiceImpl.java:82</code>.</li>
+        <li><strong>Code (proof no consumer reads the column):</strong> <code>findByCustomerId</code> defined but zero call-sites repo-wide.</li>
+        <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — CAEO row created, <code>customer_id = a0a7b6</code> (the CSP-ID).</li>
+        <li><strong>Source MD:</strong> <code>items/14-caeo-customer-id-wrong-write.md</code> <em>(to be added)</em></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 15 ============ -->
+<section id="item-15" class="tab-pane">
+  <h2>15 — <code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code></h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>Partner App fires <code>INSTALLATION_FAILED</code> with all four diagnostic fields blank.</strong> <code>failure_reason</code> defaults to the generic <code>CSP_REPORTED_FAILURE</code>; <code>failure_subreason_code</code>, <code>failure_subreason_source</code>, <code>failure_subreason_confidence</code>, <code>failure_detail</code> all <code>null</code>. Without sub-reason, Quality OS and Enforcement OS cannot differentiate "CSP didn't bother" from "address infeasible" from "customer refused" — the per-CSP pattern-aggregation discipline (BDN-CL-02) collapses at the data-collection step.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS</td><td class="define-yn yes">✓ Yes</td><td class="define-note">CL OS defines <code>failure_reason</code> required enum (CSP_REPORTED_FAILURE / TIMEOUT_P74 / VERIFICATION_FAILED / CUSTOMER_REFUSED / ACCESS_DENIED / BINDING_MISSING). <code>failure_subreason_code</code> diagnostic enum (CSP_NO_SHOW / COVERAGE_NOT_FEASIBLE / CUSTOMER_CANCELLED / PRICE_CONFUSION / SCHEDULE_CONFLICT / DEVICE_UNAVAILABLE / BACKHAUL_ISSUE). Per BDN-CL-02, Quality + Enforcement OS consume sub-reason for per-CSP pattern detection.</td></tr>
+      <tr><td>Spec (ES PRD)</td><td class="define-yn no">✗ No</td><td class="define-note">ES PRD does not currently mandate the picker UX or carrier-fields contract end-to-end.</td></tr>
+      <tr><td>Partner App</td><td class="define-yn no">✗ No</td><td class="define-note">No sub-reason picker surface on the "report installation failure" action. CSP taps a single button; app fires with the generic reason and null sub-reason.</td></tr>
+      <tr><td>Code (TAS handler)</td><td class="define-yn no">✗ No</td><td class="define-note">Handler accepts the event with null sub-reason — no rejection / no enforcement.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Blank</td><td class="define-note">Verified on the audited connection: <code>failure_reason = "CSP_REPORTED_FAILURE"</code>, <code>failure_subreason_code = null</code>, <code>failure_subreason_source = null</code>, <code>failure_subreason_confidence = null</code>, <code>failure_detail = null</code>. Pattern holds across the install-failure cohort.</td></tr>
+    </table>
+  </div>
+
+  <h3>Backend flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">CSP taps "Report failure" on the partner app</div>
+        <div class="arrow">↓</div>
+        <div class="node error">No picker; one-tap submit</div>
+        <div class="arrow">↓</div>
+        <div class="node">App fires <code>INSTALLATION_FAILED</code><br><small>failure_reason = CSP_REPORTED_FAILURE<br>subreason / source / confidence / detail = null</small></div>
+        <div class="arrow">↓</div>
+        <div class="node warn">TAS handler accepts blindly</div>
+        <div class="arrow">↓</div>
+        <div class="node error">Quality + Enforcement OS<br><small>can't tell misuse from legit failure</small></div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want</div>
+      <div class="flow">
+        <div class="node">CSP taps "Report failure"</div>
+        <div class="arrow">↓</div>
+        <div class="node new">Sub-reason picker shown<br><small>CSP_NO_SHOW / COVERAGE_NOT_FEASIBLE / CUSTOMER_CANCELLED / PRICE_CONFUSION / SCHEDULE_CONFLICT / DEVICE_UNAVAILABLE / BACKHAUL_ISSUE</small></div>
+        <div class="arrow-label">required field</div>
+        <div class="arrow">↓</div>
+        <div class="node">App fires <code>INSTALLATION_FAILED</code><br><small>failure_subreason_code = &lt;picker value&gt;<br>failure_subreason_source = CSP<br>failure_subreason_confidence = HIGH</small></div>
+        <div class="arrow">↓</div>
+        <div class="node new">TAS handler enforces: reject if sub-reason null</div>
+        <div class="arrow">↓</div>
+        <div class="node success">Quality + Enforcement OS<br><small>per-CSP pattern aggregation works</small></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>The fix</h3>
+  <ol class="fix-plan">
+    <li><span class="svc-tag es">ES&nbsp;PRD</span><span class="step-text">ES PRD specifies the sub-reason picker as a required pre-step before <code>INSTALLATION_FAILED</code> can fire. List the OS enum values + copy text. ESR registers the field mappings.</span></li>
+    <li><span class="svc-tag app">App</span><span class="step-text">Partner App: replace the one-tap "report failure" CTA with a two-step modal — (1) sub-reason picker, (2) optional free-text <code>failure_detail</code>. Block submit until sub-reason is picked.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text"><code>csp-tas-service</code>: TAS handler rejects <code>INSTALLATION_FAILED</code> with <code>failure_subreason_code = null</code> (HTTP 400 with error code <code>SUB_REASON_REQUIRED</code>).</span></li>
+  </ol>
+
+  <h3>Edge cases (business)</h3>
+  <ol style="padding-left: 1.4rem;">
+    <li><strong>Old partner-app version still in field.</strong> Tech ships server-side enforcement before forcing app update; transitional period accepts old payloads with a deprecation warning logged. Sunset window TBD with mobile team.</li>
+    <li><strong>CSP can't decide between two reasons.</strong> Single-pick only; the picker UX shows short descriptions for disambiguation. If a CSP genuinely needs to flag two issues, free-text <code>failure_detail</code> carries the secondary note.</li>
+    <li><strong>TIMEOUT-driven failures (P74).</strong> The system-driven path also writes <code>failure_subreason_code</code> — fixed to <code>TIMEOUT_P74</code> at the CL side; no picker shown to anyone.</li>
+  </ol>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> BDN-CL-02 (per-CSP pattern detection).</li>
+        <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — partner a0a9m4 fired <code>INSTALLATION_FAILED</code> after 2 h 13 m with all four diagnostic fields blank.</li>
+        <li><strong>Source MD:</strong> <code>items/15-failure-subreason-blank.md</code> <em>(to be added)</em></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 16 ============ -->
+<section id="item-16" class="tab-pane">
+  <h2>16 — DAS doesn't publish supply-side events when a zone has only one CSP</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>D&amp;A OS v1.4 "single-provider continuity mode" loop is dead end-to-end.</strong> DAS has the half-built emit side (event classes, publisher methods); Capacity OS has the fully-built receive side (endpoints, handlers, idempotency). No bridge between them — the trigger-side call sites in DAS were never written. Capacity OS therefore never gets told a zone is supply-deficient, never auto-onboards new CSPs, dashboards can't render continuity zones, and P46 breaches during continuity have no audit trail.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr><td>OS (D&amp;A §3.14 L317-318, L382, L445)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">v1.4 (BDN-DA-02 + BDN-CA-02) introduced continuity mode. Three outbound events: <code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code>, <code>ZONE_SUPPLY_DEFICIT_SIGNAL</code>, <code>P46_BREACH_BY_CONTINUITY</code>.</td></tr>
+      <tr><td>Code (DAS — events)</td><td class="define-yn yes">✓ Built</td><td class="define-note">Event record classes exist (<code>SingleProviderContinuityActive.java</code>, <code>ZoneSupplyDeficitSignal.java</code>, <code>EventTypes.P46_BREACH_BY_CONTINUITY</code>). Outbox/Kafka topic configured in <code>application.yml:146</code>.</td></tr>
+      <tr><td>Code (DAS — publisher methods)</td><td class="define-yn yes">✓ Built</td><td class="define-note"><code>EventSender.onSingleProviderContinuityActive</code> (line 55) and <code>EventSender.onZoneSupplyDeficitSignal</code> (line 62) compile and ship.</td></tr>
+      <tr><td>Code (DAS — trigger call sites)</td><td class="define-yn no">✗ Missing</td><td class="define-note"><strong>No code anywhere</strong> calls <code>eventPublisher.publishEvent(new SingleProviderContinuityActive(...))</code> or the equivalents. Continuity-mode detection logic itself missing from the batch-evaluation path.</td></tr>
+      <tr><td>Code (Capacity OS — receivers)</td><td class="define-yn yes">✓ Fully built</td><td class="define-note"><code>InboundEventController.java:146-185</code> exposes <code>/p46-breach-by-continuity</code> + <code>/zone-supply-deficit-signal</code>. <code>InboundEventProcessingServiceImpl.java:269-357</code> implements full handlers (idempotency, state update, mark-processed).</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Zero events</td><td class="define-note">0 inbound events of any of the three types ever arrived in Capacity OS.</td></tr>
+    </table>
+  </div>
+
+  <h3>Backend flow — today vs. want</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+    <div>
+      <div class="sub-head bad">Today</div>
+      <div class="flow">
+        <div class="node">Zone with 1 eligible CSP, cap ratio ≥ P_DA_CONTINUITY_CAP_RATIO</div>
+        <div class="arrow">↓</div>
+        <div class="node warn">DAS batch evaluation routes as usual</div>
+        <div class="arrow-label">no continuity-mode detection</div>
+        <div class="arrow">↓</div>
+        <div class="node error">3 events not emitted<br><small>SINGLE_PROVIDER_CONTINUITY_ACTIVE<br>ZONE_SUPPLY_DEFICIT_SIGNAL<br>P46_BREACH_BY_CONTINUITY</small></div>
+        <div class="arrow">↓</div>
+        <div class="node error">Capacity OS handlers waiting silently &middot; no new CSPs onboarded &middot; dashboards blind</div>
+      </div>
+    </div>
+    <div>
+      <div class="sub-head good">Want</div>
+      <div class="flow">
+        <div class="node">Zone with 1 eligible CSP, cap ratio ≥ P_DA_CONTINUITY_CAP_RATIO</div>
+        <div class="arrow">↓</div>
+        <div class="node new">DAS detects continuity mode in batch evaluation</div>
+        <div class="arrow">↓</div>
+        <div class="node new">Emit on entry: <code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code> + <code>ZONE_SUPPLY_DEFICIT_SIGNAL</code></div>
+        <div class="arrow">↓</div>
+        <div class="node new">On P46 breach during continuity: emit <code>P46_BREACH_BY_CONTINUITY</code></div>
+        <div class="arrow">↓</div>
+        <div class="node success">Capacity OS owns onboarding new CSPs &middot; dashboards render continuity zones &middot; audit trail intact</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>The three OS-mandated events</h3>
+  <table>
+    <thead><tr><th>Event</th><th>Fires when</th><th>Consumed by</th><th>OS reference</th></tr></thead>
+    <tbody>
+      <tr><td><code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code></td><td>Zone enters continuity mode</td><td>Data Access &amp; Dashboard OS &mdash; renders which zones are in continuity</td><td>D&amp;A §3.14 L317; outbound catalogue L710</td></tr>
+      <tr><td><code>ZONE_SUPPLY_DEFICIT_SIGNAL</code></td><td>Zone enters continuity mode (paired with the one above)</td><td>Capacity OS &mdash; <strong>state-transition trigger</strong> (explicitly "not a notification" per OS). Capacity OS owns onboarding new CSPs to the zone in response.</td><td>D&amp;A §3.14 L318; outbound catalogue L708</td></tr>
+      <tr><td><code>P46_BREACH_BY_CONTINUITY</code></td><td>P46 cap breached during continuity (the only legal way to exceed P46 per INV-DAO-17)</td><td>Capacity OS (tracking) + Visibility (zone alert)</td><td>D&amp;A §3.14 L382, L445; outbound catalogue L709</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The fix</h3>
+  <ol class="fix-plan">
+    <li><span class="svc-tag das">DAS</span><span class="step-text">Add continuity-mode detection to DAS batch evaluation: when a zone has exactly one eligible CSP and cap-ratio ≥ <code>P_DA_CONTINUITY_CAP_RATIO</code>, transition the zone to continuity mode and emit <code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code> + <code>ZONE_SUPPLY_DEFICIT_SIGNAL</code>. (Publisher methods already exist on <code>EventSender</code>; just need call-site additions.)</span></li>
+    <li><span class="svc-tag das">DAS</span><span class="step-text">In the P46 enforcement gate (Appendix B Gate 3e'), when allowing an over-cap allocation because continuity mode is active, emit <code>P46_BREACH_BY_CONTINUITY</code> with breach amount + source CSP.</span></li>
+    <li><span class="svc-tag das">DAS</span><span class="step-text">On exit from continuity mode (zone gets a second eligible CSP, or cap-ratio drops below threshold), emit the existing exit event (already wired). Verify exit path is symmetric.</span></li>
+  </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong>Both sides of the bridge already exist.</strong> Capacity OS receivers are production-quality (idempotency, mark-processed, state update). This is purely about adding trigger calls on the DAS side.</li>
+    <li><strong>Out of scope:</strong> Capacity OS's auto-onboarding decision logic on receiving <code>ZONE_SUPPLY_DEFICIT_SIGNAL</code>. Capacity OS owns that; this item just makes the signal arrive.</li>
+    <li><strong>Related pattern:</strong> the same "publisher methods exist but trigger call sites missing" shape shows up in P195 counter (Item 02) and post-AMENDMENT-02 wiring (Item 08). DAS's outbound surface is partially scaffolded across several state-machine branches.</li>
+  </ul>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Demand_Allocation_OS_v1_LOCKED.md</code> §3.14 L317-318, L382, L445; outbound catalogue L626-627, L708-710; v1.4 changelog L1118.</li>
+        <li><strong>Code (DAS — half-built emit side):</strong> <code>SingleProviderContinuityActive.java</code>, <code>ZoneSupplyDeficitSignal.java</code>, <code>EventTypes.java:30-32</code>; <code>EventSender.java:55,62</code>; <code>application.yml:146</code>.</li>
+        <li><strong>Code (Capacity OS — fully-built receive side):</strong> <code>InboundEventController.java:146-185</code>; <code>InboundEventProcessingServiceImpl.java:269-357</code>.</li>
+        <li><strong>Prod evidence:</strong> 0 events of any of the three types received in Capacity OS.</li>
+        <li><strong>Source MD:</strong> <code>items/16-das-single-csp-zone-events.md</code> <em>(to be added)</em></li>
+      </ul>
+    </div>
+  </details>
 </section>
 
 <footer>

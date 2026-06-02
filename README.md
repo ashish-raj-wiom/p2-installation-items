@@ -2,7 +2,7 @@
 
 **Owner:** Ashish Raj · **Started:** 2026-05-29 · **Target audience:** Wiom CSP tech for implementation
 
-11 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff. The HTML now also groups the 11 items into three ownership buckets (Go-ahead from Vaibhav / Working-hour dependency / Decision pending on Dhruv) so a wider audience can see the current waiting line at a glance.
+16 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff. The HTML groups the items into three ownership buckets (Go-ahead from Vaibhav / Working-hour dependency / Decision pending on Dhruv) so a wider audience can see the current waiting line at a glance.
 
 ## How the PM team writes items
 
@@ -63,14 +63,31 @@ Every BUG item's classification card carries this sub-type. GAP items don't need
 | 09 | [Show address-locality + landmark + voice direction in the CSP App](items/09-voice-directions-csp-app.md) | Gap | 1 · Vaibhav go-ahead | CSP App (model + drilldown + FPN overlay), design team | Open |
 | 10 | [Change-team-member workflow post technician assignment](items/10-change-team-member-workflow.md) | Gap | 1 · Vaibhav go-ahead | csp-tas-service (install allowed-actions · restore verify · nbrec parity), csp-gateway-service (SC `can_reassign`), CSP App (UI), csp-notification-service / CleverTap (FPN on swap — depends on Item 04) | Open |
 | 11 | [IVR 2.0 integration for Cx ↔ Px interaction](https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html) | Gap | 2 · Working-hour dep | IVR routing-table refactor — external spec on `ashish-raj-wiom/IVR-Routing-Solutioning` | Open |
+| 12 | Capacity OS code skips connection increment after installation | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-capacity-coverage-service (remove RESUME-only guard) + one-time backfill | Open |
+| 13 | `CL_INSTALLATION_QUALITY_SIGNAL` outbox FAILED — CL never delivers to Quality OS | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-connection-lifecycle-service (fix outbox delivery) **+** Quality OS housekeeping (retire stale §9.1 row — consumer metric retired in v1.16) | Open |
+| 14 | CAEO `customer_id` column has CSP-ID for installation task | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-customer-access-service (single line fix) — cosmetic; no consumer reads the column | Open |
+| 15 | `failure_subreason_code` blank on `INSTALLATION_FAILED` | Gap | 1 · Vaibhav go-ahead | Partner App (sub-reason picker), csp-tas-service (handler enforcement), ES PRD | Open |
+| 16 | DAS doesn't publish supply-side events when a zone has only one CSP | Gap | 1 · Vaibhav go-ahead | csp-demand-allocation-service (continuity-mode detection + 3 publisher call sites — Capacity OS receivers already built) | Open |
 
 ## Three ownership buckets (as of 2026-06-02)
 
-The 11 items above are grouped into three buckets in the HTML, by who needs to weigh in next:
+The 16 items above are grouped into three buckets in the HTML, by who needs to weigh in next:
 
-- **Bucket 1 — Go-ahead from Vaibhav** (no OS change, pure ES / app / backend): items **04, 05, 08, 09, 10**
+- **Bucket 1 — Go-ahead from Vaibhav** (no OS change, pure ES / app / backend): items **04, 05, 08, 09, 10, 12, 13, 14, 15, 16**
 - **Bucket 2 — Working-hour dependency** (waiting on Vaibhav's working-hour governance): items **01, 06, 07, 11**
 - **Bucket 3 — Decision pending on Dhruv** (shared question: should a CSP who self-marked `INSTALLATION_FAILED` be re-eligible after P51 cooloff? Partner-complaint pattern: *"mujhe same booking baar baar bhejte ho jo maine decline kari hai"*): items **02, 03**
+
+## On items 12–16
+
+Items 12–16 surfaced from the end-to-end audit of connection `f285e07f-85d1-40f6-a6cd-f94ab7742789` and are filed here for tech tracking. Each one carries an important nuance the headline doesn't capture:
+
+- **Item 12** — bug is real (18–64 % counter drift) but the CSP-app's active-connection count is NOT affected; the partner-app reads CL directly, bypassing Capacity OS. The drift only affects internal routing / cap-calibration decisions.
+- **Item 13** — outbox is genuinely FAILED, but the consumer metric (`P_IQ_ONTIME_RATE`) was retired in Quality OS v1.16. Fixing delivery alone lands the data in a no-op consumer. Two-track filing: tech repairs delivery + PM/OS retires the stale §9.1 row.
+- **Item 14** — single-line cosmetic fix. No downstream consumer queries CAEO by `customer_id`; `findByCustomerId` exists but is never called. Filed as low-priority cleanup.
+- **Item 15** — the *actual* installation-failure diagnostic gap. Without sub-reason, Quality OS cannot differentiate "CSP didn't bother" from "address infeasible" from "customer refused".
+- **Item 16** — supply-side escalation loop dead end-to-end. Capacity OS receivers are production-quality; DAS trigger call sites just need to be added.
+
+Single-source markdowns for items 12–16 will follow under `items/`; the HTML carries the full spec in the meantime.
 
 ## Cross-item rollout sequencing
 
