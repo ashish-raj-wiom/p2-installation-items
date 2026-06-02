@@ -381,7 +381,7 @@
         <td><a href="#item-13" class="tab-link" data-tab="item-13"><code>CL_INSTALLATION_QUALITY_SIGNAL</code> outbox FAILED — CL never delivers to Quality OS</a></td>
         <td><span class="pill bug">BUG</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
-        <td><span class="mono">csp-connection-lifecycle-service</span> (outbox delivery) &middot; OS housekeeping (retire stale §9.1 row)</td>
+        <td><span class="mono">csp-connection-lifecycle-service</span> (fix outbox dispatcher)</td>
       </tr>
       <tr>
         <td><strong>14</strong></td>
@@ -2052,7 +2052,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <div class="classify-head">
       <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
       <div class="classify-headline">
-        <strong>OS says "Capacity OS counts +1 on T2".</strong> Code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — INITIAL installs (the normal happy-path) are silently dropped. <strong>18–64 % drift</strong> on <code>zones.active_connection_count</code> across 9 zones. <strong>Not CSP-app-visible</strong> — affects internal routing decisions only.
+        <strong>OS says "Capacity OS counts +1 on T2".</strong> Code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — INITIAL installs (the normal happy-path) are silently dropped, so Capacity OS's <code>zones.active_connection_count</code> doesn't move when a new install completes. <strong>Not CSP-app-visible</strong> — affects internal routing decisions only.
       </div>
     </div>
     <table class="define-table">
@@ -2061,7 +2061,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       <tr><td>PRD (Capacity)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">Spec describes the counter as a real-time mirror of CL <code>ACTIVE</code> rows in the zone.</td></tr>
       <tr><td>Code (Capacity OS)</td><td class="define-yn no">✗ Wrong</td><td class="define-note"><code>InboundEventProcessingServiceImpl:446-461</code> guards the increment with <code>if ("RESUME".equals(event.activationSource()))</code>. INITIAL installs hit the <code>else</code> branch with a debug log <code>LOG_CONNECTION_ACTIVATION_SKIP</code>.</td></tr>
       <tr><td>CSP-app visibility</td><td class="define-yn yes">✓ Unaffected</td><td class="define-note">Partner-app count comes from CL directly (<code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code>), bypassing Capacity OS. Partner sees the correct number.</td></tr>
-      <tr><td>Prod</td><td class="define-yn no">✗ Drifted</td><td class="define-note">a0a7b6 / zone_3331: CL says 143 ACTIVE; Capacity counter says 511 (and grows). Drift 18–64 % across 9 zones.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Wrong</td><td class="define-note">For the audited connection's CSP (a0a7b6 / zone_3331), CL truth = 143 ACTIVE; Capacity counter = 511 — the two are not in sync. Fleet-wide magnitude needs a separate audit.</td></tr>
     </table>
   </div>
 
@@ -2078,7 +2078,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
         <div class="arrow-label">if (activationSource == "RESUME")</div>
         <div class="arrow">↓ else branch</div>
         <div class="node error">SKIP — counter unchanged</div>
-        <div style="font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.5rem; text-align: center;">debug log only · counter drifts</div>
+        <div style="font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.5rem; text-align: center;">debug log only · counter doesn't move</div>
       </div>
     </div>
     <div>
@@ -2115,7 +2115,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <h3>Risks / notes</h3>
   <ul class="risks">
-    <li><strong>One-time backfill is needed.</strong> Removing the guard alone fixes future T2 fires but doesn't repair the existing 18–64 % drift. Reconciliation has to run separately.</li>
+    <li><strong>One-time backfill is needed.</strong> Removing the guard alone fixes future T2 fires but doesn't repair the existing mis-count on rows already activated. Reconciliation has to run separately.</li>
     <li><strong>P46 cap-calibration cycles will move once corrected.</strong> Tech / ops should pause auto-calibration during the backfill window so a single false signal doesn't trigger fleet-wide cap changes.</li>
   </ul>
 
@@ -2141,17 +2141,16 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <div class="classify-head">
       <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
       <div class="classify-headline">
-        <strong>CL emits the signal at T2; outbox status sits at <code>FAILED</code>; Quality OS never receives it.</strong> Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> events ever processed in prod. <strong>Important nuance for filing:</strong> the consumer metric this signal was designed for (<code>P_IQ_ONTIME_RATE</code>, the old Installation Integrity domain) was retired in Quality OS v1.16 (line 131: <em>"RETIRED in v1.16 — replaced by M1 Install Ratio"</em>). The replacement M1 metric is fed by <code>TAS_INSTALL_TERMINAL</code>, which is working. So the right fix is two-part: tech repairs delivery if anything still needs the payload; PM/OS retires the stale §9.1 row in Quality OS.
+        <strong>CL emits <code>CL_INSTALLATION_QUALITY_SIGNAL</code> on T2; the outbox row sits at status <code>FAILED</code>; Quality OS never receives the signal.</strong> Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> events have been processed by Quality OS in prod. The fix is straightforward: repair the CL outbox dispatcher so the signal gets delivered.
       </div>
     </div>
     <table class="define-table">
       <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr><td>OS (CL §6.3)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">"CL emits <code>CL_INSTALLATION_QUALITY_SIGNAL</code> exactly once per connection lifetime on T2 success."</td></tr>
-      <tr><td>OS (Quality §9.1 L1023)</td><td class="define-yn partial">⚠ Stale</td><td class="define-note">Row still names "Installation Integrity domain: first-time-right, on-time, rework, retry" — but those fields fed <code>P_IQ_ONTIME_RATE</code> which v1.16 retired.</td></tr>
-      <tr><td>Code (CL emit)</td><td class="define-yn yes">✓ Wired</td><td class="define-note">Signal IS produced at T2 (outbox row written at 2026-06-02 07:03:48.532 UTC for the audited connection).</td></tr>
-      <tr><td>Code (CL outbox dispatcher)</td><td class="define-yn no">✗ FAILED</td><td class="define-note">Outbox row status = <code>FAILED</code>, <code>completed_at = null</code>, no error context recorded. Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows ever processed in Quality OS prod history.</td></tr>
-      <tr><td>Code (Quality receiver)</td><td class="define-yn yes">✓ Subscribed</td><td class="define-note"><code>/cl-installation-quality-signal</code> endpoint exists and is wired into <code>application.yml</code> consumer list.</td></tr>
-      <tr><td>Functional impact today</td><td class="define-yn partial">⚠ Orphaned</td><td class="define-note">Even if delivery is repaired, the consumer metric is retired — no current Quality OS metric uses these fields. M1 (Install Ratio) is fed by <code>TAS_INSTALL_TERMINAL</code> and is working.</td></tr>
+      <tr><td>OS</td><td class="define-yn yes">✓ Yes</td><td class="define-note">CL OS: CL emits <code>CL_INSTALLATION_QUALITY_SIGNAL</code> exactly once per connection lifetime on T2 success. Quality OS subscribes.</td></tr>
+      <tr><td>Code (CL emit)</td><td class="define-yn yes">✓ Wired</td><td class="define-note">Signal IS produced at T2 — outbox row written at 2026-06-02 07:03:48.532 UTC for the audited connection.</td></tr>
+      <tr><td>Code (CL outbox dispatcher)</td><td class="define-yn no">✗ FAILED</td><td class="define-note">Outbox row status = <code>FAILED</code>, <code>completed_at = null</code>, no error context recorded. Never retried.</td></tr>
+      <tr><td>Code (Quality receiver)</td><td class="define-yn yes">✓ Subscribed</td><td class="define-note"><code>/cl-installation-quality-signal</code> endpoint exists and is wired into <code>application.yml</code>.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Broken</td><td class="define-note">Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows ever processed in Quality OS prod history.</td></tr>
     </table>
   </div>
 
@@ -2173,38 +2172,31 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       </div>
     </div>
     <div>
-      <div class="sub-head good">Want — two parallel tracks</div>
+      <div class="sub-head good">Want</div>
       <div class="flow">
         <div class="node">T2 fires</div>
         <div class="arrow">↓</div>
         <div class="node">CL writes outbox row</div>
         <div class="arrow">↓</div>
-        <div class="node new">CL dispatcher delivers cleanly<br><small>(tech track — fix outbox)</small></div>
+        <div class="node new">CL dispatcher delivers the signal cleanly</div>
         <div class="arrow">↓</div>
-        <div class="node new">Quality §9.1 row: either retire, or repurpose payload for an active v1.16 metric<br><small>(PM/OS track)</small></div>
-        <div class="arrow">↓</div>
-        <div class="node success">No orphan signals; OS = code</div>
+        <div class="node success">Quality OS receives <code>CL_INSTALLATION_QUALITY_SIGNAL</code> once per T2</div>
       </div>
     </div>
   </div>
 
-  <h3>Two-track fix</h3>
+  <h3>The fix</h3>
   <ol class="fix-plan">
-    <li><span class="svc-tag code">Code</span><span class="step-text"><strong>Tech track — diagnose outbox FAILED.</strong> In <code>csp-connection-lifecycle-service</code>, investigate why the dispatcher leaves <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows in <code>FAILED</code> with no error context. Likely candidates: routing-registry config mismatch, consumer-endpoint 4xx swallowed, dispatcher swallowing exception. Add error capture so future failures are debuggable.</span></li>
-    <li><span class="svc-tag os">OS</span><span class="step-text"><strong>PM/OS track — Quality §9.1 housekeeping.</strong> Quality OS v1.16.4 line 1023 still lists this signal as input to the "Installation Integrity domain (FTR, on-time, rework, retry)" — but v1.16 line 131 already retired <code>P_IQ_ONTIME_RATE</code>. Either retire the §9.1 row + the CL emission, or repurpose the payload for a v1.16-active metric. Vaibhav owns the call.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">In <code>csp-connection-lifecycle-service</code>, diagnose why the dispatcher leaves <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows in <code>FAILED</code> with no error context. Likely candidates to investigate: routing-registry config mismatch, consumer-endpoint 4xx swallowed, dispatcher swallowing an exception. Fix the delivery so the signal reaches Quality OS.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">Add error capture / structured logging on outbox failures so any future delivery break is debuggable from the row alone, not from re-reading code paths.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">Replay the historical <code>FAILED</code> rows once the dispatcher is repaired — Quality OS should idempotently accept duplicate eventIds.</span></li>
   </ol>
-
-  <h3>Notes for tech</h3>
-  <ul>
-    <li><strong>Severity ≠ urgency.</strong> The outbox failure is real, but its consumer is retired. Repairing delivery without the OS track lands the data in a no-op consumer. Pair these in one ticket so neither half ships alone.</li>
-    <li><strong>M1 (Install Ratio) is NOT broken by this.</strong> M1 is sourced from <code>TAS_INSTALL_TERMINAL</code> (303 events processed in prod) + <code>ES_INSTALL_CUSTOMER_SLOT_CONFIRMED</code> (47). Verified for the audited connection.</li>
-  </ul>
 
   <details>
     <summary>Source quotes &amp; references</summary>
     <div>
       <ul>
-        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> §6.3 L1023 (CL emit contract); <code>os/quality-update/1_Quality_OS_v1_16_4_Amendment.md</code> line 131 (P_IQ_ONTIME_RATE retired) + line 1023 (stale §9.1 row) + §5.1a.M1 (replacement metric definition).</li>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> — CL emit contract for <code>CL_INSTALLATION_QUALITY_SIGNAL</code>.</li>
         <li><strong>Prod:</strong> outbox row for connection <code>f285e07f-…</code> at 2026-06-02 07:03:48.532 UTC, status <code>FAILED</code>; 0 <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows in Quality OS prod history.</li>
         <li><strong>Source MD:</strong> <code>items/13-cl-installation-quality-signal-outbox-failed.md</code> <em>(to be added)</em></li>
       </ul>
