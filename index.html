@@ -169,6 +169,11 @@
   .pill.bug { background: var(--bug-bg); color: var(--bug); }
   .pill.pending { background: #f0f0f0; color: var(--ink-faint); font-style: italic; }
 
+  .bucket-tag { display: inline-block; padding: 0.18rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap; }
+  .bucket-tag.b1 { background: var(--yes-bg); color: var(--yes); border-color: var(--yes); }
+  .bucket-tag.b2 { background: var(--warn-bg); color: var(--gap); border-color: var(--warn); }
+  .bucket-tag.b3 { background: var(--new-bg); color: var(--new); border-color: var(--new); }
+
   footer { margin-top: 5rem; padding: 1.25rem 0 2rem; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.82rem; }
 
   .sub-head { font-size: 0.74rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
@@ -196,10 +201,10 @@
 <header>
   <h1>P2 Installation Items</h1>
   <div class="meta">
-    <strong>Owner:</strong> Ashis &middot;
+    <strong>Owner:</strong> Ashish Raj &middot;
     <strong>Started:</strong> 2026-05-29 &middot;
     <strong>For:</strong> Wiom CSP Tech &middot;
-    <span id="status-counter">10 items</span>
+    <span id="status-counter">11 items &middot; grouped into 3 ownership buckets</span>
   </div>
 </header>
 
@@ -216,86 +221,143 @@
     <button class="tab-btn" data-tab="item-08"><span class="num">08</span>DAS state</button>
     <button class="tab-btn" data-tab="item-09"><span class="num">09</span>Voice + landmark</button>
     <button class="tab-btn" data-tab="item-10"><span class="num">10</span>Change team member</button>
+    <button class="tab-btn" data-tab="item-11"><span class="num">11</span>IVR 2.0 routing</button>
   </div>
 </nav>
 
 <!-- ============ OVERVIEW ============ -->
 <section id="overview" class="tab-pane active">
-  <h2>Index</h2>
+
+  <h2>Status &amp; ownership</h2>
+  <p style="color: var(--ink-soft); margin-bottom: 1.2rem;">All 11 items are scoped and ready &mdash; this is the current waiting line, by who needs to weigh in next. Each item below links into the full spec on its own tab.</p>
+
+  <!-- BUCKET 1 -->
+  <div style="border: 1px solid var(--yes); border-left: 4px solid var(--yes); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1rem; background: var(--yes-bg);">
+    <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
+      <span style="font-size: 1.1rem; font-weight: 800; color: var(--yes); letter-spacing: 0.01em;">Bucket 1 &mdash; Go-ahead from Vaibhav</span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">5 items</span>
+    </div>
+    <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>No OS change required &mdash; pure ES / app / backend wiring.</strong> Vaibhav (Quality OS PM) needs to confirm "no OS amendment required" for each; once confirmed, items move directly into tech sequencing.</p>
+    <ul style="margin: 0; padding-left: 1.2rem;">
+      <li><a href="#item-04" class="tab-link" data-tab="item-04"><strong>04</strong> &mdash; FPN for Rohit (technician) on assignment</a></li>
+      <li><a href="#item-05" class="tab-link" data-tab="item-05"><strong>05</strong> &mdash; Bifurcation: booking cancelled by customer vs by system</a></li>
+      <li><a href="#item-08" class="tab-link" data-tab="item-08"><strong>08</strong> &mdash; DAS allocation state frozen at <code>ASSIGNED</code> / <code>UNASSIGNED</code>, never reaches <code>ACCEPTED</code> / <code>ACTIVE</code></a></li>
+      <li><a href="#item-09" class="tab-link" data-tab="item-09"><strong>09</strong> &mdash; Voice directions + address-locality + landmark on the CSP / technician app</a></li>
+      <li><a href="#item-10" class="tab-link" data-tab="item-10"><strong>10</strong> &mdash; Change-team-member workflow post technician assignment</a></li>
+    </ul>
+  </div>
+
+  <!-- BUCKET 2 -->
+  <div style="border: 1px solid var(--warn); border-left: 4px solid var(--warn); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1rem; background: var(--warn-bg);">
+    <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
+      <span style="font-size: 1.1rem; font-weight: 800; color: var(--gap); letter-spacing: 0.01em;">Bucket 2 &mdash; Working-hour dependency</span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">4 items</span>
+    </div>
+    <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>Blocked on working-hour governance.</strong> Vaibhav is currently defining the working-hour rule that these items lean on (SLA-timer behaviour during off-hours, CSP availability windows, IVR routing windows). Items resume once that governance is finalised.</p>
+    <ul style="margin: 0; padding-left: 1.2rem;">
+      <li><a href="#item-01" class="tab-link" data-tab="item-01"><strong>01</strong> &mdash; Connection request gets stuck (no retrigger) if a CSP doesn't choose a slot</a></li>
+      <li><a href="#item-06" class="tab-link" data-tab="item-06"><strong>06</strong> &mdash; CLOS timeout scheduler unwired: P74 / P75 / P76 / P77 / P78 not firing</a></li>
+      <li><a href="#item-07" class="tab-link" data-tab="item-07"><strong>07</strong> &mdash; DAS scheduler unwired: P41 acceptance sweep + P191 reroute not firing</a></li>
+      <li><a href="#item-11" class="tab-link" data-tab="item-11"><strong>11</strong> &mdash; IVR 2.0 integration for Cx ↔ Px interaction <span style="color: var(--ink-soft); font-size: 0.85rem;">(spec linked)</span></a></li>
+    </ul>
+  </div>
+
+  <!-- BUCKET 3 -->
+  <div style="border: 1px solid var(--new); border-left: 4px solid var(--new); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1.5rem; background: var(--new-bg);">
+    <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
+      <span style="font-size: 1.1rem; font-weight: 800; color: var(--new); letter-spacing: 0.01em;">Bucket 3 &mdash; Decision pending on Dhruv</span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">2 items &middot; common theme</span>
+    </div>
+    <p style="margin: 0 0 0.6rem; font-size: 0.92rem; color: var(--ink);"><strong>Shared product question for both items:</strong> when a CSP marks <code>INSTALLATION_FAILED</code> on a booking himself, the existing <strong>P51 cooloff</strong> blocks that same CSP from being re-assigned the booking for 4 hours. After P51 elapses, the CSP becomes eligible again. <strong>Should this even be allowed?</strong> Allowing it produces a known partner-complaint pattern:</p>
+    <p style="margin: 0 0 0.7rem; font-style: italic; color: var(--ink-soft); padding-left: 0.9rem; border-left: 2px solid var(--new); font-size: 0.92rem;">"mujhe same booking baar baar bhejte ho jo maine decline kari hai"</p>
+    <ul style="margin: 0; padding-left: 1.2rem;">
+      <li><a href="#item-02" class="tab-link" data-tab="item-02"><strong>02</strong> &mdash; Repeat allocation to the same CSP in a single-CSP zone</a></li>
+      <li><a href="#item-03" class="tab-link" data-tab="item-03"><strong>03</strong> &mdash; Propose 2 slots (instead of 1) + reallocation case</a></li>
+    </ul>
+  </div>
+
+  <h2 style="margin-top: 2rem;">Full index</h2>
   <table class="index-table">
     <thead>
-      <tr><th style="width: 42px;">#</th><th>Title</th><th style="width: 90px;">Type</th><th>Defined where?</th><th style="width: 220px;">Service(s) to change</th></tr>
+      <tr><th style="width: 42px;">#</th><th>Title</th><th style="width: 90px;">Type</th><th style="width: 110px;">Status</th><th style="width: 220px;">Service(s) to change</th></tr>
     </thead>
     <tbody>
       <tr>
         <td><strong>01</strong></td>
         <td><a href="#item-01" class="tab-link" data-tab="item-01">Connection stuck when CSP doesn't propose a slot</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="mono" style="color: var(--no);">OS✗ &middot; ES✗ &middot; Code✗ &middot; App✗ &middot; PN✗</span></td>
+        <td><span class="bucket-tag b2">Bucket 2</span></td>
         <td><span class="mono">TAS</span>, OS, <span class="mono">CL infra</span>, <span class="mono">notif</span>, <span class="mono">app</span></td>
       </tr>
       <tr>
         <td><strong>02</strong></td>
         <td><a href="#item-02" class="tab-link" data-tab="item-02">Same CSP re-assigned in single-CSP zones (P51 bypass)</a></td>
         <td><span class="pill bug">BUG</span></td>
-        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">Spec✓</span> &middot; <span style="color: var(--no);">Code✗</span></span></td>
+        <td><span class="bucket-tag b3">Bucket 3</span></td>
         <td><span class="mono">demand-allocation-service</span></td>
       </tr>
       <tr>
         <td><strong>03</strong></td>
         <td><a href="#item-03" class="tab-link" data-tab="item-03">Propose 2 slots + customer counter-proposal</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--no);">ES✗</span> &middot; <span style="color: var(--no);">Code✗</span> &middot; <span style="color: var(--no);">App✗</span></span></td>
+        <td><span class="bucket-tag b3">Bucket 3</span></td>
         <td><span class="mono">ES&nbsp;PRD</span>, <span class="mono">tas-service</span>, partner app, customer app</td>
       </tr>
       <tr>
         <td><strong>04</strong></td>
         <td><a href="#item-04" class="tab-link" data-tab="item-04">FPN for Rohit (technician) on assignment</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--ink-faint);">PRD&nbsp;n/a</span> &middot; <span style="color: var(--no);">App✗</span> &middot; <span style="color: var(--no);">CT✗</span></span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td>Technician app, CleverTap campaign</td>
       </tr>
       <tr>
         <td><strong>05</strong></td>
         <td><a href="#item-05" class="tab-link" data-tab="item-05">Bifurcate cancel-by-customer vs cancel-by-system</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--ink-faint);">PRD&nbsp;partial</span> &middot; <span style="color: var(--no);">Backend✗</span></span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td>Customer backend, <span class="mono">tas-service</span>, ES PRD</td>
       </tr>
       <tr>
         <td><strong>06</strong></td>
         <td><a href="#item-06" class="tab-link" data-tab="item-06">CLOS timeout scheduler unwired (P74/P75/P76/P77/P78 inert)</a></td>
         <td><span class="pill bug">BUG</span></td>
-        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">PRD✓</span> &middot; <span style="color: var(--no);">Infra✗</span></span></td>
+        <td><span class="bucket-tag b2">Bucket 2</span></td>
         <td><span class="mono">connection-lifecycle-service</span>, <span class="mono">tas-service</span> (T3 co-fix)</td>
       </tr>
       <tr>
         <td><strong>07</strong></td>
         <td><a href="#item-07" class="tab-link" data-tab="item-07">DAS scheduler unwired (P41 + P191 inert) &mdash; blocked on 08</a></td>
         <td><span class="pill bug">BUG</span></td>
-        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">PRD✓</span> &middot; <span style="color: var(--no);">Infra✗</span></span></td>
+        <td><span class="bucket-tag b2">Bucket 2</span></td>
         <td><span class="mono">demand-allocation-service</span></td>
       </tr>
       <tr>
         <td><strong>08</strong></td>
         <td><a href="#item-08" class="tab-link" data-tab="item-08">DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="mono"><span style="color: var(--yes);">OS✓</span> &middot; <span style="color: var(--yes);">PRD✓</span> &middot; <span style="color: var(--warn);">AM-02⚠</span> &middot; <span style="color: var(--no);">Caller✗</span></span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">demand-allocation-service</span> &amp;/or <span class="mono">tas</span> (tech picks)</td>
       </tr>
       <tr>
         <td><strong>09</strong></td>
         <td><a href="#item-09" class="tab-link" data-tab="item-09">Show address-locality + landmark + voice direction in the CSP App</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--yes);">Customer PRD✓</span> &middot; <span style="color: var(--no);">CSP App✗</span></span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td>CSP App (model + drilldown + FPN overlay), design team</td>
       </tr>
       <tr>
         <td><strong>10</strong></td>
         <td><a href="#item-10" class="tab-link" data-tab="item-10">Change-team-member workflow post technician assignment</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="mono"><span style="color: var(--ink-faint);">OS&nbsp;n/a</span> &middot; <span style="color: var(--warn);">ES&nbsp;partial</span> &middot; <span style="color: var(--warn);">BE&nbsp;mixed</span> &middot; <span style="color: var(--no);">App✗</span></span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td>tas-service (install + restore allowed-actions), gateway, CSP App, depends on Item 04 for FPN <em>(install only)</em></td>
+      </tr>
+      <tr>
+        <td><strong>11</strong></td>
+        <td><a href="#item-11" class="tab-link" data-tab="item-11">IVR 2.0 integration for Cx ↔ Px interaction</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="bucket-tag b2">Bucket 2</span></td>
+        <td>IVR routing-table refactor (Exotel applet + masked-number scheme) &mdash; <a href="https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html" target="_blank" rel="noopener">full external spec</a></td>
       </tr>
     </tbody>
   </table>
@@ -1881,8 +1943,64 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
   </details>
 </section>
 
+<!-- ============ ITEM 11 ============ -->
+<section id="item-11" class="tab-pane">
+  <h2>11 — IVR 2.0 integration for Cx ↔ Px interaction</h2>
+
+  <!-- CLASSIFICATION -->
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type">GAP</div>
+      <div class="classify-headline">
+        <strong>IVR call-routing redesign</strong> &mdash; single masked Wiom number + per-ticket dual PINs + late-bound <code>is_customer</code> identity, replacing the current per-pair number-mapping scheme that breaks on Rohit logins, SIM swaps and ticket re-assignment.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
+      <tr class="group"><td colspan="3">Spec</td></tr>
+      <tr>
+        <td>PM-facing design</td><td class="define-yn yes">✓ Done</td>
+        <td class="define-note">9 use cases, 2 tables, four defined terms (Recognised / Authorised / Seamless / Graceful fallback). Three leadership review rounds with Dhruv closed. <a href="https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html" target="_blank" rel="noopener">Live spec ↗</a></td>
+      </tr>
+      <tr>
+        <td>Technical notes</td><td class="define-yn yes">✓ Done</td>
+        <td class="define-note">Schemas, telemetry, Exotel applet wiring, decisions and TBDs in the companion <code>IVR-Routing-Solutioning-technical-notes.md</code> on the same repo.</td>
+      </tr>
+      <tr class="group"><td colspan="3">Backend / runtime</td></tr>
+      <tr>
+        <td>Code</td><td class="define-yn no">✗ Not built</td>
+        <td class="define-note">Spec ships for build. No code in place for the new routing table; existing IVR microservice continues to run the old pairing scheme.</td>
+      </tr>
+      <tr class="group"><td colspan="3">Prod</td></tr>
+      <tr>
+        <td>Behaviour today</td><td class="define-yn no">✗ Brittle</td>
+        <td class="define-note">Per Mar-2026 IVR investigation: Rohit logged into Owner's Partner App ⇒ mapping uses Owner's number ⇒ Exotel sees Rohit's SIM ⇒ no match ⇒ blank <code>TO_NUMBER</code>. Affects partner ↔ customer call-back reliability.</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="border-left: 4px solid var(--accent); background: var(--bg-soft); padding: 1rem 1.2rem; border-radius: 0 6px 6px 0; margin: 1.2rem 0;">
+    <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 0.5rem;">Where the full spec lives</div>
+    <p style="margin: 0 0 0.4rem;">Item 11's full surface is too large to inline in this file. Two artifacts on the public IVR-Routing-Solutioning repo:</p>
+    <ul style="margin: 0 0 0.2rem; padding-left: 1.3rem;">
+      <li><a href="https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html" target="_blank" rel="noopener"><strong>Leadership-facing spec</strong> &mdash; ivr-routing-design.html</a></li>
+      <li><a href="https://github.com/ashish-raj-wiom/IVR-Routing-Solutioning" target="_blank" rel="noopener"><strong>Repo</strong> &mdash; GitHub source incl. technical notes</a></li>
+    </ul>
+  </div>
+
+  <h3>Why this is in Bucket 2 (working-hour dependency)</h3>
+  <p>The IVR routing rules need to know <strong>which CSP / technician is contactable at this moment</strong> &mdash; outside the CSP's working window, the IVR should fall back to the next-best path rather than ring a sleeping partner. The working-hour governance Vaibhav is currently defining (the same one Bucket 2 items 01 / 06 / 07 lean on) is the input that lets Item 11 decide when to seamless-route vs. when to graceful-fallback. Once working-hour governance lands, Item 11 ships with the rule plugged in.</p>
+
+  <h3>Related background</h3>
+  <ul>
+    <li>Memory: <code>ivr_routing_solutioning.md</code> &mdash; PM spec status, leadership review history, decisions closed.</li>
+    <li>Memory: <code>ivr_calling_es_project.md</code> &mdash; companion IVR-Calling capability ES (v2.1, 971 lines) wrapping the existing IVR microservice. Defines the 4 endpoints (<code>/sim-inventory</code>, <code>/calls</code>, <code>/internal/calls</code>, <code>/events</code>) and the resolver chain (connection_id → CL → booking-service → mobile).</li>
+    <li>Memory: <code>ivr_call_investigation.md</code> &mdash; root-cause investigation behind 5 partner complaints (Rohit-login mismatch) that motivated the redesign.</li>
+  </ul>
+</section>
+
 <footer>
-  P2 Installation Items &middot; 2026-06-01 &middot; <code>C:\Users\ashis\p2-installation-items\</code>
+  P2 Installation Items &middot; 2026-06-02 &middot; <code>C:\Users\ashis\p2-installation-items\</code>
 </footer>
 
 </div>

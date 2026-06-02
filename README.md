@@ -1,8 +1,8 @@
 # P2 Installation Items
 
-**Owner:** Ashis · **Started:** 2026-05-29 · **Target audience:** Wiom CSP tech for implementation
+**Owner:** Ashish Raj · **Started:** 2026-05-29 · **Target audience:** Wiom CSP tech for implementation
 
-10 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff.
+11 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff. The HTML now also groups the 11 items into three ownership buckets (Go-ahead from Vaibhav / Working-hour dependency / Decision pending on Dhruv) so a wider audience can see the current waiting line at a glance.
 
 ## How the PM team writes items
 
@@ -50,18 +50,27 @@ Every BUG item's classification card carries this sub-type. GAP items don't need
 
 ## Index
 
-| # | Title | Type | Severity | Service(s) to update | Status |
+| # | Title | Type | Bucket | Service(s) to update | Status |
 |---|---|---|---|---|---|
-| 01 | [Connection stuck when CSP doesn't propose a slot](items/01-no-slot-action-stuck.md) | Gap | — | csp-tas-service, OS, CLOS infra, csp-notification-service, partner app, CleverTap | Open |
-| 02 | [Same CSP re-assigned in single-CSP zones (P51 bypass)](items/02-same-csp-loop-single-zone.md) | Bug | — | csp-demand-allocation-service (single behavioral fix) | Open |
-| 03 | [Propose 2 slots + customer counter-proposal](items/03-two-slots-and-counter-proposal.md) | Gap | — | ES PRD, csp-tas-service (schema + DTO + handler), partner app, customer app | Open |
-| 04 | [FPN for Rohit (technician) on assignment](items/04-fpn-for-rohit-on-technician-assignment.md) | Gap | — | Technician app, CleverTap campaign | Open |
-| 05 | [Bifurcate cancel-by-customer vs cancel-by-system](items/05-cancel-bifurcation-customer-vs-system.md) | Gap | — | Customer backend (source), csp-tas-service (handler), ES PRD (sentence) | Open |
-| 06 | [CLOS timeout scheduler unwired (P74/P75/P76/P77/P78 inert)](items/06-clos-scheduler-unwired.md) | Bug · Impl-miss | — | csp-connection-lifecycle-service (scheduler infra), csp-tas-service (T3 retry co-fix) | Open |
-| 07 | [DAS allocation scheduler unwired (P41 + P191 inert)](items/07-das-scheduler-unwired.md) | Bug · Impl-miss | — | csp-demand-allocation-service (scheduler infra) — **hard-blocked on Item 08** | Open |
-| 08 | [DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)](items/08-das-state-never-accepted.md) | Gap | — | csp-demand-allocation-service / csp-tas-service / csp-gateway-service (tech-picks mechanism); AMENDMENT-02 follow-up (PM) | Open |
-| 09 | [Show address-locality + landmark + voice direction in the CSP App](items/09-voice-directions-csp-app.md) | Gap | — | CSP App (model + drilldown + FPN overlay), design team | Open |
-| 10 | [Change-team-member workflow post technician assignment](items/10-change-team-member-workflow.md) | Gap | — | csp-tas-service (install allowed-actions · restore verify · nbrec parity), csp-gateway-service (SC `can_reassign`), CSP App (UI), csp-notification-service / CleverTap (FPN on swap — depends on Item 04) | Open |
+| 01 | [Connection stuck when CSP doesn't propose a slot](items/01-no-slot-action-stuck.md) | Gap | 2 · Working-hour dep | csp-tas-service, OS, CLOS infra, csp-notification-service, partner app, CleverTap | Open |
+| 02 | [Same CSP re-assigned in single-CSP zones (P51 bypass)](items/02-same-csp-loop-single-zone.md) | Bug | 3 · Dhruv decision | csp-demand-allocation-service (single behavioral fix) | Open |
+| 03 | [Propose 2 slots + customer counter-proposal](items/03-two-slots-and-counter-proposal.md) | Gap | 3 · Dhruv decision | ES PRD, csp-tas-service (schema + DTO + handler), partner app, customer app | Open |
+| 04 | [FPN for Rohit (technician) on assignment](items/04-fpn-for-rohit-on-technician-assignment.md) | Gap | 1 · Vaibhav go-ahead | Technician app, CleverTap campaign | Open |
+| 05 | [Bifurcate cancel-by-customer vs cancel-by-system](items/05-cancel-bifurcation-customer-vs-system.md) | Gap | 1 · Vaibhav go-ahead | Customer backend (source), csp-tas-service (handler), ES PRD (sentence) | Open |
+| 06 | [CLOS timeout scheduler unwired (P74/P75/P76/P77/P78 inert)](items/06-clos-scheduler-unwired.md) | Bug · Impl-miss | 2 · Working-hour dep | csp-connection-lifecycle-service (scheduler infra), csp-tas-service (T3 retry co-fix) | Open |
+| 07 | [DAS allocation scheduler unwired (P41 + P191 inert)](items/07-das-scheduler-unwired.md) | Bug · Impl-miss | 2 · Working-hour dep | csp-demand-allocation-service (scheduler infra) — **hard-blocked on Item 08** | Open |
+| 08 | [DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)](items/08-das-state-never-accepted.md) | Gap | 1 · Vaibhav go-ahead | csp-demand-allocation-service / csp-tas-service / csp-gateway-service (tech-picks mechanism); AMENDMENT-02 follow-up (PM) | Open |
+| 09 | [Show address-locality + landmark + voice direction in the CSP App](items/09-voice-directions-csp-app.md) | Gap | 1 · Vaibhav go-ahead | CSP App (model + drilldown + FPN overlay), design team | Open |
+| 10 | [Change-team-member workflow post technician assignment](items/10-change-team-member-workflow.md) | Gap | 1 · Vaibhav go-ahead | csp-tas-service (install allowed-actions · restore verify · nbrec parity), csp-gateway-service (SC `can_reassign`), CSP App (UI), csp-notification-service / CleverTap (FPN on swap — depends on Item 04) | Open |
+| 11 | [IVR 2.0 integration for Cx ↔ Px interaction](https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html) | Gap | 2 · Working-hour dep | IVR routing-table refactor — external spec on `ashish-raj-wiom/IVR-Routing-Solutioning` | Open |
+
+## Three ownership buckets (as of 2026-06-02)
+
+The 11 items above are grouped into three buckets in the HTML, by who needs to weigh in next:
+
+- **Bucket 1 — Go-ahead from Vaibhav** (no OS change, pure ES / app / backend): items **04, 05, 08, 09, 10**
+- **Bucket 2 — Working-hour dependency** (waiting on Vaibhav's working-hour governance): items **01, 06, 07, 11**
+- **Bucket 3 — Decision pending on Dhruv** (shared question: should a CSP who self-marked `INSTALLATION_FAILED` be re-eligible after P51 cooloff? Partner-complaint pattern: *"mujhe same booking baar baar bhejte ho jo maine decline kari hai"*): items **02, 03**
 
 ## Cross-item rollout sequencing
 
