@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-02 — Change team member workflow (Install) · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./tech-handover.html">← Back to bugs</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-02</div>
+  <h1>Change technician at <code>TECHNICIAN_ASSIGNED</code> (Install only)</h1>
+  <p class="lede">The install state machine already has a <code>(TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code> self-loop wired (with the comment "<em>// reassign</em>"). But <code>TasCandidateQueryServiceImpl.resolveAllowedActions(TECHNICIAN_ASSIGNED)</code> only returns <code>[MARK_ARRIVED]</code>, hiding the swap action. The CSP App therefore has no "Change technician" CTA. Surface the existing capability — Install only, this state only.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Light</span> — A1, A2, A5, A6, A8, B5. Allowed-actions list extension + UI surfacing.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>Expose the existing <code>ASSIGN_TECHNICIAN</code> self-loop at <code>TECHNICIAN_ASSIGNED</code> in the install allowed-actions API, and add a "Change technician" CTA on the CSP App install drilldown.</dd>
+    <dt>What triggered it?</dt>    <dd>Partner feedback — multi-tech CSPs need to swap before the assigned tech arrives at site. State machine supports it; gateway hides it.</dd>
+    <dt>Blast radius</dt>          <dd>TAS install <code>resolveAllowedActions</code> · Gateway <code>TaskDrilldown.can_reassign</code> (currently always null) · CSP App install drilldown.</dd>
+    <dt>Reversible?</dt>           <dd>Yes — the allowed-actions entry can be removed; the state-machine self-loop already existed before this change.</dd>
+    <dt>Money / PII / migration?</dt><dd>No / No / No.</dd>
+    <dt>OS impact / sign-off?</dt> <dd>None — state machine already covers the self-loop; the change is in the allowed-actions surface + UI.</dd>
+    <dt>Tier</dt>                  <dd>Light</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: what state allows swap, how it's surfaced, and what is explicitly out of scope.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and a link to the feature's original PRD / OS.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Change technician at <code>TECHNICIAN_ASSIGNED</code> (Install only)</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft → For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>Install candidate state machine in <code>services/csp-tas-service/.../install/domain/service/InstallationStateMachine.java</code> (the <code>TECHNICIAN_ASSIGNED</code> self-loop already wired). ES installation PRD allowed-actions table.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short problem statement.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>The install state machine already wires <code>(TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code> as a swap self-loop (verified — see the line annotated <em>"// reassign"</em> in <code>InstallationStateMachine.java</code>). But <code>TasCandidateQueryServiceImpl.resolveAllowedActions(TECHNICIAN_ASSIGNED)</code> returns only <code>[MARK_ARRIVED]</code> — so the API never tells the CSP App that <code>ASSIGN_TECHNICIAN</code> is a valid next action. The gateway's <code>TaskDrilldown.can_reassign</code> field exists but is hard-coded to <code>null</code> on every install drilldown (verified at <code>HomeFacadeService</code> — the 6th of 6 INSTALL-specific nulls in the constructor block). The CSP App's <code>TaskDetail.canReassign</code> defaults to <code>false</code>.</td></tr>
+    <tr><td>Who experiences it?</td><td>CSPs running multi-technician operations whose initial pick becomes unavailable before the tech arrives at site (sick, route conflict, last-minute reassign to a senior tech).</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>The CSP has to mark the install failed and let DAS reroute — which is destructive for the customer (install gets reassigned to a different CSP entirely, instead of staying with the original CSP under a different tech).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes → before → after → why</em>.</div>
+  <span class="row-mode req">All rows required</span>
+  <table class="delta">
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>TAS allowed-actions at <code>TECHNICIAN_ASSIGNED</code></td>
+        <td><code>[ MARK_ARRIVED ]</code></td>
+        <td><code>[ MARK_ARRIVED, ASSIGN_TECHNICIAN ]</code></td>
+        <td>The state-machine self-loop on <code>ASSIGN_TECHNICIAN</code> at this state already exists; just surface it on the API.</td>
+      </tr>
+      <tr>
+        <td>Gateway <code>TaskDrilldown.can_reassign</code> for install</td>
+        <td>Always <code>null</code> (the 6th null in the install-specific block of <code>HomeFacadeService</code>'s <code>new TaskDrilldown(...)</code> call)</td>
+        <td>Either populated from the install card's <code>allowed_actions</code> (true iff list contains <code>ASSIGN_TECHNICIAN</code>) <strong>OR</strong> the field is dropped entirely and the CSP App reads <code>allowed_actions</code> directly. Engineering's call — the latter is cleaner.</td>
+        <td>Either fix the dedicated flag or rely on <code>allowed_actions</code> carrying the action. Both work; pick one.</td>
+      </tr>
+      <tr>
+        <td>CSP App install drilldown UI</td>
+        <td>No "Change technician" CTA</td>
+        <td>CTA visible at <code>TECHNICIAN_ASSIGNED</code> when <code>allowed_actions</code> contains <code>ASSIGN_TECHNICIAN</code> (or <code>can_reassign == true</code> if the dedicated flag is kept). CTA reuses the same technician picker as the initial-assignment flow.</td>
+        <td>Surface the action; reuse the existing picker.</td>
+      </tr>
+      <tr>
+        <td>Notification to the newly-assigned technician</td>
+        <td>No swap path exists today</td>
+        <td>New tech receives whatever standard install-assignment notification path the initial-assignment flow uses. Same path, same payload shape.</td>
+        <td>Re-use existing notification mechanism; don't invent a new one.</td>
+      </tr>
+      <tr>
+        <td>ES PRD allowed-actions table</td>
+        <td>Lists <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code></td>
+        <td>Lists <code>MARK_ARRIVED, ASSIGN_TECHNICIAN</code> at <code>TECHNICIAN_ASSIGNED</code>.</td>
+        <td>PM-side spec matches API behaviour.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>Out of scope — explicitly:</strong> swap is NOT being added at <code>ARRIVED_AT_SITE</code> or any later state. The install state machine doesn't have <code>ASSIGN_TECHNICIAN</code> self-loops at those states; extending swap there would require state-machine additions and is a separate item. If PM wants mid-install swap, file a new spec. Also out of scope: Restore + NBREC families, system-initiated reassignment, CSP-to-CSP reassignment, customer notification about the swap, swap-to-self / un-assign (Install has no SELF assignee concept today).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Adjacent behaviours that must survive untouched.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:38%">Behaviour to protect</th><th>Why it's at risk</th></tr>
+    <tr><td>1</td><td>Initial-assignment flow at <code>AWAITING_TECHNICIAN_ASSIGNMENT</code></td><td>Allowed-actions there already includes <code>ASSIGN_TECHNICIAN</code> (verified). Adding the same action at <code>TECHNICIAN_ASSIGNED</code> must not affect this path.</td></tr>
+    <tr><td>2</td><td>State machine transitions at later states (<code>ARRIVED_AT_SITE</code> and beyond)</td><td>No <code>ASSIGN_TECHNICIAN</code> self-loops exist at those states. The CSP App must NOT show the swap CTA there.</td></tr>
+    <tr><td>3</td><td>Terminal-state guards (<code>INSTALLATION_REPORTED_FAILED</code>, <code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>, etc.)</td><td>Swap must be blocked at terminal states. The existing terminal-state checks in <code>InstallationStateMachine</code> must continue to reject.</td></tr>
+    <tr><td>4</td><td>Restore + NBREC families</td><td>Restore has its own <code>AllowedActionsResolver</code>; NBREC has its own <code>assignTask</code> endpoint. This change is in install-only code (<code>TasCandidateQueryServiceImpl</code>). Restore + NBREC must not change.</td></tr>
+    <tr><td>5</td><td>Existing <code>cancel_onsite</code> / <code>report_installation_failed</code> paths at <code>TECHNICIAN_ASSIGNED</code></td><td>Adding <code>ASSIGN_TECHNICIAN</code> to the allowed-actions list must not change the other transitions from this state.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius. Single-row "No" is fine if the change is below the OS layer.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Amendment</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>All OS</td><td>No</td><td>State machine already covers the self-loop. Change lives below the OS layer (ES PRD documentation + service code + gateway + app UI).</td><td>None</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Verification layer for engineering build and test.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, use / edge cases, plus a REGRESSION block per A6 guard. Plus a coverage matrix.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Swap allowed at TECHNICIAN_ASSIGNED
+  <span class="kw">Given</span> an install candidate in state TECHNICIAN_ASSIGNED with technician X assigned
+  <span class="kw">When</span>  the CSP taps "Change technician" and picks technician Y
+  <span class="kw">Then</span>  the candidate's assigned_technician becomes Y
+  <span class="kw">And</span>   the candidate state stays at TECHNICIAN_ASSIGNED (self-loop)
+  <span class="kw">And</span>   technician Y receives the standard install-assignment notification
+        (same path as initial assignment)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Allowed-actions surface
+  <span class="kw">Given</span> a candidate in TECHNICIAN_ASSIGNED
+  <span class="kw">When</span>  the CSP App fetches the drilldown
+  <span class="kw">Then</span>  allowed_actions contains both MARK_ARRIVED and ASSIGN_TECHNICIAN
+  <span class="kw">And</span>   can_reassign is true (or the dedicated flag has been dropped per A5 row 2)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3 (negative):</span> Swap blocked at later states
+  <span class="kw">Given</span> a candidate in ARRIVED_AT_SITE or any later in-flight state
+        (INSTALLATION_IN_PROGRESS_PRE_FEE, FEE_COLLECTION_PENDING,
+         INSTALLATION_IN_PROGRESS_POST_FEE, AWAITING_CUSTOMER_OTP, RATING_PENDING)
+  <span class="kw">When</span>  the CSP App fetches the drilldown
+  <span class="kw">Then</span>  allowed_actions does NOT contain ASSIGN_TECHNICIAN
+  <span class="kw">And</span>   the swap CTA is suppressed in the UI
+  <span class="kw">And</span>   if a swap is attempted via direct API call, the state machine rejects it
+        (no self-loop wired at these states)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4 (negative):</span> Swap blocked at terminal states
+  <span class="kw">Given</span> a candidate in any terminal state
+        (INSTALLATION_REPORTED_FAILED, CANCELLED_BY_CUSTOMER, CANCELLED_BY_UPSTREAM,
+         INSTALLATION_CANCELLED_ONSITE, INSTALLATION_COMPLETED)
+  <span class="kw">When</span>  the CSP attempts to swap (via API or UI)
+  <span class="kw">Then</span>  backend rejects with the existing terminal-state guard error
+  <span class="kw">And</span>   the UI does not show the CTA</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Rapid sequential swaps (X → Y → Z in seconds)
+  <span class="kw">Given</span> a candidate at TECHNICIAN_ASSIGNED
+  <span class="kw">When</span>  the CSP swaps X→Y then Y→Z within a few seconds
+  <span class="kw">Then</span>  each swap fires a fresh assignment notification to the new pick
+  <span class="kw">And</span>   the candidate's assigned_technician tracks the final value (Z)
+  <span class="kw">And</span>   no rate-limit is enforced (UI may debounce as an implementation choice)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Swap-to-self
+  <span class="kw">Given</span> Install has no SELF assignee concept today
+  <span class="kw">When</span>  the CSP opens the swap picker and tries to submit without a tech selected
+  <span class="kw">Then</span>  the picker requires a non-null technician (UI validation)
+  <span class="kw">And</span>   the backend rejects null/empty technician_id with a 400</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Booking cancelled mid-picker
+  <span class="kw">Given</span> the CSP has the swap picker open
+  <span class="kw">When</span>  the booking is cancelled upstream (customer or system)
+  <span class="kw">Then</span>  the picker closes; the candidate disappears from the active list
+  <span class="kw">And</span>   if the swap was already submitted but not yet processed, the backend rejects with the terminal-state guard</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> CSP App offline at submit
+  <span class="kw">Given</span> the CSP has picked the new technician but the app is offline
+  <span class="kw">When</span>  connectivity returns and the request is retried
+  <span class="kw">Then</span>  the swap fires; if the candidate has moved off TECHNICIAN_ASSIGNED in the meantime,
+        backend rejects with a graceful failure (state-transition not valid)
+  <span class="kw">And</span>   the UI shows a clear "could not swap — please retry from the current state" message</pre></div>
+
+  <h3>Regression</h3>
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Initial-assignment flow unchanged
+  <span class="kw">Given</span> a candidate at AWAITING_TECHNICIAN_ASSIGNMENT
+  <span class="kw">When</span>  the CSP assigns the initial technician
+  <span class="kw">Then</span>  the existing flow works exactly as today
+        (state transitions to TECHNICIAN_ASSIGNED via the same ASSIGN_TECHNICIAN action;
+         the allowed-actions list at AWAITING_TECHNICIAN_ASSIGNMENT is unchanged)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): No swap at ARRIVED_AT_SITE and later
+  <span class="kw">Given</span> a candidate in ARRIVED_AT_SITE, INSTALLATION_IN_PROGRESS_PRE_FEE,
+        FEE_COLLECTION_PENDING, INSTALLATION_IN_PROGRESS_POST_FEE, AWAITING_CUSTOMER_OTP, or RATING_PENDING
+  <span class="kw">When</span>  the drilldown is fetched
+  <span class="kw">Then</span>  allowed_actions has the same value as today (no ASSIGN_TECHNICIAN added)
+  <span class="kw">And</span>   the swap CTA is not surfaced</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Terminal-state guards still reject
+  <span class="kw">Given</span> a candidate in any terminal state
+  <span class="kw">When</span>  swap is attempted via API
+  <span class="kw">Then</span>  backend rejects with the existing terminal-state guard error</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): Restore + NBREC unchanged
+  <span class="kw">Given</span> a Restore or NBREC candidate at the equivalent assigned state
+  <span class="kw">When</span>  the drilldown is fetched
+  <span class="kw">Then</span>  allowed_actions for those families is identical to today
+        (this change is in install-only code paths)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Other actions at TECHNICIAN_ASSIGNED unchanged
+  <span class="kw">Given</span> a candidate in TECHNICIAN_ASSIGNED
+  <span class="kw">When</span>  the CSP fires REPORT_INSTALLATION_FAILED (or any other existing transition from this state)
+  <span class="kw">Then</span>  the transition fires exactly as today
+        (adding ASSIGN_TECHNICIAN to allowed-actions doesn't change MARK_ARRIVED, REPORT_INSTALLATION_FAILED,
+         CANCELLED_BY_UPSTREAM, or CANCELLED_BY_CUSTOMER behaviour)</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1–5</td><td>5 deltas</td><td>LOGIC-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>—</td><td>N/A</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..4</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 rows 1–5</td><td>5 guards</td><td>REGRESSION-1..5</td><td>All covered</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A6, A8, B5) filled</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" on every class</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A6 guard has a matching B5 REGRESSION block</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes" has sign-off Received</td><td class="check">N/A — no OS impact</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code evidence (verified 2026-06-03):</strong>
+    <ul>
+      <li><strong>Install state machine — self-loop on TECHNICIAN_ASSIGNED + ASSIGN_TECHNICIAN:</strong> <code>services/csp-tas-service/.../install/domain/service/InstallationStateMachine.java</code> — the line <code>m.put(k(CandidateState.TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN), CandidateState.TECHNICIAN_ASSIGNED); // reassign</code></li>
+      <li><strong>Install allowed-actions resolver (the surfacing gap):</strong> <code>TasCandidateQueryServiceImpl.resolveAllowedActions(CandidateState)</code> — <code>case TECHNICIAN_ASSIGNED → List.of(action("MARK_ARRIVED", ...))</code> only.</li>
+      <li><strong>Verified that initial-assign already works:</strong> <code>case AWAITING_TECHNICIAN_ASSIGNMENT → List.of(action("ASSIGN_TECHNICIAN", "action.install.assign_tech", "ACTION_SHEET"))</code>.</li>
+      <li><strong>Gateway TaskDrilldown record:</strong> <code>services/csp-gateway-service/.../home/dto/response/TaskDrilldown.java:26</code> — <code>@JsonProperty("can_reassign") Boolean canReassign</code>.</li>
+      <li><strong>Gateway HomeFacadeService (the null site):</strong> <code>services/csp-gateway-service/.../home/service/HomeFacadeService.java</code> — in the <code>new TaskDrilldown(...)</code> call, the 6th INSTALL-specific positional argument is <code>null</code> (corresponds to <code>canReassign</code>).</li>
+      <li><strong>CSP App default:</strong> <code>core/model/.../TaskDetail.kt:49</code> — <code>val canReassign: Boolean = false</code>.</li>
+      <li><strong>Confirmed no self-loop on ASSIGN_TECHNICIAN at ARRIVED_AT_SITE or beyond</strong> — checked the state-machine transition map.</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope corrected from earlier iteration: swap is only at <code>TECHNICIAN_ASSIGNED</code>, not at <code>ARRIVED_AT_SITE</code> or later (verified against state-machine map).</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+</body>
+</html>
