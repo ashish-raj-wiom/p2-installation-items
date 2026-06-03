@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Change Spec Template v1.0 (PM)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --example-bg: #fffbeb; --example-rule: #f3d56a; --example-ink: #78350f;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention strong { font-weight: 700; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .badge.ill { background: var(--illustrative-bg); color: var(--illustrative); }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.full { background: var(--how-bg); color: var(--how); }
+
+  .quickcheck {
+    margin: 28px 0 40px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule);
+    border-radius: 6px; padding: 18px 22px;
+  }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .quickcheck dd.placeholder { color: var(--muted); font-style: italic; }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .hint strong { color: var(--hint-ink); }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  .row-mode.ill { background: var(--illustrative-bg); color: var(--illustrative); }
+  .row-mode-note { font-size: 12.5px; color: var(--muted); margin-left: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  td.placeholder { color: var(--muted); font-style: italic; }
+  tr.example-row td { background: #fefcf5; }
+  tr.example-row td:first-child::before { content: "ex: "; color: var(--illustrative); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .worked-example { margin: 16px 0; background: var(--example-bg); border: 1px solid var(--example-rule); border-left: 4px solid var(--example-rule); border-radius: 5px; padding: 12px 16px; }
+  .worked-example .we-label { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; background: var(--example-rule); color: var(--example-ink); }
+  .worked-example .we-title { font-weight: 700; font-size: 14px; color: var(--example-ink); margin: 2px 0 8px; }
+  .worked-example table { font-size: 13px; margin: 6px 0; }
+
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck, .worked-example { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflows (before/after)</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameter changes</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec Template · v1.0 · PM deliverable</div>
+  <h1>[Change Name] — Change Specification</h1>
+  <p class="lede">For modifications to an existing feature's behaviour or logic (the change goes PM → Engineering). A modification is a <strong>diff</strong>, not a feature — so this spec is built around current → desired → delta, and protects what must stay the same. Business behaviour only; engineering owns implementation. If you are building something new, use the Product Solution Spec instead. If the change is UI-only with no backend dependency, it is a design PR — no spec needed.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> PM &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Governs tiering:</strong> Lead PM</span>
+  </div>
+  <div class="convention">
+    <strong>Tiers:</strong>
+    <span class="badge light">Light</span> A1, A2, A5, A6, A8, B5 — a contained logic tweak (A8 is always declared).
+    <span class="badge full">Full</span> all sections — touches multiple workflows, state, or money.
+    Lead PM picks the tier at triage; mark it in the Quick Check.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> fill or mark N/A with reason · <span class="badge ill">Example</span> illustrative — keep what fits, delete the rest. <strong>Worked examples</strong> stay visible (yellow).
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. <strong>Filled last</strong>, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt><dd class="placeholder">[One line — from A2/A5]</dd>
+    <dt>What triggered it?</dt><dd class="placeholder">[Bug / policy / metric / partner feedback]</dd>
+    <dt>Blast radius</dt><dd class="placeholder">[Which existing behaviour &amp; actors this touches]</dd>
+    <dt>Reversible?</dt><dd class="placeholder">[Yes / No — is there a clean rollback path]</dd>
+    <dt>Money / PII / migration?</dt><dd class="placeholder">[Y/N each]</dd>
+    <dt>OS impact / sign-off?</dt><dd class="placeholder">[None, or list OS — all signed off? Y/N — from A8]</dd>
+    <dt>Tier</dt><dd class="placeholder">[Light / Full — lead PM]</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why we are changing this, what it does today, what it should do, and the precise delta. Stable across implementation revisions.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and a link to the feature's original PRD / OS so the reviewer can see the baseline being changed.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td class="placeholder">[Clear, scope-bounded — names the behaviour, not the fix]</td></tr>
+    <tr><td>Owner (PM)</td><td class="placeholder">[Name]</td></tr>
+    <tr><td>Status</td><td class="placeholder">Draft / In review / Approved / In build / Shipped</td></tr>
+    <tr><td>Version</td><td class="placeholder">v0.1 / v1.0 / …</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td class="placeholder">[Link — the feature being modified]</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short problem statement so the reader understands the change is solving a real problem, not a preference. Observable trigger, who is affected, cost of leaving it. Two or three lines — keep it light, but never skip it.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td class="placeholder">[Observable problem]</td></tr>
+    <tr><td>Who experiences it?</td><td class="placeholder">[Affected actor]</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td class="placeholder">[Why it's worth a change]</td></tr>
+  </table>
+  <div class="worked-example">
+    <div class="we-label">Worked example</div>
+    <div class="we-title">Autopay-failure grace window</div>
+    <table>
+      <tr><th>Question</th><th>Answer</th></tr>
+      <tr><td>What's wrong?</td><td>When an autopay mandate fails on validity-end day, service is suspended immediately. Most failures are transient (bank-side) and clear within hours, but the customer is already offline and treats it as a broken promise.</td></tr>
+      <tr><td>Who?</td><td>Autopay customers whose mandate fails on the due date (~X% of autopay base/month).</td></tr>
+      <tr><td>Cost of leaving it?</td><td>Avoidable churn and trust loss on customers who had every intention of paying; ops tickets to manually restore.</td></tr>
+    </table>
+  </div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> How the system observably behaves today, for the slice you are about to change. Describe what an observer sees — inputs, decisions, outputs — <strong>not how it is coded</strong>. The current code is available; you are summarising its behaviour, not its structure.</div>
+  <div class="hint"><strong>Tip:</strong> Write it as "Given X, the system does Y." If you find yourself naming tables, services, or functions, you've slipped into implementation — pull back to observable behaviour.</div>
+  <span class="row-mode ill">Example</span>
+  <table>
+    <tr><th style="width:30%">Trigger / condition</th><th>Observable behaviour today</th></tr>
+    <tr class="example-row"><td>Autopay mandate fails on validity-end day</td><td>Service is suspended at the moment the validity window ends; customer goes offline immediately. A single retry is attempted at suspension; no grace period.</td></tr>
+    <tr class="example-row"><td>Customer recharges manually after suspension</td><td>Service restores within the normal provisioning window.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The same observable slice, after the change. Mirror A3's structure so the reader can read them side by side.</div>
+  <span class="row-mode ill">Example</span>
+  <table>
+    <tr><th style="width:30%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr class="example-row"><td>Autopay mandate fails on validity-end day</td><td>Service continues for a grace window (default 24h). The customer is told payment failed and that service continues briefly while it is retried. Retries run across the window.</td></tr>
+    <tr class="example-row"><td>Payment succeeds within the grace window</td><td>Validity is recharged as normal; no suspension ever occurs; the customer is told they're sorted.</td></tr>
+    <tr class="example-row"><td>Grace window elapses with no successful payment</td><td>Service is suspended as it is today; customer told the grace period ended.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The heart of the spec. One row per rule, workflow step, output, or parameter that changes. Each row: what it does now → what it should do → why. This table is what engineering builds against and what test cases are generated from.</div>
+  <div class="hint"><strong>A4 or A5?</strong> A single picture of the result the reader can hold in their head → A4 (Desired behaviour). The itemised list of differences, one change per row → A5. A4 is for comprehension; A5 is for build and test.</div>
+  <span class="row-mode ill">Example rows</span>
+  <table class="delta">
+    <tr><th style="width:22%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:24%">Why</th></tr>
+    <tr class="example-row"><td>Suspension timing on autopay failure</td><td>Immediate at validity end.</td><td>Deferred until end of 24h grace window.</td><td>Absorb transient bank failures without taking the customer offline.</td></tr>
+    <tr class="example-row"><td>Retry cadence</td><td>One retry at suspension.</td><td>Retries across the grace window until success or window end.</td><td>Maximise recovery before any suspension.</td></tr>
+    <tr class="example-row"><td>Customer message on failure</td><td>"Service suspended."</td><td>"Payment failed — service continues while we retry."</td><td>Reframe from punishment to reassurance.</td></tr>
+    <tr class="example-row"><td>Parameter: AUTOPAY_GRACE_HOURS</td><td>Does not exist (effectively 0).</td><td>New, default 24h.</td><td>Make the window tunable without a code change.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The behaviours adjacent to this change that <strong>must survive untouched</strong>. This is how we move fast without breaking trust. Scope it to what a reasonable engineer might fear breaking — <strong>not an exhaustive inventory of the system</strong>. Each line here becomes a regression assertion in B5.</div>
+  <div class="hint"><strong>Reviewer note:</strong> sufficiency of this list is judged by the lead PM. Too short and a real risk is unguarded; exhaustive and it becomes ritual. Aim for the handful of behaviours genuinely in the blast radius.</div>
+  <span class="row-mode ill">Example rows</span>
+  <table>
+    <tr><th style="width:50%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr class="example-row"><td>Manual (non-autopay) recharge → suspension timing is unchanged.</td><td>Shares the suspension code path; easy to catch in the change.</td></tr>
+    <tr class="example-row"><td>Non-autopay customers see no grace window and no new messaging.</td><td>The new behaviour must not leak to customers it wasn't designed for.</td></tr>
+    <tr class="example-row"><td>Validity-end date for successful autopay (no failure) is unchanged.</td><td>The happy path must be byte-for-byte as before.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Business rules the change adds or alters; <strong>invariants</strong> — truths that must always hold once the change ships (e.g. "a customer is in exactly one service state at any moment"); and the new edge cases the change introduces. For each edge: the condition and the intended business outcome (not the handling mechanism). Everything declared here must be verified in B5.</div>
+  <div class="hint"><strong>A6 or A7?</strong> A behaviour that must be <em>preserved</em> unchanged → A6. A rule or invariant that <em>changes</em> or is <em>newly introduced</em>, or a new edge → A7. They are mirror images.</div>
+  <span class="row-mode ill">Example rows</span>
+  <h3>A7.1 Rules &amp; invariants (must always hold)</h3>
+  <table>
+    <tr><th style="width:35%">Rule / invariant</th><th>Statement</th></tr>
+    <tr class="example-row"><td>INV — service-state exclusivity</td><td>At any moment a customer is in exactly one service state: active, in-grace, or suspended — never two at once.</td></tr>
+    <tr class="example-row"><td>INV — settlement integrity</td><td>A customer kept live by a grace window is not treated as paid for settlement until an actual payment succeeds.</td></tr>
+    <tr class="example-row"><td>RULE — single open window</td><td>A customer can have at most one open grace window at a time.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:35%">Edge / condition</th><th>Intended business outcome</th></tr>
+    <tr class="example-row"><td>Payment succeeds in the final minute of the grace window</td><td>Treated as success; no suspension; normal recharge.</td></tr>
+    <tr class="example-row"><td>Customer manually recharges while a grace window is open</td><td>Manual payment wins; grace window closes; service continues seamlessly.</td></tr>
+    <tr class="example-row"><td>Mandate fails again on the next cycle while still inside a grace-extended period</td><td>[Decision needed — define before build]</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A modification often ripples into an OS the PM does not own — its behaviour, its cross-OS contract, or its SPR parameters. Declare every OS this change touches, the amendment, the amendment owner you consulted, and whether they have <strong>signed off</strong>. This mirrors the Product Solution Spec's A4 (OS ownership), A9 (cross-OS impact) and B3.2 (SPR amendment). A row marked impacted with sign-off still <em>Pending</em> blocks the change from shipping — this is the accountability gate.</div>
+  <div class="hint"><strong>How to declare:</strong> list the OSes plausibly in the blast radius and give each an explicit Yes/No — silent omission is how cross-team incidents happen. "No" rows need no owner; every "Yes" needs a <em>consulted</em> owner (not merely assigned) and a sign-off status. If the change touches no OS at all, keep a single row stating so and why.</div>
+  <span class="row-mode ill">Example rows</span>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Amendment owner (consulted)</th><th>Sign-off</th></tr>
+    <tr class="example-row"><td>Billing &amp; Recharge OS</td><td>Yes</td><td>Suspension deferred to end of grace window; new grace state.</td><td>Behaviour change</td><td>[Owner name]</td><td>Received · YYYY-MM-DD</td></tr>
+    <tr class="example-row"><td>Billing &amp; Recharge OS (SPR)</td><td>Yes</td><td>New AUTOPAY_GRACE_HOURS parameter (default 24h).</td><td>SPR parameter</td><td>[Owner name]</td><td>Pending</td></tr>
+    <tr class="example-row"><td>Payment &amp; Settlement OS</td><td>Yes</td><td>Confirm settlement still keys on actual payment, not grace continuation (no change expected — confirmation only).</td><td>Cross-OS contract</td><td>[Owner name]</td><td>Received · YYYY-MM-DD</td></tr>
+    <tr class="example-row"><td>Compensation OS</td><td>No</td><td>—</td><td>None</td><td>—</td><td>—</td></tr>
+  </table>
+  <div class="hint"><strong>Amendment types:</strong> <em>Behaviour change</em> (an OS now behaves differently) · <em>SPR parameter</em> (a configurable value added/changed in an OS's registry) · <em>Cross-OS contract</em> (what one OS expects from another changes) · <em>None</em> (declared No).</div>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The supporting detail engineering needs to build and test the delta precisely. Light tier may skip B1–B4 and keep only B5.</p>
+  <div class="author-note">Still business behaviour — diagrams describe logic and outcomes, never architecture.</div>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflows — Before &amp; After <span class="tier cond">Conditional — only if a workflow's logic moves</span></h2>
+  <div class="expected"><strong>What is expected:</strong> For each workflow whose decision logic changes, two Mermaid diagrams — <strong>Before</strong> (current logic) and <strong>After</strong> (changed logic) — using the shared colour key below so the diff reads at a glance. Mermaid only; no image embeds. Skip only if the change is a parameter or message with no flow change.</div>
+
+  <div class="diff-legend">
+    <strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+    <span class="chip removed">Removed / replaced</span>
+  </div>
+
+  <p class="flow-label before">Before — current logic</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Validity-end reached, autopay due]) --> Pay{Autopay charge succeeds?}
+    Pay -- Yes --> Recharge[Recharge validity, normal flow]
+    Pay -- No --> Retry1[Single retry at suspension]
+    Retry1 --> Retry1Q{Retry succeeds?}
+    Retry1Q -- Yes --> Recharge
+    Retry1Q -- No --> Suspend[Suspend service immediately]
+    Recharge --> End([Service continues])
+    Suspend --> EndS([Service suspended])
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class Retry1,Retry1Q removed;
+    class Suspend changed;
+  </div>
+
+  <p class="flow-label after">After — changed logic</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Validity-end reached, autopay due]) --> Pay{Autopay charge succeeds?}
+    Pay -- Yes --> Recharge[Recharge validity, normal flow]
+    Pay -- No --> Grace[Open grace window AUTOPAY_GRACE_HOURS]
+    Grace --> Notify["Tell customer: payment failed, service continues"]
+    Notify --> Retry{Retry succeeds within window?}
+    Retry -- Yes --> Recharge
+    Retry -- No --> WindowEnd{Grace window elapsed?}
+    WindowEnd -- No --> Retry
+    WindowEnd -- Yes --> Suspend["Suspend service, notify grace ended"]
+    Recharge --> End([Service continues])
+    Suspend --> EndS([Service suspended])
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class Grace,Notify,WindowEnd,Retry added;
+    class Suspend changed;
+  </div>
+
+  <div class="hint"><strong>Authoring rule:</strong> the two diagrams must use the same start and end nodes so the reader is comparing like with like. Only the nodes inside the diff carry colour; everything outside the blast radius stays neutral. Colour the <em>After</em> diagram by what changed relative to Before — added paths green, modified behaviour amber; mark the paths they replace in the <em>Before</em> diagram red.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">Strict conditional — only if a state machine is touched</span></h2>
+  <div class="expected"><strong>What is expected:</strong> If the change adds, removes, or re-routes states, show the before and after transitions. New states / transitions marked clearly. Otherwise mark N/A with a one-line reason.</div>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> ACTIVE
+    ACTIVE --> GRACE: autopay failed (NEW)
+    GRACE --> ACTIVE: payment succeeds (NEW)
+    GRACE --> SUSPENDED: grace window elapsed (NEW)
+    ACTIVE --> SUSPENDED: (non-autopay) validity lapsed
+    SUSPENDED --> ACTIVE: recharge
+  </div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Configurable values the change introduces or alters, at the business level — key, default, valid range, scope. New data the system must now track is described by its <em>business meaning</em>, never by schema. Field names, columns, and storage are engineering's.</div>
+  <span class="row-mode ill">Example rows</span>
+  <table>
+    <tr><th>Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
+    <tr class="example-row"><td>AUTOPAY_GRACE_HOURS</td><td>— (none)</td><td>24h</td><td>0–72h · global, overridable per plan</td><td>Tunable grace window.</td></tr>
+    <tr class="example-row"><td>Whether a customer is currently in a grace window</td><td>Not tracked</td><td>Tracked (business state)</td><td>Per customer</td><td>Needed to drive messaging and suspension timing.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional — only if user-visible</span></h2>
+  <div class="expected"><strong>What is expected:</strong> What changes on which surface, at the level of information and state — not pixels or copy. If the change needs genuinely new screen states with backend dependency, raise an <strong>Experience–Data Spec</strong> instead and link it here.</div>
+  <span class="row-mode ill">Example rows</span>
+  <table>
+    <tr><th>Surface</th><th>What the user now sees</th></tr>
+    <tr class="example-row"><td>Customer app — home / status</td><td>A "payment failed, service continues" state during the grace window, with time remaining.</td></tr>
+    <tr class="example-row"><td>Customer app — notification</td><td>Failure-with-grace message on entry; resolution message on success; grace-ended message on lapse.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The robust verification layer that proves the generated code is correct and nothing adjacent broke. Given / When / Then criteria must <strong>exhaustively</strong> cover four classes, plus regression. A change is not verified until every item in every class has at least one block.
+    <br>1. <strong>Business logic</strong> — every rule added or changed (A5 delta, A7.1). Happy and negative paths.
+    <br>2. <strong>Computation &amp; calculation</strong> — every value the change computes or alters (amounts, durations, counts, thresholds, derived values). Tested at normal values <em>and</em> at boundaries: zero, maximum, rounding, off-by-one, window expiry.
+    <br>3. <strong>Invariants</strong> — every "must always hold" truth (A7.1). Asserted as conditions that hold across all paths, including failure paths.
+    <br>4. <strong>Use &amp; edge cases</strong> — every happy path, negative path, and edge (A7.2); every new / changed branch (B1) and transition (B2).
+    <br>5. <strong>Regression</strong> — a REGRESSION block for every A6 guard line.
+  </div>
+  <div class="hint"><strong>Why this matters:</strong> code is AI-generated; review is human. B5 is the contract the generated code is checked against. A class left uncovered is a class no one verified — that is exactly where "moved fast, broke trust" happens. Label every block with its class so coverage is auditable.</div>
+
+  <span class="row-mode ill">Example blocks</span>
+  <div class="gherkin">
+    <strong>LOGIC_01 (business logic · happy):</strong> Grace absorbs a transient failure<br>
+    <span class="kw">Given</span> an autopay customer whose mandate fails on validity-end day<br>
+    <span class="kw">When</span> a retry succeeds within AUTOPAY_GRACE_HOURS<br>
+    <span class="kw">Then</span> service is never suspended<br>
+    <span class="kw">And</span> validity is recharged as on a normal cycle
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_02 (business logic · negative):</strong> Grace window elapses<br>
+    <span class="kw">Given</span> an autopay customer in an open grace window<br>
+    <span class="kw">When</span> no payment succeeds before the window ends<br>
+    <span class="kw">Then</span> service is suspended<br>
+    <span class="kw">And</span> the customer is told the grace period has ended
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_01 (computation · boundary):</strong> Window expiry is exact<br>
+    <span class="kw">Given</span> a grace window opened at time T with AUTOPAY_GRACE_HOURS = 24<br>
+    <span class="kw">When</span> the clock reaches exactly T + 24h with no successful payment<br>
+    <span class="kw">Then</span> the window is treated as elapsed and service is suspended<br>
+    <span class="kw">And</span> a payment arriving one second after T + 24h does not prevent suspension
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_02 (computation · zero / config):</strong> Zero-hour grace<br>
+    <span class="kw">Given</span> AUTOPAY_GRACE_HOURS is set to 0<br>
+    <span class="kw">When</span> an autopay mandate fails<br>
+    <span class="kw">Then</span> behaviour is identical to the pre-change immediate suspension<br>
+    <span class="kw">And</span> no grace state is ever entered
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_01 (from A7.1):</strong> Service-state exclusivity<br>
+    <span class="kw">Given</span> any autopay customer at any moment, including mid-retry<br>
+    <span class="kw">Then</span> the customer is in exactly one service state (active / in-grace / suspended)<br>
+    <span class="kw">And</span> never in two states at once
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_02 (from A7.1):</strong> Settlement integrity<br>
+    <span class="kw">Given</span> a customer kept live by a grace window<br>
+    <span class="kw">Then</span> at no point is the customer treated as paid for settlement<br>
+    <span class="kw">Until</span> an actual payment succeeds
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_01 (guard · from A6):</strong> Non-autopay unaffected<br>
+    <span class="kw">Given</span> a non-autopay customer whose validity lapses<br>
+    <span class="kw">When</span> the validity window ends<br>
+    <span class="kw">Then</span> suspension timing is exactly as before the change<br>
+    <span class="kw">And</span> no grace messaging is shown
+  </div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <p style="font-size:13px;color:var(--muted);margin:4px 0;">Required. The author fills counts; the reviewer audits that every declared item is covered. The change is not sendable until every row reads "all covered".</p>
+  <table class="coverage">
+    <tr><th style="width:24%">Coverage class</th><th>Source section(s)</th><th style="width:14%">Items</th><th style="width:14%">Blocks</th><th style="width:16%">All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 delta · A7.1 rules</td><td class="placeholder">[n]</td><td class="placeholder">[n]</td><td class="placeholder">[Y/N]</td></tr>
+    <tr><td class="cls">Computation</td><td>A5 (changed calculations) · B3 parameters</td><td class="placeholder">[n]</td><td class="placeholder">[n]</td><td class="placeholder">[Y/N]</td></tr>
+    <tr><td class="cls">Invariants</td><td>A7.1 invariants</td><td class="placeholder">[n]</td><td class="placeholder">[n]</td><td class="placeholder">[Y/N]</td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 edges · B1 branches · B2 transitions</td><td class="placeholder">[n]</td><td class="placeholder">[n]</td><td class="placeholder">[Y/N]</td></tr>
+    <tr><td class="cls">Regression</td><td>A6 guard lines</td><td class="placeholder">[n]</td><td class="placeholder">[n]</td><td class="placeholder">[Y/N]</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);">Bar: every coverage-matrix row "all covered"; every computation has at least one boundary block; every A6 line has a REGRESSION block; overall bias ~1 happy : 3 negative/edge/regression. No exceptions.</p>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <p style="font-size:13px;color:var(--muted);margin-top:0;">Sendable when: Quick Check filled (incl. tier); all required sections <code>[x] Filled</code>; conditional sections <code>[x] Filled</code> or <code>[x] N/A — &lt;reason&gt;</code>; the B5 coverage matrix reads "all covered" on every class (business logic, computation, invariants, use/edge, regression); every A6 guard has a matching REGRESSION block; every A8 OS marked impacted has sign-off <code>Received</code>.</p>
+  <table>
+    <tr><th>#</th><th>Section</th><th class="tier-cell">Tier</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td><span class="tier core">Always</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td><span class="tier core">Light</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td><span class="tier core">Light</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td><span class="tier how">Full</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A4</td><td>Desired behaviour</td><td><span class="tier how">Full</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td><span class="tier guard">Light</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>B1</td><td>Changed workflows (before/after)</td><td><span class="tier cond">Cond.</span></td><td class="check">[ ]</td><td class="check">[ ]</td></tr>
+    <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[ ]</td><td class="check">[ ]</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[ ]</td><td class="check">[ ]</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (verification layer)</td><td><span class="tier core">Light</span></td><td class="check">[ ]</td><td class="check">—</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Author rule:</strong> N/A on a conditional section needs a one-line reason. Every A6 guard maps to a B5 REGRESSION block. Every A7.1 invariant and every changed calculation maps to a B5 block. Every A8 OS marked impacted is consulted, not merely assigned.<br><br>
+    <strong>Reviewer rule (engineering):</strong> Read Quick Check, then A5 (delta), A6 (guard), A8 (OS impact), and the B5 coverage matrix in full. Reject if: A5 mixes in implementation; A6 is empty / hand-wavy; any A8 "Yes" has sign-off Pending; or the B5 coverage matrix has any class not "all covered" — a computation with no boundary block, an A7.1 invariant with no INVARIANT block, an edge / branch / transition with no block, or an A6 line with no REGRESSION block.<br><br>
+    <strong>Out-of-scope for this spec:</strong> API contracts, event/payload schemas, database design, concurrency / locking, retry / backoff mechanics, monitoring thresholds, alert routing, dedup keys, pixel-level UI and exact copy. Engineering and design own these.<br><br>
+    <strong>What this spec is — and isn't:</strong> The canonical articulation of how an existing behaviour should change. Not a code-generation contract; engineering decides architecture and produces its own downstream artefacts from this spec.
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <span class="row-mode ill">Example rows</span>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:130px">Author</th><th style="width:90px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
+    <tr class="example-row"><td>v1.0</td><td>YYYY-MM-DD</td><td>[Name]</td><td>All</td><td>Initial change spec.</td><td>—</td></tr>
+    <tr class="example-row"><td>v1.1</td><td>YYYY-MM-DD</td><td>[Name]</td><td>A5, B3</td><td>Default AUTOPAY_GRACE_HOURS set to 24h after ops review.</td><td>Lead PM</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom Change Spec Template v1.0 (PM deliverable) · Quick Check + Part A (8) + Part B (5) + Closeout · Sibling of the Product Solution Spec v2.0
+</p>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>
