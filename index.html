@@ -241,7 +241,7 @@
     <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>Ready to move into tech sequencing once Vaibhav (Quality OS PM) gives the go-ahead.</strong> Most are pure ES / app / backend wiring; a few have a small OS-amendment companion (called out per item).</p>
     <ul style="margin: 0; padding-left: 1.2rem;">
       <li><a href="#item-02" class="tab-link" data-tab="item-02"><strong>02</strong> &mdash; Bifurcation: booking cancelled by customer vs by system</a></li>
-      <li><a href="#item-03" class="tab-link" data-tab="item-03"><strong>03</strong> &mdash; CLOS timeout scheduler unwired: P75 / P76 / P77 / P78 not firing <span style="color: var(--ink-soft); font-size: 0.85rem;">(P74 carved out to Item 13)</span></a></li>
+      <li><a href="#item-03" class="tab-link" data-tab="item-03"><strong>03</strong> &mdash; CLOS timeout scheduler unwired: P75 / P76 / P77 not firing <span style="color: var(--ink-soft); font-size: 0.85rem;">(P74 carved out to Item 13; P78 is event-driven and works in isolation)</span></a></li>
       <li><a href="#item-04" class="tab-link" data-tab="item-04"><strong>04</strong> &mdash; DAS scheduler unwired: P191 reroute not firing <span style="color: var(--ink-soft); font-size: 0.85rem;">(P41 carved out to Item 13)</span></a></li>
       <li><a href="#item-05" class="tab-link" data-tab="item-05"><strong>05</strong> &mdash; DAS allocation state frozen at <code>ASSIGNED</code> / <code>UNASSIGNED</code>, never reaches <code>ACCEPTED</code> / <code>ACTIVE</code></a></li>
       <li><a href="#item-06" class="tab-link" data-tab="item-06"><strong>06</strong> &mdash; Change-team-member workflow post technician assignment <span style="color: var(--ink-soft); font-size: 0.85rem;">(Install only)</span></a></li>
@@ -289,7 +289,7 @@
       </tr>
       <tr>
         <td><strong>03</strong></td>
-        <td><a href="#item-03" class="tab-link" data-tab="item-03">CLOS timeout scheduler unwired (P74/P75/P76/P77/P78 inert)</a></td>
+        <td><a href="#item-03" class="tab-link" data-tab="item-03">CLOS timeout scheduler unwired (P75/P76/P77 inert; P74 carved out, P78 event-driven)</a></td>
         <td><span class="pill bug">BUG</span></td>
         <td><span class="bucket-tag b1">Bucket 2</span></td>
         <td><span class="mono">connection-lifecycle-service</span>, <span class="mono">tas-service</span> (T3 co-fix)</td>
@@ -780,10 +780,10 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 </section>
 <!-- ============ ITEM 03 ============ -->
 <section id="item-03" class="tab-pane">
-  <h2>03 — CLOS timeout scheduler unwired (P75 / P76 / P77 / P78 inert)</h2>
+  <h2>03 — CLOS timeout scheduler unwired (P75 / P76 / P77 inert)</h2>
 
   <div class="caveat" style="margin-bottom: 0.8rem;">
-    <strong>P74 is carved out to <a href="#item-13" class="tab-link" data-tab="item-13">Item 13</a>.</strong> P74 (CL install window, 72h) is excluded from this item's scope until Dhruv decides whether its start anchor is <code>ASSIGNED</code> or <code>ACCEPTED</code>. The TAS T3-retry co-fix that previously paired with P74 is similarly deferred to Item 13. This item ships the wiring for the remaining four CLOS timers (P75 / P76 / P77 / P78) only.
+    <strong>P74 is carved out to <a href="#item-13" class="tab-link" data-tab="item-13">Item 13</a>.</strong> P74 (CL install window, 72h) is excluded from this item's scope until Dhruv decides whether its start anchor is <code>ASSIGNED</code> or <code>ACCEPTED</code>. The TAS T3-retry co-fix that previously paired with P74 is similarly deferred to Item 13. <strong>P78 (retry cap) is event-driven, not scheduler-driven</strong> — it works in isolation today and isn't part of this item. This item ships the wiring for the remaining three CLOS timers (P75 / P76 / P77) only.
   </div>
 
   <div class="classify">
@@ -795,7 +795,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     </div>
     <table class="define-table">
       <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr><td>OS (CL)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">P75 (7d) / P76 (90d) / P77 (45d&nbsp;PM, 30d&nbsp;OS-doc) / P78 (3 retries) — all with transitions T9 / T12 / timeouts. <em>(P74 + T3 deferred to <a href="#item-13" class="tab-link" data-tab="item-13">Item 13</a>.)</em></td></tr>
+      <tr><td>OS (CL)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">P75 (7d) / P76 (90d) / P77 (45d&nbsp;PM, 30d&nbsp;OS-doc) — all with transitions T9 / timeouts. <em>(P74 + T3 deferred to <a href="#item-13" class="tab-link" data-tab="item-13">Item 13</a>. P78 retry-cap is event-driven, not in scope.)</em></td></tr>
       <tr><td>PRD (CL v1.6)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">State machine + system-source transitions all listed. Implementation choice for how the sweep runs.</td></tr>
       <tr><td>Code (CLOS — batches)</td><td class="define-yn yes">✓ Correct</td><td class="define-note"><code>SchedulingServiceImpl</code> five batch methods + <code>InternalTaskController</code> endpoints. Reachable; work when called manually.</td></tr>
       <tr><td>Code (CLOS — scheduler)</td><td class="define-yn no">✗ Unwired</td><td class="define-note"><code>application-prod.yml:18</code> → <code>AWS_SCHEDULER_ENABLED: false</code>. <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> never called anywhere.</td></tr>
@@ -812,21 +812,19 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       <tr><td><code>P75</code></td><td>CL <strong>request expiry</strong> — 7-day cap on how long a connection can sit in <code>REQUESTED</code> (no CSP picked up yet) before auto-deactivation.</td></tr>
       <tr><td><code>P76</code></td><td>CL <strong>pause max</strong> — 90-day cap on <code>PAUSED</code> before auto-deactivation.</td></tr>
       <tr><td><code>P77</code></td><td>CL <strong>deactivation timeout</strong> — <strong>45 days</strong> cap on <code>PENDING_DEACTIVATION</code> before being forced to <code>DEACTIVATED</code>. Sourced from AWS param store (PM-confirmed canonical); OS doc still shows older 30d default — minor drift, not blocking.</td></tr>
-      <tr><td><code>P78</code></td><td>CL <strong>install retry cap</strong> — 3 retries before retry-exhaustion forces permanent deactivation (T12 path inside P74). Scope is <strong>global per-connection</strong> (counts <code>PENDING_INSTALL → REQUESTED</code> cycles regardless of which CSP each attempt is routed to) — per OS L460.</td></tr>
     </tbody>
   </table>
 
-  <h3>What the five timers should do</h3>
+  <h3>What the in-scope timers should do</h3>
   <table>
     <thead><tr><th>Timer</th><th>Anchor</th><th>Threshold</th><th>Transition</th><th>Today</th></tr></thead>
     <tbody>
-      <tr><td><strong>P74</strong></td><td><code>PENDING_INSTALL</code></td><td>72h since entry</td><td>If <code>retry_count &lt; P78</code> → <code>T3 → REQUESTED</code> (<code>entry_reason=RETRY</code>). Else → <code>T12 → PENDING_DEACTIVATION</code> (<code>RETRY_EXHAUSTION</code>).</td><td>Nothing fires.</td></tr>
       <tr><td><strong>P75</strong></td><td><code>REQUESTED</code></td><td>7 days</td><td><code>T9 → DEACTIVATED</code> (<code>REQUEST_EXPIRED</code>).</td><td>Nothing fires.</td></tr>
       <tr><td><strong>P76</strong></td><td><code>PAUSED</code></td><td>90 days</td><td><code>→ DEACTIVATED</code> (<code>PAUSE_MAX_EXCEEDED</code>).</td><td>Nothing fires.</td></tr>
       <tr><td><strong>P77</strong></td><td><code>PENDING_DEACTIVATION</code></td><td>45 days (canonical; from AWS param store)</td><td><code>→ DEACTIVATED</code> (<code>DEACTIVATION_TIMEOUT</code>).</td><td>Nothing fires.</td></tr>
-      <tr><td><strong>P78</strong></td><td>(cap inside P74)</td><td><code>retry_count ≥ 3</code></td><td>Selects P74's exhausted branch (T12).</td><td>Same as P74.</td></tr>
     </tbody>
   </table>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);">P74 (install window) and P78 (retry cap) are excluded from this item — see the caveat at the top.</p>
 
   <h3>What more is required in the install service (TAS) — co-fix</h3>
   <p>Today, when CL fires a <code>T3</code> retry, TAS no-ops because its <code>UPSTREAM_RETRY_TRIGGERS</code> set only contains T11 / T12 — <code>T3</code> is missing. Without this fix, the first P74 retry orphans 50 install candidates in prod.</p>
@@ -845,13 +843,11 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <li>Connection re-enters PENDING_INSTALL after a decline. The new <code>entry_timestamp</code> resets the P74 clock — second 72h count starts fresh.</li>
     <li>P75 fires while a stale TAS candidate from a previous allocation still exists. Mitigated by the T3 co-fix above.</li>
     <li>P77 fires while ACS still holds router. ACS retrieval flow runs independently; P77 hard-caps the wait.</li>
-    <li>Retry count already at P78 when P74 fires. Exhausted branch (T12 → PENDING_DEACTIVATION).</li>
   </ol>
 
   <h3>Notes for tech</h3>
   <ul>
     <li><strong>Sweep cadence:</strong> tech's choice, up to <strong>15-minute granularity</strong>. PM accepts the implication that timers can fire up to a sweep-period late (e.g. P75 may fire up to 15 min after the 7-day mark).</li>
-    <li><strong>Retry-cap scope:</strong> P78 stays global per-connection (per OS L460, current code matches). No per-CSP scoping in this item.</li>
     <li><strong>P77 value:</strong> 45 days is canonical (AWS param store). The OS doc table still shows the older 30d default — minor doc-drift, optional follow-up on the next OS-doc revision; not blocking.</li>
   </ul>
 
@@ -874,7 +870,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <summary>Source quotes &amp; references</summary>
     <div>
       <ul>
-        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> — P74 / P75 / P76 / P77 / P78.</li>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> — P75 / P76 / P77.</li>
         <li><strong>PRD:</strong> <code>yaml-prd/connection-lifecycle-prd-v1.6.yaml</code>.</li>
         <li><strong>Code (CLOS):</strong> <code>application-prod.yml:18</code> · <code>SchedulingServiceImpl.java</code> (the five batches) · <code>InternalTaskController.java</code> (the endpoints) · <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> (never called).</li>
         <li><strong>Code (TAS co-fix site):</strong> <code>ClStateChangedHandler.java</code> — <code>UPSTREAM_RETRY_TRIGGERS</code>.</li>
@@ -1746,7 +1742,7 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
     <table class="define-table">
       <tr><th>Layer</th><th class="define-yn">Status</th><th>Notes</th></tr>
       <tr><td>OS (CL + DAS)</td><td class="define-yn partial">⚠ Ambiguous</td><td class="define-note">CL OS L572 (P74 = 72h install window) and DAS OS (P41 = 2h acceptance window) define the durations but don't explicitly fix the start anchor across both interpretations. Reasonable readings exist for both <code>ASSIGNED</code> and <code>ACCEPTED</code>.</td></tr>
-      <tr><td>Items 03 + 05</td><td class="define-yn no">✗ Carved out</td><td class="define-note">Items 03 (CLOS scheduler) and 05 (DAS scheduler) explicitly exclude P74 and P41 respectively. They wire P75/P76/P77/P78 and P191 only, until this decision lands.</td></tr>
+      <tr><td>Items 03 + 05</td><td class="define-yn no">✗ Carved out</td><td class="define-note">Items 03 (CLOS scheduler) and 05 (DAS scheduler) explicitly exclude P74 and P41 respectively. They wire P75/P76/P77 (and P191) only, until this decision lands.</td></tr>
       <tr><td>Prod impact</td><td class="define-yn partial">⚠ Downstream</td><td class="define-note">Once Dhruv decides, Items 03 and 05 absorb the answer and become unblocked. Anchor choice also affects the TAS T3-retry co-fix semantics under Item 03.</td></tr>
     </table>
   </div>
@@ -1782,7 +1778,7 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
   <p style="font-size: 0.95rem;"><strong>PM decision required from Dhruv:</strong> for both P74 (CL install window, 72h) and P41 (DAS acceptance window, 2h), is the start anchor <code>ASSIGNED</code> entry (Option A) or <code>ACCEPTED</code> entry (Option B)? Same answer applies to both timers, or do they need separate anchors?</p>
 
   <h3>Why this is in Bucket 2 (Pending on Dhruv)</h3>
-  <p>Items 03 and 05 cannot ship the P74 / P41 portions until this is locked. The rest of those items (P75/P76/P77/P78 in CLOS, P191 in DAS) is independent of this decision and proceeds under Bucket 1.</p>
+  <p>Items 03 and 05 cannot ship the P74 / P41 portions until this is locked. The rest of those items (P75/P76/P77 in CLOS, P191 in DAS) is independent of this decision and proceeds under Bucket 1.</p>
 
   <details>
     <summary>Source quotes &amp; references</summary>
