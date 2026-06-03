@@ -171,8 +171,7 @@
 
   .bucket-tag { display: inline-block; padding: 0.18rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid transparent; white-space: nowrap; }
   .bucket-tag.b1 { background: var(--yes-bg); color: var(--yes); border-color: var(--yes); }
-  .bucket-tag.b2 { background: var(--warn-bg); color: var(--gap); border-color: var(--warn); }
-  .bucket-tag.b3 { background: var(--new-bg); color: var(--new); border-color: var(--new); }
+  .bucket-tag.b2 { background: var(--new-bg); color: var(--new); border-color: var(--new); }
 
   footer { margin-top: 5rem; padding: 1.25rem 0 2rem; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 0.82rem; }
 
@@ -204,7 +203,7 @@
     <strong>Owner:</strong> Ashish Raj &middot;
     <strong>Started:</strong> 2026-05-29 &middot;
     <strong>For:</strong> Wiom CSP Tech &middot;
-    <span id="status-counter">15 items &middot; grouped into 3 ownership buckets</span>
+    <span id="status-counter">14 items &middot; grouped into 2 ownership buckets</span>
   </div>
 </header>
 
@@ -213,19 +212,18 @@
     <button class="tab-btn active" data-tab="overview">Overview</button>
     <button class="tab-btn" data-tab="item-01"><span class="num">01</span>Same-CSP loop</button>
     <button class="tab-btn" data-tab="item-02"><span class="num">02</span>2 slots + counter</button>
-    <button class="tab-btn" data-tab="item-03"><span class="num">03</span>Tech FPN</button>
-    <button class="tab-btn" data-tab="item-04"><span class="num">04</span>Cancel bifurcation</button>
-    <button class="tab-btn" data-tab="item-05"><span class="num">05</span>CLOS sched</button>
-    <button class="tab-btn" data-tab="item-06"><span class="num">06</span>DAS sched</button>
-    <button class="tab-btn" data-tab="item-07"><span class="num">07</span>DAS state</button>
-    <button class="tab-btn" data-tab="item-08"><span class="num">08</span>Voice + landmark</button>
-    <button class="tab-btn" data-tab="item-09"><span class="num">09</span>Change team member</button>
-    <button class="tab-btn" data-tab="item-10"><span class="num">10</span>IVR 2.0 routing</button>
-    <button class="tab-btn" data-tab="item-11"><span class="num">11</span>Capacity skip-T2</button>
-    <button class="tab-btn" data-tab="item-12"><span class="num">12</span>Quality signal contract drift</button>
-    <button class="tab-btn" data-tab="item-13"><span class="num">13</span>CAEO customer_id</button>
-    <button class="tab-btn" data-tab="item-14"><span class="num">14</span>Sub-reason blank</button>
-    <button class="tab-btn" data-tab="item-15"><span class="num">15</span>DAS single-CSP zone</button>
+    <button class="tab-btn" data-tab="item-03"><span class="num">03</span>Cancel bifurcation</button>
+    <button class="tab-btn" data-tab="item-04"><span class="num">04</span>CLOS sched</button>
+    <button class="tab-btn" data-tab="item-05"><span class="num">05</span>DAS sched</button>
+    <button class="tab-btn" data-tab="item-06"><span class="num">06</span>DAS state</button>
+    <button class="tab-btn" data-tab="item-07"><span class="num">07</span>Change team member</button>
+    <button class="tab-btn" data-tab="item-08"><span class="num">08</span>IVR 2.0 routing</button>
+    <button class="tab-btn" data-tab="item-09"><span class="num">09</span>Capacity skip-T2</button>
+    <button class="tab-btn" data-tab="item-10"><span class="num">10</span>Quality signal contract drift</button>
+    <button class="tab-btn" data-tab="item-11"><span class="num">11</span>CAEO customer_id</button>
+    <button class="tab-btn" data-tab="item-12"><span class="num">12</span>Sub-reason blank</button>
+    <button class="tab-btn" data-tab="item-13"><span class="num">13</span>DAS single-CSP zone</button>
+    <button class="tab-btn" data-tab="item-14"><span class="num">14</span>P74/P41 start time (Dhruv)</button>
   </div>
 </nav>
 
@@ -239,48 +237,35 @@
   <div style="border: 1px solid var(--yes); border-left: 4px solid var(--yes); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1rem; background: var(--yes-bg);">
     <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
       <span style="font-size: 1.1rem; font-weight: 800; color: var(--yes); letter-spacing: 0.01em;">Bucket 1 &mdash; Go-ahead from Vaibhav</span>
-      <span style="font-size: 0.85rem; color: var(--ink-soft);">10 items</span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">12 items</span>
     </div>
-    <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>No OS change required &mdash; pure ES / app / backend wiring.</strong> Vaibhav (Quality OS PM) needs to confirm "no OS amendment required" for each; once confirmed, items move directly into tech sequencing.</p>
+    <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>Ready to move into tech sequencing once Vaibhav (Quality OS PM) gives the go-ahead.</strong> Most are pure ES / app / backend wiring; a few have a small OS-amendment companion (called out per item).</p>
     <ul style="margin: 0; padding-left: 1.2rem;">
-      <li><a href="#item-03" class="tab-link" data-tab="item-03"><strong>03</strong> &mdash; FPN for Rohit (technician) on assignment</a></li>
-      <li><a href="#item-04" class="tab-link" data-tab="item-04"><strong>04</strong> &mdash; Bifurcation: booking cancelled by customer vs by system</a></li>
-      <li><a href="#item-07" class="tab-link" data-tab="item-07"><strong>07</strong> &mdash; DAS allocation state frozen at <code>ASSIGNED</code> / <code>UNASSIGNED</code>, never reaches <code>ACCEPTED</code> / <code>ACTIVE</code></a></li>
-      <li><a href="#item-08" class="tab-link" data-tab="item-08"><strong>08</strong> &mdash; Voice directions + address-locality + landmark on the CSP / technician app</a></li>
-      <li><a href="#item-09" class="tab-link" data-tab="item-09"><strong>09</strong> &mdash; Change-team-member workflow post technician assignment</a></li>
-      <li><a href="#item-11" class="tab-link" data-tab="item-11"><strong>11</strong> &mdash; Capacity OS code skips connection increment after installation <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
-      <li><a href="#item-12" class="tab-link" data-tab="item-12"><strong>12</strong> &mdash; <code>CL_INSTALLATION_QUALITY_SIGNAL</code> — CL producer record drifted from CL OS S-10 contract (100 % rejected by Quality OS validation) <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
-      <li><a href="#item-13" class="tab-link" data-tab="item-13"><strong>13</strong> &mdash; CAEO <code>customer_id</code> column has CSP-ID for installation task <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
-      <li><a href="#item-14" class="tab-link" data-tab="item-14"><strong>14</strong> &mdash; <code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code> <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
-      <li><a href="#item-15" class="tab-link" data-tab="item-15"><strong>15</strong> &mdash; DAS doesn't publish supply-side events when a zone has only one CSP <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
+      <li><a href="#item-02" class="tab-link" data-tab="item-02"><strong>02</strong> &mdash; Propose 2 slots (instead of 1) + reallocation case</a></li>
+      <li><a href="#item-03" class="tab-link" data-tab="item-03"><strong>03</strong> &mdash; Bifurcation: booking cancelled by customer vs by system</a></li>
+      <li><a href="#item-04" class="tab-link" data-tab="item-04"><strong>04</strong> &mdash; CLOS timeout scheduler unwired: P75 / P76 / P77 / P78 not firing <span style="color: var(--ink-soft); font-size: 0.85rem;">(P74 carved out to Item 14)</span></a></li>
+      <li><a href="#item-05" class="tab-link" data-tab="item-05"><strong>05</strong> &mdash; DAS scheduler unwired: P191 reroute not firing <span style="color: var(--ink-soft); font-size: 0.85rem;">(P41 carved out to Item 14)</span></a></li>
+      <li><a href="#item-06" class="tab-link" data-tab="item-06"><strong>06</strong> &mdash; DAS allocation state frozen at <code>ASSIGNED</code> / <code>UNASSIGNED</code>, never reaches <code>ACCEPTED</code> / <code>ACTIVE</code></a></li>
+      <li><a href="#item-07" class="tab-link" data-tab="item-07"><strong>07</strong> &mdash; Change-team-member workflow post technician assignment <span style="color: var(--ink-soft); font-size: 0.85rem;">(Install only)</span></a></li>
+      <li><a href="#item-08" class="tab-link" data-tab="item-08"><strong>08</strong> &mdash; IVR 2.0 integration for Cx ↔ Px interaction <span style="color: var(--ink-soft); font-size: 0.85rem;">(spec linked)</span></a></li>
+      <li><a href="#item-09" class="tab-link" data-tab="item-09"><strong>09</strong> &mdash; Capacity OS code skips connection increment after installation <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
+      <li><a href="#item-10" class="tab-link" data-tab="item-10"><strong>10</strong> &mdash; <code>CL_INSTALLATION_QUALITY_SIGNAL</code> — CL producer record drifted from CL OS S-10 contract (100 % rejected by Quality OS validation) <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
+      <li><a href="#item-11" class="tab-link" data-tab="item-11"><strong>11</strong> &mdash; CAEO <code>customer_id</code> column has CSP-ID for installation task <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
+      <li><a href="#item-12" class="tab-link" data-tab="item-12"><strong>12</strong> &mdash; <code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code> &mdash; implement OS-aligned 6-option picker + 4-field auto-populate <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
+      <li><a href="#item-13" class="tab-link" data-tab="item-13"><strong>13</strong> &mdash; DAS doesn't publish supply-side events when a zone has only one CSP <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
     </ul>
   </div>
 
   <!-- BUCKET 2 -->
-  <div style="border: 1px solid var(--warn); border-left: 4px solid var(--warn); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1rem; background: var(--warn-bg);">
-    <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
-      <span style="font-size: 1.1rem; font-weight: 800; color: var(--gap); letter-spacing: 0.01em;">Bucket 2 &mdash; Working-hour dependency</span>
-      <span style="font-size: 0.85rem; color: var(--ink-soft);">3 items</span>
-    </div>
-    <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>Blocked on working-hour governance.</strong> Vaibhav is currently defining the working-hour rule that these items lean on (SLA-timer behaviour during off-hours, CSP availability windows, IVR routing windows). Items resume once that governance is finalised.</p>
-    <ul style="margin: 0; padding-left: 1.2rem;">
-      <li><a href="#item-05" class="tab-link" data-tab="item-05"><strong>05</strong> &mdash; CLOS timeout scheduler unwired: P74 / P75 / P76 / P77 / P78 not firing</a></li>
-      <li><a href="#item-06" class="tab-link" data-tab="item-06"><strong>06</strong> &mdash; DAS scheduler unwired: P41 acceptance sweep + P191 reroute not firing</a></li>
-      <li><a href="#item-10" class="tab-link" data-tab="item-10"><strong>10</strong> &mdash; IVR 2.0 integration for Cx ↔ Px interaction <span style="color: var(--ink-soft); font-size: 0.85rem;">(spec linked)</span></a></li>
-    </ul>
-  </div>
-
-  <!-- BUCKET 3 -->
   <div style="border: 1px solid var(--new); border-left: 4px solid var(--new); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1.5rem; background: var(--new-bg);">
     <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
-      <span style="font-size: 1.1rem; font-weight: 800; color: var(--new); letter-spacing: 0.01em;">Bucket 3 &mdash; Decision pending on Dhruv</span>
-      <span style="font-size: 0.85rem; color: var(--ink-soft);">2 items &middot; common theme</span>
+      <span style="font-size: 1.1rem; font-weight: 800; color: var(--new); letter-spacing: 0.01em;">Bucket 2 &mdash; Pending on Dhruv</span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">2 items</span>
     </div>
-    <p style="margin: 0 0 0.6rem; font-size: 0.92rem; color: var(--ink);"><strong>Shared product question for both items:</strong> when a CSP marks <code>INSTALLATION_FAILED</code> on a booking himself, the existing <strong>P51 cooloff</strong> blocks that same CSP from being re-assigned the booking for 4 hours. After P51 elapses, the CSP becomes eligible again. <strong>Should this even be allowed?</strong> Allowing it produces a known partner-complaint pattern:</p>
-    <p style="margin: 0 0 0.7rem; font-style: italic; color: var(--ink-soft); padding-left: 0.9rem; border-left: 2px solid var(--new); font-size: 0.92rem;">"mujhe same booking baar baar bhejte ho jo maine decline kari hai"</p>
+    <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>Waiting on product decisions from Dhruv before tech can build.</strong> Both items have downstream impact on the items in Bucket 1 (Item 14's start-time decision is absorbed into Items 04 and 05; Item 01's P51-reassignability decision affects how single-CSP-zone routing behaves end-to-end).</p>
     <ul style="margin: 0; padding-left: 1.2rem;">
-      <li><a href="#item-01" class="tab-link" data-tab="item-01"><strong>01</strong> &mdash; Repeat allocation to the same CSP in a single-CSP zone</a></li>
-      <li><a href="#item-02" class="tab-link" data-tab="item-02"><strong>02</strong> &mdash; Propose 2 slots (instead of 1) + reallocation case</a></li>
+      <li><a href="#item-01" class="tab-link" data-tab="item-01"><strong>01</strong> &mdash; Repeat allocation to the same CSP in a single-CSP zone &mdash; should the P51 cooloff allow a CSP who marked <code>INSTALLATION_FAILED</code> to be re-assigned the same booking once the cooloff elapses? Partner-complaint pattern: <em>"mujhe same booking baar baar bhejte ho jo maine decline kari hai"</em></a></li>
+      <li><a href="#item-14" class="tab-link" data-tab="item-14"><strong>14</strong> &mdash; CLOS P74 (72h) + DAS P41 (2h): does the timer start from <code>ASSIGNED</code> or from <code>ACCEPTED</code>? Once decided, Items 04 and 05 absorb the answer and become unblocked.</a></li>
     </ul>
   </div>
 
@@ -294,106 +279,99 @@
         <td><strong>01</strong></td>
         <td><a href="#item-01" class="tab-link" data-tab="item-01">Same CSP re-assigned in single-CSP zones (P51 bypass)</a></td>
         <td><span class="pill bug">BUG</span></td>
-        <td><span class="bucket-tag b3">Bucket 3</span></td>
+        <td><span class="bucket-tag b2">Bucket 2</span></td>
         <td><span class="mono">demand-allocation-service</span></td>
       </tr>
       <tr>
         <td><strong>02</strong></td>
         <td><a href="#item-02" class="tab-link" data-tab="item-02">Propose 2 slots + customer counter-proposal</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="bucket-tag b3">Bucket 3</span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">ES&nbsp;PRD</span>, <span class="mono">tas-service</span>, partner app, customer app</td>
       </tr>
       <tr>
         <td><strong>03</strong></td>
-        <td><a href="#item-03" class="tab-link" data-tab="item-03">FPN for Rohit (technician) on assignment</a></td>
-        <td><span class="pill gap">GAP</span></td>
-        <td><span class="bucket-tag b1">Bucket 1</span></td>
-        <td>Technician app, CleverTap campaign</td>
-      </tr>
-      <tr>
-        <td><strong>04</strong></td>
-        <td><a href="#item-04" class="tab-link" data-tab="item-04">Bifurcate cancel-by-customer vs cancel-by-system</a></td>
+        <td><a href="#item-03" class="tab-link" data-tab="item-03">Bifurcate cancel-by-customer vs cancel-by-system</a></td>
         <td><span class="pill gap">GAP</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td>Customer backend, <span class="mono">tas-service</span>, ES PRD</td>
       </tr>
       <tr>
-        <td><strong>05</strong></td>
-        <td><a href="#item-05" class="tab-link" data-tab="item-05">CLOS timeout scheduler unwired (P74/P75/P76/P77/P78 inert)</a></td>
+        <td><strong>04</strong></td>
+        <td><a href="#item-04" class="tab-link" data-tab="item-04">CLOS timeout scheduler unwired (P74/P75/P76/P77/P78 inert)</a></td>
         <td><span class="pill bug">BUG</span></td>
-        <td><span class="bucket-tag b2">Bucket 2</span></td>
+        <td><span class="bucket-tag b1">Bucket 2</span></td>
         <td><span class="mono">connection-lifecycle-service</span>, <span class="mono">tas-service</span> (T3 co-fix)</td>
       </tr>
       <tr>
-        <td><strong>06</strong></td>
-        <td><a href="#item-06" class="tab-link" data-tab="item-06">DAS scheduler unwired (P41 + P191 inert) &mdash; blocked on 08</a></td>
+        <td><strong>05</strong></td>
+        <td><a href="#item-05" class="tab-link" data-tab="item-05">DAS scheduler unwired (P41 + P191 inert) &mdash; blocked on 08</a></td>
         <td><span class="pill bug">BUG</span></td>
-        <td><span class="bucket-tag b2">Bucket 2</span></td>
+        <td><span class="bucket-tag b1">Bucket 2</span></td>
         <td><span class="mono">demand-allocation-service</span></td>
       </tr>
       <tr>
-        <td><strong>07</strong></td>
-        <td><a href="#item-07" class="tab-link" data-tab="item-07">DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)</a></td>
+        <td><strong>06</strong></td>
+        <td><a href="#item-06" class="tab-link" data-tab="item-06">DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)</a></td>
         <td><span class="pill gap">GAP</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">demand-allocation-service</span> &amp;/or <span class="mono">tas</span> (tech picks)</td>
       </tr>
       <tr>
+        <td><strong>07</strong></td>
+        <td><a href="#item-07" class="tab-link" data-tab="item-07">Change-team-member workflow post technician assignment</a></td>
+        <td><span class="pill gap">GAP</span></td>
+        <td><span class="bucket-tag b1">Bucket 1</span></td>
+        <td><span class="mono">csp-tas-service</span> (install allowed-actions), gateway, CSP App</td>
+      </tr>
+      <tr>
         <td><strong>08</strong></td>
-        <td><a href="#item-08" class="tab-link" data-tab="item-08">Show address-locality + landmark + voice direction in the CSP App</a></td>
+        <td><a href="#item-08" class="tab-link" data-tab="item-08">IVR 2.0 integration for Cx ↔ Px interaction</a></td>
         <td><span class="pill gap">GAP</span></td>
-        <td><span class="bucket-tag b1">Bucket 1</span></td>
-        <td>CSP App (model + drilldown + FPN overlay), design team</td>
-      </tr>
-      <tr>
-        <td><strong>09</strong></td>
-        <td><a href="#item-09" class="tab-link" data-tab="item-09">Change-team-member workflow post technician assignment</a></td>
-        <td><span class="pill gap">GAP</span></td>
-        <td><span class="bucket-tag b1">Bucket 1</span></td>
-        <td>tas-service (install + restore allowed-actions), gateway, CSP App, depends on Item 03 for FPN <em>(install only)</em></td>
-      </tr>
-      <tr>
-        <td><strong>10</strong></td>
-        <td><a href="#item-10" class="tab-link" data-tab="item-10">IVR 2.0 integration for Cx ↔ Px interaction</a></td>
-        <td><span class="pill gap">GAP</span></td>
-        <td><span class="bucket-tag b2">Bucket 2</span></td>
+        <td><span class="bucket-tag b1">Bucket 2</span></td>
         <td>IVR routing-table refactor (Exotel applet + masked-number scheme) &mdash; <a href="https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html" target="_blank" rel="noopener">full external spec</a></td>
       </tr>
       <tr>
-        <td><strong>11</strong></td>
-        <td><a href="#item-11" class="tab-link" data-tab="item-11">Capacity OS code skips connection increment after installation</a></td>
+        <td><strong>09</strong></td>
+        <td><a href="#item-09" class="tab-link" data-tab="item-09">Capacity OS code skips connection increment after installation</a></td>
         <td><span class="pill bug">BUG</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">csp-capacity-coverage-service</span> (one behavioral fix)</td>
       </tr>
       <tr>
-        <td><strong>12</strong></td>
-        <td><a href="#item-12" class="tab-link" data-tab="item-12"><code>CL_INSTALLATION_QUALITY_SIGNAL</code> — CL producer record drifted from CL OS S-10 contract (3 field-level deviations; 100 % rejected)</a></td>
+        <td><strong>10</strong></td>
+        <td><a href="#item-10" class="tab-link" data-tab="item-10"><code>CL_INSTALLATION_QUALITY_SIGNAL</code> — CL producer record drifted from CL OS S-10 contract (3 field-level deviations; 100 % rejected)</a></td>
         <td><span class="pill bug">BUG</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">csp-connection-lifecycle-service</span> (fix outbox dispatcher)</td>
       </tr>
       <tr>
-        <td><strong>13</strong></td>
-        <td><a href="#item-13" class="tab-link" data-tab="item-13">CAEO <code>customer_id</code> column has CSP-ID for installation task</a></td>
+        <td><strong>11</strong></td>
+        <td><a href="#item-11" class="tab-link" data-tab="item-11">CAEO <code>customer_id</code> column has CSP-ID for installation task</a></td>
         <td><span class="pill bug">BUG</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">csp-customer-access-service</span> (single line fix)</td>
       </tr>
       <tr>
-        <td><strong>14</strong></td>
-        <td><a href="#item-14" class="tab-link" data-tab="item-14"><code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code></a></td>
+        <td><strong>12</strong></td>
+        <td><a href="#item-12" class="tab-link" data-tab="item-12"><code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code></a></td>
         <td><span class="pill gap">GAP</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td>Partner App (sub-reason picker), <span class="mono">csp-tas-service</span> (handler), ES PRD</td>
       </tr>
       <tr>
-        <td><strong>15</strong></td>
-        <td><a href="#item-15" class="tab-link" data-tab="item-15">DAS doesn't publish supply-side events when a zone has only one CSP</a></td>
+        <td><strong>13</strong></td>
+        <td><a href="#item-13" class="tab-link" data-tab="item-13">DAS doesn't publish supply-side events when a zone has only one CSP</a></td>
         <td><span class="pill gap">GAP</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">csp-demand-allocation-service</span> (continuity-mode detection + 3 publisher call sites)</td>
+      </tr>
+      <tr>
+        <td><strong>14</strong></td>
+        <td><a href="#item-14" class="tab-link" data-tab="item-14">CLOS P74 (72h) + DAS P41 (2h) &mdash; does the timer start from <code>ASSIGNED</code> or from <code>ACCEPTED</code>?</a></td>
+        <td><span class="pill gap">DECISION</span></td>
+        <td><span class="bucket-tag b2">Bucket 2</span></td>
+        <td>PM decision; once made, Items 04 and 05 absorb the answer</td>
       </tr>
     </tbody>
   </table>
@@ -882,182 +860,7 @@ ALTER TABLE install_execution_candidates
   </ul>
 </section>
 <section id="item-03" class="tab-pane">
-  <h2>03 — Full-page notification for Rohit (technician) on assignment</h2>
-
-  <!-- CLASSIFICATION -->
-  <div class="classify">
-    <div class="classify-head">
-      <div class="classify-type">GAP</div>
-      <div class="classify-headline">
-        <strong>Notification UX upgrade.</strong> Today the technician gets a standard banner PN when assigned; we want a full-page notification (FPN) — same heavy-hitting treatment as the CSP gets when allocated — so it can't be missed and Rohit acts on the booking promptly.
-        <br><span style="font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.4rem; display: inline-block;">Fully app + CleverTap-side. <strong>No backend, no PRD, no OS change.</strong></span>
-      </div>
-    </div>
-    <table class="define-table">
-      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr>
-        <td>OS</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
-        <td class="define-note">Notification UX is not an OS-level concern.</td>
-      </tr>
-      <tr>
-        <td>Spec (ES PRD v2.5)</td><td class="define-yn" style="color: var(--ink-faint);">— Partial</td>
-        <td class="define-note">Underlying event <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> and state <code>TECHNICIAN_ASSIGNED</code> already exist; the PRD doesn't prescribe notification treatment (PN vs FPN).</td>
-      </tr>
-      <tr>
-        <td>Backend (TAS, notification-service)</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
-        <td class="define-note">No code change — TAS already emits the event; notification-service already forwards it to CleverTap.</td>
-      </tr>
-      <tr>
-        <td>CleverTap config</td><td class="define-yn no">✗ No</td>
-        <td class="define-note">Campaign currently configured as a standard PN; needs FPN configuration.</td>
-      </tr>
-      <tr>
-        <td>Technician app</td><td class="define-yn no">✗ No</td>
-        <td class="define-note">FPN handler not wired for the technician-assignment event. (Capability exists in the codebase via CSP-app fork — just isn't connected for this trigger.)</td>
-      </tr>
-      <tr>
-        <td>Partner (CSP) app</td><td class="define-yn" style="color: var(--ink-faint);">— n/a</td>
-        <td class="define-note">No change.</td>
-      </tr>
-      <tr>
-        <td>Prod today</td><td class="define-yn no">✗ Observable</td>
-        <td class="define-note">Technicians receive a standard banner PN; bookings sometimes sit unacknowledged.</td>
-      </tr>
-    </table>
-  </div>
-
-  <!-- FLOWS -->
-  <h3>Notification flow — today vs. want</h3>
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-    <div>
-      <div class="sub-head bad">Today</div>
-      <div class="flow">
-        <div class="node">CSP assigns technician</div>
-        <div class="arrow">↓ ES_INSTALL_TECHNICIAN_ASSIGNED</div>
-        <div class="node">notification-service → CleverTap</div>
-        <div class="arrow">↓ standard PN</div>
-        <div class="node warn">Banner in Rohit's notification tray</div>
-        <div class="arrow-label">Easily missed / swiped away; not always acted on</div>
-      </div>
-    </div>
-    <div>
-      <div class="sub-head good">Want</div>
-      <div class="flow">
-        <div class="node">CSP assigns technician</div>
-        <div class="arrow">↓ ES_INSTALL_TECHNICIAN_ASSIGNED <small>(same event, no backend change)</small></div>
-        <div class="node">notification-service → CleverTap</div>
-        <div class="arrow">↓ FPN <small>(replaces standard PN)</small></div>
-        <div class="node new">Full-page takeover in Technician app</div>
-        <div class="arrow">↓ Rohit taps CTA</div>
-        <div class="node success">Booking detail screen</div>
-        <div class="arrow-label">Persistent — re-appears on next app open until acknowledged</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SPEC -->
-  <h3>Spec &mdash; handed to tech</h3>
-
-  <h4>Today</h4>
-  <ul>
-    <li>CSP assigns a technician via the partner app → backend records <code>TECHNICIAN_ASSIGNED</code> and emits <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code>.</li>
-    <li>Technician receives a <strong>standard PN</strong> as a banner. He may or may not tap it; easily missed.</li>
-  </ul>
-
-  <h4>Want</h4>
-  <p><strong>Trigger:</strong> every time a candidate transitions into <code>TECHNICIAN_ASSIGNED</code> — i.e. on the first technician assignment <strong>and</strong> on every subsequent re-assignment (when the CSP changes the technician mid-flow).</p>
-
-  <p><strong>What the technician sees:</strong></p>
-  <table class="comm-table">
-    <thead><tr><th>When</th><th>Backend</th><th>Notification (CleverTap)</th><th>Technician app UI</th></tr></thead>
-    <tbody>
-      <tr>
-        <td>Moment of assignment</td>
-        <td>Candidate enters <code>TECHNICIAN_ASSIGNED</code>; existing event fires (no change)</td>
-        <td><strong>Replaced:</strong> campaign is now FPN-typed (not standard PN)</td>
-        <td>App open → full-page overlay immediately. App closed → next app launch opens the FPN.</td>
-      </tr>
-      <tr>
-        <td>Technician taps the CTA on the FPN</td>
-        <td>No state change</td>
-        <td>(no event)</td>
-        <td>FPN dismisses; booking detail screen is shown.</td>
-      </tr>
-      <tr>
-        <td>Technician swipes / dismisses without tapping CTA</td>
-        <td>No state change</td>
-        <td>(no re-trigger needed)</td>
-        <td><strong>FPN re-appears on next app open</strong> — persistent until acknowledged.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <p><strong>FPN content</strong> (mirrors the CSP allocation FPN): booking essentials — customer name, install address (or short locality), confirmed slot if one is already locked in — and a single primary CTA (exact label TBD by product copy).</p>
-
-  <p><strong>Replaces, not adds.</strong> The standard PN that fires today must be removed from the campaign. Only one notification per assignment.</p>
-
-  <h4>Edge cases (well-scoped)</h4>
-  <ol style="padding-left: 1.4rem;">
-    <li><strong>Technician opens app after the assignment happened</strong> (no FPN delivered yet). FPN fires immediately on open.</li>
-    <li><strong>Technician is offline at the moment of assignment.</strong> FPN is queued by CleverTap and surfaces when the device next reaches the network and opens the app. FPN is persistent — the next app open shows it regardless.</li>
-    <li><strong>CSP re-assigns the booking from technician A to technician B.</strong> B gets a fresh FPN. A's pending FPN (if not yet acknowledged) becomes invalid — A's app should clear it on next refresh because A is no longer the assigned technician. No new "un-assigned" notification is sent to A.</li>
-    <li><strong>CSP changes the technician multiple times rapidly.</strong> Each new technician gets an FPN; previously-assigned technicians' FPNs clear on next refresh.</li>
-    <li><strong>Customer cancels the booking before the technician acknowledges the FPN.</strong> Booking is cancelled; the technician's FPN clears on next app refresh.</li>
-    <li><strong>Connection is cancelled or fails upstream</strong> (CL deactivation, D&amp;A reallocation, etc.) <strong>before the technician acknowledges.</strong> Same as customer cancellation — FPN clears on next refresh.</li>
-    <li><strong>Technician acknowledges; then the booking is reassigned to a different technician.</strong> The acknowledgement is recorded against the original technician, but the booking is now with someone else; original technician's app removes the booking from the active list on next refresh.</li>
-    <li><strong>Technician dismisses the FPN by tapping outside or back button</strong> (without tapping the CTA). FPN counts as not acknowledged — re-appears on next app open.</li>
-  </ol>
-
-  <h4>Notes for tech</h4>
-  <ul>
-    <li><strong>FPN CTA copy</strong> (label + any subtitle): owned by the <strong>design copy team</strong>, not a dev blocker. Tech proceeds with a placeholder; copy team locks the final text in their normal track.</li>
-    <li><strong>Acknowledgement reporting: fire-and-forget.</strong> No backend event, no CleverTap event on FPN-ack in this item. Matches today's PN behaviour. If we later want ack-rate / time-to-ack tracking, that's a separate item.</li>
-  </ul>
-
-  <h4>Out of scope</h4>
-  <ul>
-    <li><strong>SLA / escalation when the technician doesn't acknowledge.</strong> PM-confirmed: no SLA in this item. FPN stays persistent. If we later want CSP-side escalation or auto-reassignment, that's a separate item.</li>
-    <li><strong>FPN treatment for other technician-facing events</strong> (customer slot confirmed, slot rescheduled, customer cancellation, day-of-install reminder). PM-confirmed: only the assignment event in this item.</li>
-    <li><strong>Backend reporting of "FPN acknowledged."</strong> PM-resolved: fire-and-forget. Not in scope.</li>
-  </ul>
-
-  <!-- RISKS -->
-  <h3>Risks / dependencies</h3>
-  <ul class="risks">
-    <li><strong>Technician-app FPN capability.</strong> The capability exists in the codebase (inherited from the CSP-app fork) but tech needs to confirm it's wired and not stripped out in the technician build before the CleverTap campaign is flipped.</li>
-    <li><strong>Rollout sequencing.</strong> Ship the technician-app update that handles FPNs first → confirm rollout coverage across devices → then flip the CleverTap campaign from PN to FPN. Otherwise older builds will silently miss the notification.</li>
-    <li><strong>Stale FPN clearing on re-assignment</strong> (edge case 3). Without the app clearing a stale FPN, the previously-assigned technician sees a confusing FPN for a booking they no longer have.</li>
-    <li><strong>No SLA today.</strong> If technicians routinely ignore FPNs and bookings stall, we'll need an escalation item later. Worth tracking acknowledgement rates after launch.</li>
-  </ul>
-
-  <h3>What the existing spec and code say today</h3>
-
-  <h4>ES PRD (v2.5)</h4>
-  <p>The state machine has the entry into <code>TECHNICIAN_ASSIGNED</code> via the <code>ASSIGN_TECHNICIAN</code> trigger; the outbound event <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> fires on this transition and is consumed by <code>csp-notification-service</code>. The PRD does not prescribe whether the resulting notification is a banner PN or an FPN — that lives in the CleverTap campaign + the receiving app's handler.</p>
-
-  <h4>Backend (no change)</h4>
-  <p><code>csp-tas-service</code> emits <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> with the technician's identity in the payload. <code>csp-notification-service</code> consumes the event and dispatches a CleverTap event today configured as a standard PN.</p>
-
-  <h4>Technician app</h4>
-  <p>The Technician app is a fork of the CSP app (<code>technician-app-development</code> branch). It inherits the FPN-rendering capability from the CSP app but the FPN handler is not currently wired for the technician-assignment event.</p>
-
-  <h3>References</h3>
-  <ul>
-    <li><strong>OS:</strong> silent — notification UX is not OS-level.</li>
-    <li><strong>Spec:</strong> <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> — state-machine entry <code>TECHNICIAN_ASSIGNED</code>; outbound event <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code>.</li>
-    <li><strong>Backend (no change):</strong> <code>csp-tas-service</code> emits the event; <code>csp-notification-service</code> forwards to CleverTap.</li>
-    <li><strong>Apps:</strong> <code>technician-app-development</code> branch (fork of CSP app). Reference UX: the CSP app's allocation FPN.</li>
-    <li><strong>CleverTap:</strong> existing campaign keyed off <code>ES_INSTALL_TECHNICIAN_ASSIGNED</code> (currently standard PN).</li>
-    <li><strong>Source MD (PM working notes):</strong> <code>items/03-fpn-for-rohit-on-technician-assignment.md</code></li>
-  </ul>
-
-  <h3>Investigation log</h3>
-  <ul>
-    <li><strong>2026-05-29 — filed.</strong> Gap in notification UX for technician on assignment. PM-confirmed all 4 behavioural questions: (1) no SLA — FPN persistent until acknowledged; (2) FPN replaces standard PN (not both); (3) every assignment incl. re-assignments; (4) only on the technician-assignment trigger (other events not in scope). Two remaining open questions flagged: FPN CTA copy (defer to product copy team) and whether to report acknowledgement to backend (default no). Spec is fully app + CleverTap-side; no OS, no DAS, no TAS code, no CL code change.</li>
-  </ul>
-</section>
-<section id="item-04" class="tab-pane">
-  <h2>04 — Bifurcate "cancelled by customer" vs "cancelled by system"</h2>
+  <h2>03 — Bifurcate "cancelled by customer" vs "cancelled by system"</h2>
 
   <!-- CLASSIFICATION -->
   <div class="classify">
@@ -1238,7 +1041,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <li><strong>Spec:</strong> <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> — <code>CANCELLED_BY_CUSTOMER</code> (L818–822), <code>CANCELLED_BY_UPSTREAM</code> (L827–831), outbound events <code>ES_INSTALL_CANCELLED_BY_CUSTOMER</code> (L3449), <code>ES_INSTALL_CANCELLED_BY_UPSTREAM</code> (L3409).</li>
     <li><strong>Code evidence (not the fix):</strong> TAS <code>InboundEventProcessingServiceImpl</code> — <code>CANCELLATION_TRIGGERS = Set.of("USER_CANCELLATION")</code> currently routes to <code>cancelByCustomer(...)</code>. <code>ReallocationPending</code> / <code>ExitStageChanged</code> / <code>EnforcementPostureUpdated</code> already call <code>cancelByUpstream(...)</code>.</li>
     <li><strong>Customer backend:</strong> booking-service / i2e1. Cross-team change required.</li>
-    <li><strong>Source MD (PM working notes):</strong> <code>items/04-cancel-bifurcation-customer-vs-system.md</code></li>
+    <li><strong>Source MD (PM working notes):</strong> <code>items/03-cancel-bifurcation-customer-vs-system.md</code></li>
   </ul>
 
   <h3>Investigation log</h3>
@@ -1246,20 +1049,24 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <li><strong>2026-05-29 — filed.</strong> Gap in cancellation-source bifurcation between customer backend and install side. PM-confirmed 4 things: (1) "system-initiated cancel" covers booking auto-expiry + stage-stagnation timeouts (5 days at tech-assigned) + all-CSPs-declined + similar lifecycle stalls; (2) bifurcation mechanism (two events or one with cause) is tech's call; (3) TAS lands customer-cancels in <code>CANCELLED_BY_CUSTOMER</code> and system-cancels in <code>CANCELLED_BY_UPSTREAM</code> — both terminal states already exist; (4) no differentiated PN in this item — future work. One open question: canonical reason-code list.</li>
   </ul>
 </section>
-<!-- ============ ITEM 05 ============ -->
-<section id="item-05" class="tab-pane">
-  <h2>05 — CLOS timeout scheduler unwired (P74 / P75 / P76 / P77 / P78 inert)</h2>
+<!-- ============ ITEM 04 ============ -->
+<section id="item-04" class="tab-pane">
+  <h2>04 — CLOS timeout scheduler unwired (P75 / P76 / P77 / P78 inert)</h2>
+
+  <div class="caveat" style="margin-bottom: 0.8rem;">
+    <strong>P74 is carved out to <a href="#item-14" class="tab-link" data-tab="item-14">Item 14</a>.</strong> P74 (CL install window, 72h) is excluded from this item's scope until Dhruv decides whether its start anchor is <code>ASSIGNED</code> or <code>ACCEPTED</code>. The TAS T3-retry co-fix that previously paired with P74 is similarly deferred to Item 14. This item ships the wiring for the remaining four CLOS timers (P75 / P76 / P77 / P78) only.
+  </div>
 
   <div class="classify">
     <div class="classify-head">
       <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
       <div class="classify-headline">
-        <strong>CL OS defines the timers, the PRD defines the batches, the service code wires the batch methods + endpoints — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>.</strong> Zero system-driven CL transitions in prod in 90 days. <strong>50</strong> connections sit in <code>PENDING_INSTALL</code> past P74 (oldest 38 days). To make P74 retries safe, TAS also needs a co-fix to handle <code>T3</code> retries (today it no-ops on them).
+        <strong>CL OS defines the timers, the PRD defines the batches, the service code wires the batch methods + endpoints — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>.</strong> Zero system-driven CL transitions in prod in 90 days for the four in-scope timers.
       </div>
     </div>
     <table class="define-table">
       <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr><td>OS (CL)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">P74 (72h) / P75 (7d) / P76 (90d) / P77 (45d&nbsp;PM, 30d&nbsp;OS-doc) / P78 (3 retries) — all with transitions T3 / T9 / T12 / timeouts.</td></tr>
+      <tr><td>OS (CL)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">P75 (7d) / P76 (90d) / P77 (45d&nbsp;PM, 30d&nbsp;OS-doc) / P78 (3 retries) — all with transitions T9 / T12 / timeouts. <em>(P74 + T3 deferred to <a href="#item-14" class="tab-link" data-tab="item-14">Item 14</a>.)</em></td></tr>
       <tr><td>PRD (CL v1.6)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">State machine + system-source transitions all listed. Implementation choice for how the sweep runs.</td></tr>
       <tr><td>Code (CLOS — batches)</td><td class="define-yn yes">✓ Correct</td><td class="define-note"><code>SchedulingServiceImpl</code> five batch methods + <code>InternalTaskController</code> endpoints. Reachable; work when called manually.</td></tr>
       <tr><td>Code (CLOS — scheduler)</td><td class="define-yn no">✗ Unwired</td><td class="define-note"><code>application-prod.yml:18</code> → <code>AWS_SCHEDULER_ENABLED: false</code>. <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> never called anywhere.</td></tr>
@@ -1330,7 +1137,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
   <ul class="risks">
     <li><strong>First sweep activation = flood.</strong> 50 stuck PENDING_INSTALL + unknown REQUESTED / PAUSED / PENDING_DEACTIVATION rows. Tech runs first sweep in controlled window.</li>
     <li><strong>TAS co-fix must ship before CLOS scheduler is activated.</strong> Recommended sequence: TAS T3-handling lands in prod → qa-verify no orphans → flip the CLOS scheduler.</li>
-    <li><strong>Hard sequencing with Items 06 + 08.</strong> Recommended overall rollout: Item 07 → Item 06 → Item 05. P74-T3 retry's reroute would otherwise repeat Item 07's symptoms on retried connections.</li>
+    <li><strong>Hard sequencing with Items 05 + 08.</strong> Recommended overall rollout: Item 06 → Item 05 → Item 04. P74-T3 retry's reroute would otherwise repeat Item 06's symptoms on retried connections.</li>
     <li><strong>Downstream "transition-not-seen-before-in-prod" sweep.</strong> When CL system events start emitting, TAS / DAS / Quality / ACS each see T3 / T9 / T12 / pause / deactivation timeouts for the first time. Each consumer should be audited for "do I handle this? am I a no-op? do I crash?"</li>
   </ul>
 
@@ -1343,21 +1150,25 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
         <li><strong>Code (CLOS):</strong> <code>application-prod.yml:18</code> · <code>SchedulingServiceImpl.java</code> (the five batches) · <code>InternalTaskController.java</code> (the endpoints) · <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> (never called).</li>
         <li><strong>Code (TAS co-fix site):</strong> <code>ClStateChangedHandler.java</code> — <code>UPSTREAM_RETRY_TRIGGERS</code>.</li>
         <li><strong>Prior investigation:</strong> CL Timer Enforcement Gap notes, BUG-1.</li>
-        <li><strong>Source MD:</strong> <code>items/05-clos-scheduler-unwired.md</code></li>
+        <li><strong>Source MD:</strong> <code>items/04-clos-scheduler-unwired.md</code></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 06 ============ -->
-<section id="item-06" class="tab-pane">
-  <h2>06 — DAS allocation scheduler unwired (P41 acceptance sweep, P191 reroute)</h2>
+<!-- ============ ITEM 05 ============ -->
+<section id="item-05" class="tab-pane">
+  <h2>05 — DAS allocation scheduler unwired (P191 reroute inert)</h2>
+
+  <div class="caveat" style="margin-bottom: 0.8rem;">
+    <strong>P41 is carved out to <a href="#item-14" class="tab-link" data-tab="item-14">Item 14</a>.</strong> P41 (DAS acceptance window, 2h) is excluded from this item's scope until Dhruv decides whether its start anchor is <code>ASSIGNED</code> or <code>ACCEPTED</code>. This item ships the wiring for P191 held-allocation reroute only.
+  </div>
 
   <div class="classify">
     <div class="classify-head">
       <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
       <div class="classify-headline">
-        <strong>Same scheduler-wiring failure as Item 05 — this time on DAS.</strong> <code>AWS_SCHEDULER_ENABLED: false</code> in DAS's <code>application-prod.yml</code>; <code>scheduleRecurring(...)</code> never called; six sweep batches (P41, P191, reallocation-dwell, override watchdog, conversion-eval, exposure-recalc) all sit unused. Prod: <strong>66/66</strong> ASSIGNED rows past P41 (2h) never reclaimed; <strong>230</strong> UNASSIGNED rows never re-routed by P191. <strong style="color: var(--bug);">Hard-blocked on Item 07</strong> — activating P41 before Item 07 ships would reclaim 274 live in-flight installs.
+        <strong>Same scheduler-wiring failure as Item 04 — this time on DAS.</strong> <code>AWS_SCHEDULER_ENABLED: false</code> in DAS's <code>application-prod.yml</code>; <code>scheduleRecurring(...)</code> never called; the in-scope batch (P191 held-allocation reroute) sits unused. Prod: <strong>230</strong> UNASSIGNED rows never re-routed by P191. <em>P41 acceptance sweep is deferred to Item 14 along with its start-time decision.</em>
       </div>
     </div>
     <table class="define-table">
@@ -1366,7 +1177,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       <tr><td>PRD (DAS v1.2)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">State machine includes timeout transitions; <code>trigger_source = SYSTEM</code>.</td></tr>
       <tr><td>Code (DAS — batches)</td><td class="define-yn yes">✓ Correct</td><td class="define-note"><code>BatchTriggerServiceImpl</code> six sweeps + <code>BatchTriggerController</code> endpoints. Work when called manually.</td></tr>
       <tr><td>Code (DAS — scheduler)</td><td class="define-yn no">✗ Unwired</td><td class="define-note">Same root cause as CLOS — <code>AWS_SCHEDULER_ENABLED: false</code>, <code>scheduleRecurring(...)</code> never called.</td></tr>
-      <tr><td>Item 07 dependency</td><td class="define-yn no">✗ Blocking</td><td class="define-note">Without Item 07, every successful allocation sits in ASSIGNED; P41 sweep would reclaim all 274 live in-flight installs as if timed out.</td></tr>
+      <tr><td>Item 06 dependency</td><td class="define-yn no">✗ Blocking</td><td class="define-note">Without Item 06, every successful allocation sits in ASSIGNED; P41 sweep would reclaim all 274 live in-flight installs as if timed out.</td></tr>
       <tr><td>Prod</td><td class="define-yn no">✗ Wrong</td><td class="define-note">66/66 ASSIGNED &gt;2h not reclaimed. 230 UNASSIGNED &gt;24h not rerouted. 0 DECLINE_PATTERN(TIMEOUT) in 90d.</td></tr>
     </table>
   </div>
@@ -1393,9 +1204,9 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
   </table>
   <p>The other four DAS sweep batches (<code>reallocation_dwell</code>, <code>override_watchdog</code>, <code>conversion_eval</code>, <code>exposure_recalc</code>) share the same wiring root cause and should be co-wired by tech but are out of scope from PM's spec deliverable.</p>
 
-  <h3>What more is required for these to work — the Item 07 prerequisite</h3>
+  <h3>What more is required for these to work — the Item 06 prerequisite</h3>
   <div class="caveat">
-    <strong>Item 06 cannot ship before Item 07.</strong> Today every allocation sits in <code>ASSIGNED</code> because nobody wires the auto-accept (Item 07). If Item 06's P41 sweep is activated under that condition, the first sweep run reclaims <strong>all 274 live, in-progress installs</strong> back to <code>UNASSIGNED</code>. Mass mis-routing.
+    <strong>Item 05 cannot ship before Item 06.</strong> Today every allocation sits in <code>ASSIGNED</code> because nobody wires the auto-accept (Item 06). If Item 05's P41 sweep is activated under that condition, the first sweep run reclaims <strong>all 274 live, in-progress installs</strong> back to <code>UNASSIGNED</code>. Mass mis-routing.
   </div>
   <table>
     <thead><tr><th>Scenario</th><th>If 07 ships without 08</th><th>If 08 first, then 07</th></tr></thead>
@@ -1404,7 +1215,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       <tr><td>Future allocations</td><td>Auto-accept never lands → P41 reclaims every new allocation 2h later → loop.</td><td>ACCEPTED reached quickly; P41 is rare safety net for actual wiring failures.</td></tr>
     </tbody>
   </table>
-  <p><strong>Other install-service interventions:</strong> none beyond Item 07. Downstream consumers already handle <code>DECLINE_PATTERN(TIMEOUT)</code> the same way as <code>EXPLICIT_DECLINE</code>; UNASSIGNED → ASSIGNED via reroute is the same path as the original routing.</p>
+  <p><strong>Other install-service interventions:</strong> none beyond Item 06. Downstream consumers already handle <code>DECLINE_PATTERN(TIMEOUT)</code> the same way as <code>EXPLICIT_DECLINE</code>; UNASSIGNED → ASSIGNED via reroute is the same path as the original routing.</p>
 
   <h3>Edge cases (business)</h3>
   <ol>
@@ -1429,8 +1240,8 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <h3>Risks / interactions</h3>
   <ul class="risks">
-    <li><strong>Hard prerequisite: Item 07.</strong> Recommended rollout sequence: 08 → 07 → 06.</li>
-    <li>First P41 sweep — even after Item 07 there may be a small backlog of genuine wiring-failure ASSIGNED rows. Controlled-window first run.</li>
+    <li><strong>Hard prerequisite: Item 06.</strong> Recommended rollout sequence: 08 → 07 → 06.</li>
+    <li>First P41 sweep — even after Item 06 there may be a small backlog of genuine wiring-failure ASSIGNED rows. Controlled-window first run.</li>
     <li>First P191 sweep — 230 stuck UNASSIGNED will all attempt reroute simultaneously. Load spike on routing pipeline; phase or rate-limit.</li>
     <li>Item 01 interaction — Open Q1 above overlaps with the Item 01 cooldown-bypass fix. Treat as one block during rollout if Open Q1 = "timeout counts as decline."</li>
     <li>Single-CSP zones — once P41 reclaims a single-CSP-zone allocation, Item 01's fix keeps the cooldown active; reroute correctly fails with ROUTING_FAILURE (OS L540 service-vacuum-accepted). Consistent.</li>
@@ -1443,16 +1254,16 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
         <li><strong>OS:</strong> <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> — P41, P50, P51, P191, DECLINE_PATTERN, L540.</li>
         <li><strong>PRD:</strong> <code>yaml-prd/demand-allocation-prd-v1.2.yaml</code>.</li>
         <li><strong>Code (DAS):</strong> <code>application-prod.yml:18</code> · <code>BatchTriggerServiceImpl.java</code> · <code>BatchTriggerController.java</code> · <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> (never called).</li>
-        <li><strong>Hard dependency:</strong> Item 07 (DAS state never reaches ACCEPTED).</li>
-        <li><strong>Source MD:</strong> <code>items/06-das-scheduler-unwired.md</code></li>
+        <li><strong>Hard dependency:</strong> Item 06 (DAS state never reaches ACCEPTED).</li>
+        <li><strong>Source MD:</strong> <code>items/05-das-scheduler-unwired.md</code></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 07 ============ -->
-<section id="item-07" class="tab-pane">
-  <h2>07 — DAS allocation state never reaches ACCEPTED (post-AMENDMENT-02 wiring orphan)</h2>
+<!-- ============ ITEM 06 ============ -->
+<section id="item-06" class="tab-pane">
+  <h2>06 — DAS allocation state never reaches ACCEPTED (post-AMENDMENT-02 wiring orphan)</h2>
 
   <div class="classify">
     <div class="classify-head">
@@ -1477,20 +1288,20 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
   <table>
     <thead><tr><th style="width: 100px;">Term</th><th>Meaning</th></tr></thead>
     <tbody>
-      <tr><td><code>P41</code></td><td>DAS <strong>acceptance window</strong> — 2h. The safety-net timer (Item 06) that reclaims <code>ASSIGNED → UNASSIGNED</code> if acceptance never lands. Item 07 must close the wiring so P41 sees only genuine wiring-failure rows, not every live install.</td></tr>
+      <tr><td><code>P41</code></td><td>DAS <strong>acceptance window</strong> — 2h. The safety-net timer (Item 05) that reclaims <code>ASSIGNED → UNASSIGNED</code> if acceptance never lands. Item 06 must close the wiring so P41 sees only genuine wiring-failure rows, not every live install.</td></tr>
     </tbody>
   </table>
 
   <h3>What we want — PM-defined invariant (tech picks mechanism)</h3>
   <div class="caveat">
-    <strong>Behavioural invariant:</strong> every allocation that the routing pipeline successfully selects a CSP for must reach <code>allocation_state = ACCEPTED</code> with <code>acceptance_timestamp</code> set on the standard happy path — quickly enough that Item 06's P41 sweep (2h) does not trip on a healthy install. P41 is the safety net for the rare case where the auto-accept didn't land — <em>not</em> the primary mechanism.
+    <strong>Behavioural invariant:</strong> every allocation that the routing pipeline successfully selects a CSP for must reach <code>allocation_state = ACCEPTED</code> with <code>acceptance_timestamp</code> set on the standard happy path — quickly enough that Item 05's P41 sweep (2h) does not trip on a healthy install. P41 is the safety net for the rare case where the auto-accept didn't land — <em>not</em> the primary mechanism.
   </div>
   <p>Concrete observable conditions after the fix:</p>
   <ol>
     <li>After <code>ALLOCATION_ACCEPTED</code> is emitted, DB row's <code>allocation_state</code> reaches <code>ACCEPTED</code> within seconds (or a single transaction).</li>
     <li><code>acceptance_timestamp</code> is non-null for every connection past the acceptance moment.</li>
     <li>INV-DAO-03 stickiness enforceable — once ACCEPTED, no silent re-route except via REALLOCATION_PENDING.</li>
-    <li><code>ASSIGNED</code> only observed transiently, or as leftover of a genuine wiring failure that Item 06's P41 sweep will reclaim.</li>
+    <li><code>ASSIGNED</code> only observed transiently, or as leftover of a genuine wiring failure that Item 05's P41 sweep will reclaim.</li>
   </ol>
 
   <h3>What more is required — tech-owned mechanism choice</h3>
@@ -1507,11 +1318,11 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <h3>Edge cases (business)</h3>
   <ol>
-    <li>ALLOCATION_ACCEPTED emits but the auto-accept signal fails (network / consumer crash). Item 06's P41 is the safety net — reclaim at 2h. Mechanism A eliminates this case by construction.</li>
-    <li>Customer cancels before the install reaches ACCEPTED. The cancellation path (Item 04) takes the connection to a terminal state through CL → TAS → DAS in the usual order; the allocation transitions to its terminal state regardless of which auto-accept mechanism is in flight.</li>
-    <li>CSP declines slot proposal explicitly. Separate path — <code>declineAllocation(...)</code> endpoint exists (also unused today, paired removal in AMENDMENT-02). Item 07 doesn't change explicit decline.</li>
+    <li>ALLOCATION_ACCEPTED emits but the auto-accept signal fails (network / consumer crash). Item 05's P41 is the safety net — reclaim at 2h. Mechanism A eliminates this case by construction.</li>
+    <li>Customer cancels before the install reaches ACCEPTED. The cancellation path (Item 03) takes the connection to a terminal state through CL → TAS → DAS in the usual order; the allocation transitions to its terminal state regardless of which auto-accept mechanism is in flight.</li>
+    <li>CSP declines slot proposal explicitly. Separate path — <code>declineAllocation(...)</code> endpoint exists (also unused today, paired removal in AMENDMENT-02). Item 06 doesn't change explicit decline.</li>
     <li>Re-routing of a row already in ACCEPTED (CSP suspended). INV-DAO-03 → REALLOCATION_PENDING → REASSIGNED. Path currently dead (0 ACCEPTED rows); becomes live as soon as ACCEPTED rows start appearing.</li>
-    <li>T3 retry (Item 05's P74 retry path) lands a new ASSIGNED row. Same auto-accept flow runs again. No special-casing.</li>
+    <li>T3 retry (Item 04's P74 retry path) lands a new ASSIGNED row. Same auto-accept flow runs again. No special-casing.</li>
   </ol>
 
   <h3>Notes for tech</h3>
@@ -1530,8 +1341,8 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <h3>Risks / interactions</h3>
   <ul class="risks">
-    <li><strong>Hard prerequisite for Item 06.</strong> Item 07 must ship first. Otherwise Item 06's P41 sweep destroys 274 live installs.</li>
-    <li><strong>Backfill decision for the 274 currently-ASSIGNED rows.</strong> They are live in-progress installs mis-stated in DAS. Tech decides: one-shot UPDATE to ACCEPTED with <code>acceptance_timestamp=now()</code> (safer), or let Item 06's P41 sweep reclaim them (harmful — partner mid-install). PM should be told the choice before rollout.</li>
+    <li><strong>Hard prerequisite for Item 05.</strong> Item 06 must ship first. Otherwise Item 05's P41 sweep destroys 274 live installs.</li>
+    <li><strong>Backfill decision for the 274 currently-ASSIGNED rows.</strong> They are live in-progress installs mis-stated in DAS. Tech decides: one-shot UPDATE to ACCEPTED with <code>acceptance_timestamp=now()</code> (safer), or let Item 05's P41 sweep reclaim them (harmful — partner mid-install). PM should be told the choice before rollout.</li>
     <li><strong>Datadog dashboards become accurate for the first time.</strong> All P41-timeout-rate / acceptance-latency metrics currently key off <code>entry_timestamp</code> on ASSIGNED. Post-fix, dashboards become meaningful.</li>
     <li><strong>INV-DAO-03 becomes live.</strong> Routing engine should add an explicit assertion: no code path silently re-routes an ACCEPTED row outside REALLOCATION_PENDING.</li>
   </ul>
@@ -1546,192 +1357,66 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
         <li><strong>DAS code:</strong> <code>AllocationServiceImpl.java:42–53</code> (acceptAllocation — works) · <code>AllocationController.java:31–39</code> (endpoint — exposed) · <code>RoutingEngineServiceImpl.java</code> (emits ALLOCATION_ACCEPTED; does NOT write state to ACCEPTED).</li>
         <li><strong>Gateway "did its half" docs:</strong> <code>services/csp-gateway-service/docs/install-api-contract.md:145</code> · <code>frontend-amendment-02-handoff.md:14</code>.</li>
         <li><strong>Prod DB:</strong> <code>SELECT allocation_state, COUNT(*) FROM csp_demand_allocation_service.connection_allocations GROUP BY allocation_state;</code> → 230 UNASSIGNED, 274 ASSIGNED, 0 everything else.</li>
-        <li><strong>Hard dependant:</strong> Item 06.</li>
-        <li><strong>Source MD:</strong> <code>items/07-das-state-never-accepted.md</code></li>
+        <li><strong>Hard dependant:</strong> Item 05.</li>
+        <li><strong>Source MD:</strong> <code>items/06-das-state-never-accepted.md</code></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 08 ============ -->
-<section id="item-08" class="tab-pane">
-  <h2>08 — Show address-locality + landmark + voice direction in the CSP App</h2>
+<!-- ============ ITEM 07 ============ -->
+<section id="item-07" class="tab-pane">
+  <h2>07 — Change-team-member workflow post technician assignment (Install only)</h2>
 
   <div class="classify">
     <div class="classify-head">
       <div class="classify-type">GAP</div>
       <div class="classify-headline">
-        <strong>Customer app shipped a new capture flow (3-field address + landmark type/name + 30-sec voice). Customer captures it; CSP / Rohit cannot see most of it.</strong> Verified against the live <code>development</code> branch: the install drilldown's §4 Location <code>SectionCard</code> (<code>InstallDrilldownContent.kt:233-289</code>) shows only stacked <code>streetHomeAddress()</code> + "View on map" link — no landmark, no locality, no voice. The FPN overlay (<code>FpnOverlay.kt</code>) already has a <code>landmark: String</code> field — but it's a single free-text string fed from FCM <code>task.extraData.landMark</code>, not the new structured <code>landmarkType</code> + <code>landmarkInput</code>. Per PM: scope is CSP-side surface + CSP App (backend persistence stays with the upstream Customer PRD); surface on both install drilldown and FPN allocation overlay; voice-playback UX is design-team-owned; legacy bookings (all 4 fields null) render exactly as today.
+        <strong>Install has the backend self-loop but the gateway hides it; the CSP App has no UX to swap.</strong> <code>InstallationStateMachine.java:182</code> exposes a self-loop on <code>ASSIGN_TECHNICIAN</code>, but <code>TasCandidateQueryServiceImpl.resolveAllowedActions:118</code> only returns <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code>. So a CSP who wants to swap a technician on an install has no in-app path today. Scope of this item: <strong>Install family only</strong> — Restore and NBREC are out of scope.
       </div>
     </div>
     <table class="define-table">
-      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr><td>OS</td><td class="define-yn">n/a</td><td class="define-note">Address / landmark / voice UX is not an OS-level concern.</td></tr>
-      <tr><td>Customer-side PRD</td><td class="define-yn yes">✓ Yes</td><td class="define-note"><code>PRD_ Address + Landmark + Voice Onboarding.pdf</code> — §6 recording rules, §7 input schema, §9 data model, §12 acceptance criteria ("Partner App receives same data").</td></tr>
-      <tr><td>Customer App (UI)</td><td class="define-yn yes">✓ Shipped</td><td class="define-note">PR 1 + PR 2 on <code>feature/chat</code>. Capture flow is live.</td></tr>
-      <tr><td>Backend persistence (booking-service / customer-backend)</td><td class="define-yn partial">⏳ Pending</td><td class="define-note">Tracked by upstream Customer PRD's ship status. <strong>Out of scope for this item.</strong></td></tr>
-      <tr><td>CSP App (model — <code>TaskDetail</code>)</td><td class="define-yn no">✗ Missing</td><td class="define-note">AMENDMENT-03 address fields present (<code>addressHome</code> / <code>addressStreet</code> / <code>addressCity</code> / <code>addressPincode</code> / <code>addressLat/Lng</code>); the 4 new fields missing. Possibly also <code>localityInput</code> (see Open Q1).</td></tr>
-      <tr><td>CSP App (drilldown render)</td><td class="define-yn no">✗ Missing</td><td class="define-note"><code>InstallDrilldownContent.kt:233-289</code> renders only <code>streetHomeAddress()</code> + "View on map". No landmark, no locality, no voice.</td></tr>
-      <tr><td>CSP App (FPN overlay render)</td><td class="define-yn partial">⚠ Partial</td><td class="define-note"><code>FpnOverlayData.landmark: String</code> already exists (line 59), fed from FCM <code>task.extraData.landMark</code> (free text) via <code>FpnPayload.landMark()</code>. New structured type+name need to flow through this slot — reuse-or-extend is Open Q5. No voice slot today.</td></tr>
-      <tr><td>Design team</td><td class="define-yn partial">⏳ Pending</td><td class="define-note">Voice-playback UX shape is design-owned per PM.</td></tr>
-    </table>
-  </div>
-
-  <h3>What the CSP / technician sees today vs. want</h3>
-  <table>
-    <thead><tr><th style="width: 220px;">Surface</th><th>Today</th><th>Want</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>FPN allocation overlay</strong> (<code>FpnOverlay</code>)</td>
-        <td>Address (3 lines max) + a single free-text landmark row already exists (today fed from FCM <code>task.extraData.landMark</code>). No locality. No voice.</td>
-        <td>Same overlay extended so the landmark row carries the customer-typed <code>landmarkInput</code> (with a type-driven icon ahead of it) and a new voice-direction control appears when <code>voiceFilePath</code> is non-null. Locality line above or below the address — design's call.</td>
-      </tr>
-      <tr>
-        <td><strong>Install drilldown</strong> — §4 Location <code>SectionCard</code> (<code>InstallDrilldownContent.kt:233-289</code>)</td>
-        <td><code>streetHomeAddress()</code> stacked + "View on map" link. <strong>No landmark, no locality, no voice.</strong></td>
-        <td>Inside the same SectionCard (no new card), add: locality line · landmark line (type icon + name) · voice-direction control (when present). All collapsed gracefully when the underlying fields are null (backfill mode).</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Backfill rule (critical)</h3>
-  <div class="caveat">
-    <strong>If <code>landmark_type</code>, <code>landmark_input</code>, <code>voice_file_path</code>, <code>voice_duration_seconds</code> are all null (or the API doesn't yet serve them — pre-rollout bookings), the CSP App renders the address exactly as it does today.</strong> No "Landmark: not provided" text. No empty voice tile. No new section heading. The partner's view of an old booking is byte-for-byte identical to today. This is what keeps the rollout safe while backend persistence rolls out independently per the upstream PRD.
-  </div>
-
-  <h3>Edge cases (business)</h3>
-  <ol>
-    <li>Customer captured landmark but skipped voice. Voice fields null/0; landmark renders; voice control hidden. Backfill rule does <strong>not</strong> kick in (partial data is genuine data).</li>
-    <li>Customer recorded voice but picked "Other" with blank name. Voice plays; landmark renders as <code>OTHER</code> icon + empty name (or just the icon).</li>
-    <li>Customer uses wrong-address recovery mid-install (address / landmark / voice can change after the booking is already allocated). CSP App picks up updated values on next drilldown refresh. No live-push requirement in this item — eventual consistency is acceptable.</li>
-    <li>Voice file URL returns 404 / network fail. Playback control shows a small error state with retry; partner can still see all text fields.</li>
-    <li>Voice file URL slow on 2G. Per PRD acceptance criteria, playback should pre-cache on drilldown open or stream gracefully. Design picks the pattern.</li>
-    <li>Customer's language is English; CSP's is Hindi (or vice-versa). CSP App's label locale wins; landmark <em>name</em> (free text) shown as-typed; landmark <em>type label</em> rendered in CSP's locale.</li>
-    <li><code>voice_file_path</code> present but <code>voice_duration_seconds = 0</code> (data inconsistency). Treat as voice-absent — hide the playback control. Defensive.</li>
-    <li>Landmark type is a future enum value the CSP App doesn't recognise. Fall back to <code>OTHER</code> icon and render the name as-is. Don't crash.</li>
-    <li>Two partners (CSP self + assigned Rohit) open the drilldown. Both see the same data. No coordination requirement.</li>
-    <li>Partner shares the customer details via WhatsApp. Share text continues to use <code>streetHomeAddress()</code> — landmark + voice are NOT added to the share text. Audio over WhatsApp is its own scope.</li>
-  </ol>
-
-  <h3>Notes for tech</h3>
-  <ul>
-    <li><strong><code>localityInput</code> vs existing <code>locality</code></strong> — PM-deferred: tech / customer-backend team to confirm whether the customer's typed <code>localityInput</code> (PRD §7, Required) is the <em>same</em> semantic field as the CSP-App's existing top-level <code>TaskDetail.locality</code> (today used for the home-card preview), or a <em>different</em> one (e.g. server-derived from lat/lng). If same → drop a new locality field, the existing one carries it. If different → add the customer-typed value to the address block and keep the existing top-level field for the card. <strong>PM doesn't need to pre-decide.</strong></li>
-    <li><strong>FPN overlay landmark + voice density</strong> — PM-deferred to the <strong>design team</strong>. The spec mandates that both surfaces (FPN overlay + drilldown) carry the new fields; how densely the FPN renders them (full vs condensed) is a design call.</li>
-    <li><strong><code>CustomerDetailsScreen</code> (install wizard, third surface that also renders address)</strong> — <strong>strictly out of scope.</strong> Only drilldown + FPN overlay in this item. The partner has typically already arrived at the address by the time they see <code>CustomerDetailsScreen</code>; consistency on landmark / voice there is not worth this item's scope. If it becomes an issue later, a separate item.</li>
-    <li><strong>CleverTap instrumentation on voice playback — emit play / pause / complete events.</strong> PM-confirmed: add a small CT event family (one event, three actions) on voice clip play / pause / completion. Lets us measure later whether the feature reduces "couldn't find the house" install delays. Lightweight; folds into the existing CT pipeline.</li>
-    <li><strong>FPN landmark wire — reuse single <code>landmark</code> String vs extend the schema</strong> — PM-deferred. Tech picks once the customer-backend team's actual FCM payload shape is visible. Spec records both options:
-      <ul>
-        <li><strong>Extend</strong> (separate <code>landmarkType</code> + <code>landmarkInput</code> fields end-to-end) — type→icon decision stays client-side, icon catalogue evolves without server churn. More plumbing.</li>
-        <li><strong>Reuse</strong> (server composes the display string into the existing single field) — less plumbing, but couples icon decisions to server output.</li>
-      </ul>
-    </li>
-  </ul>
-
-  <h3>Out of scope</h3>
-  <ul>
-    <li>Customer-side capture UX (already shipped — PR 1 + PR 2 on feature/chat).</li>
-    <li>Customer-backend / booking-service persistence — tracked by upstream PRD.</li>
-    <li>C2 nudge audio (PRD §10) — customer-side.</li>
-    <li>WhatsApp share text augmentation.</li>
-    <li>Voice-playback UX details (inline button vs row vs modal) — <strong>design team owns</strong>. This item gives design the behavioural requirements; design picks the shape.</li>
-    <li>Pre-loaded nearby places by category at chat-flow entry (PRD §9 last bullet) — customer-side.</li>
-    <li>Backend landmark normalisation / dedup against a place database — future improvement, backend.</li>
-    <li>Wrong-address recovery customer-side UI (PRD's "Address Confirm" screen).</li>
-  </ul>
-
-  <h3>Risks / dependencies</h3>
-  <ul class="risks">
-    <li><strong>Hard dependency on backend persistence rollout.</strong> CSP App's new fields stay null until the customer-backend persists the new schema and the CSP-OS gateway echoes them. The backfill rule keeps the rollout safe — without it the partner would see "not provided" on every existing booking for weeks.</li>
-    <li><strong>Surface contract sign-off is the binding step.</strong> Land the SC amendment first; then frontend + backend in parallel.</li>
-    <li><strong>Voice file storage + auth.</strong> Customer-side team picks storage backend (S3 + pre-signed URLs is the natural fit). CSP App needs the same auth pattern as existing image assets (e.g. NetBox photos). Confirm with customer-side team before SC freeze.</li>
-    <li><strong>Audio cache lifecycle.</strong> Tech / design decide how long a voice clip is cached on the device (e.g. until booking is terminal, or 24h after first play). Affects storage footprint on low-end devices.</li>
-    <li><strong>Design-team latency.</strong> Item lists behavioural requirements but leaves voice-control UX shape to design. Tech can build data plumbing in parallel.</li>
-    <li><strong>Language toggle.</strong> Customer-side strings are in <code>ChatStrings.kt</code>; CSP App has its own labels-file pattern — mirror the type-label strings there.</li>
-  </ul>
-
-  <details>
-    <summary>Source quotes &amp; references</summary>
-    <div>
-      <ul>
-        <li><strong>Upstream PRD:</strong> <code>C:\Users\ashis\Downloads\PRD_ Address + Landmark + Voice Onboarding.pdf</code> — §6 recording rules, §7 inputs, §9 data model + cross-app sync, §12 acceptance criteria.</li>
-        <li><strong>Reference design (customer side):</strong> <code>https://abhishekgarg-wiom.github.io/Onboarding_customer/v3/</code></li>
-        <li><strong>Customer-side PRs:</strong> PR 1 + PR 2 on <code>feature/chat</code> (Customer App).</li>
-        <li><strong>CSP App — exact render sites (verified against <code>development</code> branch):</strong>
-          <ul>
-            <li><code>core/model/.../TaskDetail.kt:100-145</code> — AMENDMENT-03 model block to extend with the 4 new fields.</li>
-            <li><code>feature/home/.../drilldowns/install/InstallDrilldownContent.kt:233-289</code> — §4 Location <code>SectionCard</code>, current render site for the address.</li>
-            <li><code>feature/home/.../FpnOverlay.kt:54-71</code> — <code>FpnOverlayData</code> data class (already has <code>landmark: String</code>).</li>
-            <li><code>feature/home/.../FpnOverlay.kt:280-300</code> — landmark and address render rows.</li>
-            <li><code>app/.../fpn/FpnPayload.kt:64-92</code> — <code>landMark()</code> extractor (the existing wire from FCM <code>task.extraData.landMark</code>).</li>
-            <li><code>feature/installation/.../CustomerDetailsScreen.kt:162-169</code> — third surface (install wizard); see Open Q3 for whether to extend.</li>
-          </ul>
-        </li>
-        <li><strong>Helper to leave alone:</strong> <code>TaskDetail.streetHomeAddress()</code> — landmark is rendered separately, not appended here.</li>
-        <li><strong>Source MD:</strong> <code>items/08-voice-directions-csp-app.md</code></li>
-      </ul>
-    </div>
-  </details>
-</section>
-
-<!-- ============ ITEM 09 ============ -->
-<section id="item-09" class="tab-pane">
-  <h2>09 — Change-team-member workflow post technician assignment</h2>
-
-  <div class="classify">
-    <div class="classify-head">
-      <div class="classify-type">GAP</div>
-      <div class="classify-headline">
-        <strong>Same workflow, three different stories across Install, Restore, and NBREC.</strong> NBREC has a clean unified <code>assignTask</code> endpoint that handles both initial and reassignment, with a tracked <code>reassignmentCount</code>. Install has the backend self-loop (<code>InstallationStateMachine.java:182</code> — <em>"reassign"</em>) but the gateway hides it: <code>TasCandidateQueryServiceImpl.resolveAllowedActions:118</code> returns only <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code>, so the CSP App has no UX to swap. Restore added the self-loop explicitly in v1.7-DIFF-A1 (<em>"CSP can swap technician without intermediate recall"</em>); gateway exposure to verify. Result: a CSP who wants to swap a technician on an install today has no in-app path. PM-scope: keep per-service vocabulary; just add the missing exposure points + UI. Allowed mid-work; new team member is notified via the family's existing assignment-notification path — <strong>for Install only</strong>, this is the FPN treatment from Item 03 (<em>"every assignment incl. re-assignments"</em>, Item 03 scope); for Restore and NBREC, they use their own per-family notification.
-      </div>
-    </div>
-    <table class="define-table">
-      <tr><th>Family</th><th class="define-yn">State machine</th><th>Allowed-actions exposure</th><th>Reassignment counter</th><th>CSP-App UX</th></tr>
-      <tr><td><strong>Install</strong></td><td class="define-yn yes">✓ Self-loop</td><td class="define-note">✗ <code>resolveAllowedActions:118</code> returns only <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code></td><td>✗ Not tracked</td><td>✗ No CTA</td></tr>
-      <tr><td><strong>Restore</strong></td><td class="define-yn yes">✓ Self-loop (v1.7-DIFF-A1)</td><td class="define-note">⚠ Verify (<code>AllowedActionsResolver:49,56</code> lists <code>ASSIGN_TECHNICIAN</code> in multiple states)</td><td>✗ Not explicit</td><td>⚠ Conditional on backend exposure</td></tr>
-      <tr><td><strong>NBREC</strong></td><td class="define-yn yes">✓ Same endpoint handles both</td><td class="define-note">✓ Single <code>assignTask</code> endpoint</td><td>✓ <code>reassignmentCount</code> + <code>isReassignment</code></td><td>✓ Works (reference)</td></tr>
-      <tr><td><strong>Gateway <code>can_reassign</code></strong></td><td class="define-yn">n/a</td><td class="define-note" colspan="2">Defined as INSTALL-specific field on <code>TaskDrilldown</code>; <code>HomeFacadeService:303</code> passes <code>null</code>. Dead flag today.</td><td>—</td></tr>
+      <tr><th>Layer</th><th class="define-yn">State today</th><th>Notes</th></tr>
+      <tr><td>State machine</td><td class="define-yn yes">✓ Self-loop</td><td class="define-note"><code>InstallationStateMachine.java:182</code> defines the <em>"reassign"</em> self-loop on <code>TECHNICIAN_ASSIGNED</code>.</td></tr>
+      <tr><td>Allowed-actions exposure</td><td class="define-yn no">✗ Missing</td><td class="define-note"><code>TasCandidateQueryServiceImpl.resolveAllowedActions:118</code> returns only <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code> — <code>ASSIGN_TECHNICIAN</code> is not listed.</td></tr>
+      <tr><td>Gateway <code>can_reassign</code></td><td class="define-yn no">✗ Dead</td><td class="define-note">Field exists on <code>TaskDrilldown</code> but <code>HomeFacadeService:303</code> always passes <code>null</code>.</td></tr>
+      <tr><td>CSP App UX</td><td class="define-yn no">✗ No CTA</td><td class="define-note">Drilldown has no "Change team member" CTA; <code>TaskDetail.kt:49</code> <code>canReassign: Boolean = false</code>.</td></tr>
     </table>
   </div>
 
   <h3>What we want</h3>
-  <p>For every task family where a team member is assigned to do a task (<strong>Install · Restore · NBREC</strong> — PM-scoped):</p>
   <ol>
-    <li>The CSP App's drilldown exposes a <strong>"Change team member"</strong> CTA whenever a team member is currently assigned and the task is not in a terminal state.</li>
+    <li>The CSP App's install drilldown exposes a <strong>"Change team member"</strong> CTA whenever a team member is currently assigned and the candidate is not in a terminal state.</li>
     <li>Tapping the CTA opens the same picker used for the initial assignment.</li>
-    <li>Confirming the picker fires the <strong>same backend action used for the initial assignment</strong>, with the new team-member identifier — Install/Restore reuse <code>ASSIGN_TECHNICIAN</code>, NBREC reuses <code>assignTask</code>.</li>
-    <li>The new team member receives the standard technician-assignment FPN (per <a href="#item-03" class="tab-link" data-tab="item-03">Item 03</a> — <em>"every assignment incl. re-assignments"</em>).</li>
-    <li><strong>No timing constraint</strong> — change is allowed anytime before the task reaches a terminal state, including mid-work. PM-confirmed.</li>
-    <li>Per-service vocabulary stays as-is. No unification migration in this item.</li>
+    <li>Confirming the picker fires <code>ASSIGN_TECHNICIAN</code> with the new team-member identifier — same backend action as the initial assign.</li>
+    <li>The new team member receives the existing standard technician-assignment notification path (whatever notification mechanism the install flow already uses on initial assignment is reused on swap).</li>
+    <li><strong>No timing constraint</strong> — change allowed anytime before the candidate reaches a terminal state, including mid-work. PM-confirmed.</li>
   </ol>
 
-  <h3>The smallest possible fix per family</h3>
+  <h3>The smallest possible fix</h3>
   <table>
-    <thead><tr><th>Family</th><th>Change</th></tr></thead>
+    <thead><tr><th>Layer</th><th>Change</th></tr></thead>
     <tbody>
-      <tr><td><strong>Install</strong></td><td>Add <code>ASSIGN_TECHNICIAN</code> to the allowed-actions list at <code>TECHNICIAN_ASSIGNED</code> in <code>TasCandidateQueryServiceImpl.resolveAllowedActions:118</code> (one line). Update ES PRD's allowed-actions table to match.</td></tr>
-      <tr><td><strong>Restore</strong></td><td>Confirm <code>AllowedActionsResolver</code> already includes <code>ASSIGN_TECHNICIAN</code> at <code>ASSIGNED_TECHNICIAN</code>. If yes — no backend change. If no — same one-line fix as Install.</td></tr>
-      <tr><td><strong>NBREC</strong></td><td>No backend change. (Optional: surface <code>reassignmentCount</code> on the home drilldown for observability parity.)</td></tr>
-      <tr><td><strong>Gateway</strong></td><td>Either populate <code>TaskDrilldown.can_reassign</code> correctly across all three families, OR drop the dedicated flag and rely on <code>allowed_actions</code> carrying the action. Tech's call — latter is cleaner.</td></tr>
-      <tr><td><strong>CSP App</strong></td><td>Drilldown UI: render the <em>"Change team member"</em> CTA when <code>allowed_actions</code> contains <code>ASSIGN_TECHNICIAN</code> / <code>assignTask</code>. Reuse the existing team-member picker. Wire to the existing action endpoint.</td></tr>
+      <tr><td><strong>TAS (Install)</strong></td><td>Add <code>ASSIGN_TECHNICIAN</code> to the allowed-actions list at <code>TECHNICIAN_ASSIGNED</code> in <code>TasCandidateQueryServiceImpl.resolveAllowedActions:118</code> (one line). Update the install ES PRD's allowed-actions table to match.</td></tr>
+      <tr><td><strong>Gateway</strong></td><td>Either populate <code>TaskDrilldown.can_reassign</code> correctly for install, OR drop the dedicated flag and rely on <code>allowed_actions</code> carrying the action. Tech's call — latter is cleaner.</td></tr>
+      <tr><td><strong>CSP App</strong></td><td>Install drilldown UI: render the <em>"Change team member"</em> CTA when <code>allowed_actions</code> contains <code>ASSIGN_TECHNICIAN</code>. Reuse the existing team-member picker. Wire to the existing <code>ASSIGN_TECHNICIAN</code> action endpoint.</td></tr>
     </tbody>
   </table>
 
   <h3>Edge cases (business)</h3>
   <ol>
-    <li><strong>CSP swaps after the assigned technician has already arrived at site.</strong> Allowed per PM. New team member is notified via the family's existing assignment-notification path (FPN for Install per <a href="#item-03" class="tab-link" data-tab="item-03">Item 03</a>; per-family notification for Restore / NBREC). Previous tech's app removes the booking from active list on next refresh. Any wizard-state from the previous tech (selfie, OTP, photos) needs reconciliation — tech-design call per family.</li>
+    <li><strong>CSP swaps after the assigned technician has already arrived at site.</strong> Allowed per PM. New team member is notified via the existing install technician-assignment notification path. Previous tech's app removes the booking from active list on next refresh. Any wizard-state from the previous tech (selfie, OTP, photos) needs reconciliation — tech-design call.</li>
     <li><strong>CSP swaps while a customer call is in progress</strong> (IVR dual-PIN model). Existing call stays bound to the old tech's PIN. New tech uses their own PIN going forward. No call migration; consistent with IVR design.</li>
-    <li><strong>CSP changes back to themselves (SELF / un-assign).</strong> NBREC handles via <code>AssigneeType.SELF</code>. Install + Restore have no SELF concept today — PM to confirm whether self-unassign is in scope (probably separate item).</li>
-    <li><strong>Rapid sequential swaps</strong> (A → B → C in seconds). Each swap fires a fresh assignment notification to the new pick (FPN for Install per Item 03; per-family notification elsewhere) and increments the counter (if tracked). No rate limit; partner UI debounces if needed.</li>
+    <li><strong>CSP changes back to themselves (SELF / un-assign).</strong> Install has no SELF concept today — PM to confirm whether self-unassign is in scope (probably a separate item).</li>
+    <li><strong>Rapid sequential swaps</strong> (A → B → C in seconds). Each swap fires a fresh assignment notification to the new pick. No rate limit; partner UI debounces if needed.</li>
     <li><strong>Booking cancelled / fails upstream while CSP is mid-picker.</strong> Cancellation wins. Picker closes; task disappears.</li>
-    <li><strong>Task in a non-assignable state</strong> (e.g. Install <code>AWAITING_SLOT_PROPOSAL</code> — no tech yet). CTA suppressed; use the existing initial-assign CTA. Rule: CTA visible iff a team member is currently assigned AND state is not terminal.</li>
-    <li><strong>CSP App offline.</strong> Action queues like any other; fires on next online window. Backend may reject if the task has reached terminal state in the meantime — surface a graceful failure.</li>
+    <li><strong>Task in a non-assignable state</strong> (e.g. <code>AWAITING_SLOT_PROPOSAL</code> — no tech yet). CTA suppressed; use the existing initial-assign CTA. Rule: CTA visible iff a team member is currently assigned AND state is not terminal.</li>
+    <li><strong>CSP App offline.</strong> Action queues like any other; fires on next online window. Backend may reject if the candidate has reached terminal state in the meantime — surface a graceful failure.</li>
   </ol>
 
   <h3>Out of scope</h3>
   <ul>
-    <li>Complaints / support-resolution-service. PM-confirmed Install + Restore + NBREC only.</li>
-    <li>Outage management.</li>
-    <li>Unifying the per-service models (NBREC's <code>AssigneeType</code> everywhere). Per-family vocabulary preserved.</li>
+    <li><strong>Restore and NBREC families.</strong> Install-only scope. If Restore/NBREC also need this CTA, file separate items.</li>
     <li>System-initiated reassignment (auto-pick on tech unavailability). CSP-initiated only.</li>
     <li>CSP-to-CSP reassignment (covered by D&amp;A reallocation).</li>
     <li>Customer notification about team-member change.</li>
@@ -1739,12 +1424,9 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <h3>Risks / dependencies</h3>
   <ul class="risks">
-    <li><strong>Hard dependency on <a href="#item-03" class="tab-link" data-tab="item-03">Item 03</a> — Install only.</strong> For the <strong>Install</strong> family, FPN-on-re-assignment relies on Item 03's <em>"every assignment incl. re-assignments"</em> scope; Item 03 must ship before or alongside this item for install swaps to fire an FPN to the new tech. <strong>Restore and NBREC are outside Item 03's scope</strong> — they each use their own per-family assignment notification, which this item just extends to fire on swap too. If PM wants FPN treatment on Restore/NBREC swaps as well, file a separate item analogous to Item 03 for those families.</li>
-    <li><strong>Install is a one-line fix.</strong> Add <code>ASSIGN_TECHNICIAN</code> to <code>TasCandidateQueryServiceImpl:118</code>. State machine + workflow already support it.</li>
-    <li><strong>Restore needs a 5-minute verification</strong> of <code>AllowedActionsResolver</code> before any work. Likely already done.</li>
-    <li><strong>Mid-work swap product risk.</strong> Allowing swap after arrival means the customer may see two techs. Previous tech's wizard state needs reconciliation. PM accepted this risk; tech should sanity-check per family.</li>
-    <li><strong><code>can_reassign</code> flag fate.</strong> Either populate it across all 3 families, or drop it and use <code>allowed_actions</code>. Latter is cleaner.</li>
-    <li><strong>NBREC reference — don't change.</strong> It works. Resist the urge to add "consistency" behaviour. Optional: surface <code>reassignmentCount</code> on home drilldown.</li>
+    <li><strong>One-line backend fix.</strong> Add <code>ASSIGN_TECHNICIAN</code> to <code>TasCandidateQueryServiceImpl:118</code>. State machine + workflow already support it.</li>
+    <li><strong>Mid-work swap product risk.</strong> Allowing swap after arrival means the customer may see two techs. Previous tech's wizard state needs reconciliation. PM accepted this risk; tech should sanity-check.</li>
+    <li><strong><code>can_reassign</code> flag fate.</strong> Either populate it correctly for install, or drop it and use <code>allowed_actions</code>. Latter is cleaner.</li>
   </ul>
 
   <details>
@@ -1752,20 +1434,17 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <div>
       <ul>
         <li><strong>Install backend:</strong> <code>InstallationStateMachine.java:182</code> (self-loop) · <code>TasCandidateQueryServiceImpl.java:111-125</code> (the surfacing gap) · <code>CandidateWorkflowServiceImpl.java:528-547</code> (<code>assignTechnician</code> workflow).</li>
-        <li><strong>Restore backend:</strong> <code>RestoreCandidateStateMachine.java:68-73</code> (self-loop, v1.7-DIFF-A1) · <code>AllowedActionsResolver.java:49,56</code> (to verify).</li>
-        <li><strong>NBREC backend (reference, no change):</strong> <code>CandidateCommandServiceImpl.java:223-285</code> (<code>assignTask</code> handles initial + reassign via <code>assigned_at != null</code>).</li>
         <li><strong>Gateway:</strong> <code>TaskDrilldown.java:26</code> (<code>can_reassign</code> field) · <code>HomeFacadeService.java:303</code> (always <code>null</code>).</li>
         <li><strong>CSP App:</strong> <code>core/model/.../TaskDetail.kt:49</code> (<code>canReassign: Boolean = false</code>).</li>
-        <li><strong>Related items:</strong> Item 03 (Install-only technician-assignment FPN — hard dependency for FPN-on-swap in the Install family; does <strong>not</strong> extend to Restore / NBREC, which use their own per-family assignment notification paths).</li>
-        <li><strong>Source MD:</strong> <code>items/09-change-team-member-workflow.md</code></li>
+        <li><strong>Source MD:</strong> <code>items/07-change-team-member-workflow.md</code></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 10 ============ -->
-<section id="item-10" class="tab-pane">
-  <h2>10 — IVR 2.0 integration for Cx ↔ Px interaction</h2>
+<!-- ============ ITEM 08 ============ -->
+<section id="item-08" class="tab-pane">
+  <h2>08 — IVR 2.0 integration for Cx ↔ Px interaction</h2>
 
   <!-- CLASSIFICATION -->
   <div class="classify">
@@ -1801,15 +1480,15 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <div style="border-left: 4px solid var(--accent); background: var(--bg-soft); padding: 1rem 1.2rem; border-radius: 0 6px 6px 0; margin: 1.2rem 0;">
     <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 0.5rem;">Where the full spec lives</div>
-    <p style="margin: 0 0 0.4rem;">Item 10's full surface is too large to inline in this file. Two artifacts on the public IVR-Routing-Solutioning repo:</p>
+    <p style="margin: 0 0 0.4rem;">Item 08's full surface is too large to inline in this file. Two artifacts on the public IVR-Routing-Solutioning repo:</p>
     <ul style="margin: 0 0 0.2rem; padding-left: 1.3rem;">
       <li><a href="https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html" target="_blank" rel="noopener"><strong>Leadership-facing spec</strong> &mdash; ivr-routing-design.html</a></li>
       <li><a href="https://github.com/ashish-raj-wiom/IVR-Routing-Solutioning" target="_blank" rel="noopener"><strong>Repo</strong> &mdash; GitHub source incl. technical notes</a></li>
     </ul>
   </div>
 
-  <h3>Why this is in Bucket 2 (working-hour dependency)</h3>
-  <p>The IVR routing rules need to know <strong>which CSP / technician is contactable at this moment</strong> &mdash; outside the CSP's working window, the IVR should fall back to the next-best path rather than ring a sleeping partner. The working-hour governance Vaibhav is currently defining (the same one Bucket 2 items 01 / 06 / 07 lean on) is the input that lets Item 10 decide when to seamless-route vs. when to graceful-fallback. Once working-hour governance lands, Item 10 ships with the rule plugged in.</p>
+  <h3>Scope and status</h3>
+  <p>The PM-facing design + technical notes are complete and have passed three leadership review rounds with Dhruv. The spec ships for build &mdash; <strong>Bucket 1 (Go-ahead from Vaibhav)</strong>. The companion ES PRD work (resolver chain wiring, JWT claims, app refactor scope) is captured in the <code>ivr_calling_es_project.md</code> memory and the IVR-Calling capability ES v2.1.</p>
 
   <h3>Related background</h3>
   <ul>
@@ -1819,9 +1498,9 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
   </ul>
 </section>
 
-<!-- ============ ITEM 11 ============ -->
-<section id="item-11" class="tab-pane">
-  <h2>11 — Capacity OS code skips connection increment after installation</h2>
+<!-- ============ ITEM 09 ============ -->
+<section id="item-09" class="tab-pane">
+  <h2>09 — Capacity OS code skips connection increment after installation</h2>
 
   <div class="classify">
     <div class="classify-head">
@@ -1902,15 +1581,15 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
         <li><strong>Code (bug site):</strong> <code>services/csp-capacity-coverage-service/.../InboundEventProcessingServiceImpl.java:446-461</code>.</li>
         <li><strong>Code (CSP-app path, evidence that this is back-office only):</strong> <code>services/csp-connection-lifecycle-service/.../CspConnectionQueryController.java:62</code> + <code>services/csp-gateway-service/.../AssuranceStripFacadeService.java:520-525</code>.</li>
         <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-85d1-40f6-a6cd-f94ab7742789</code> — CL=143 ACTIVE for a0a7b6, Capacity zone_3331 counter=511.</li>
-        <li><strong>Source MD:</strong> <code>items/11-capacity-skip-t2-increment.md</code> <em>(to be added — currently only lives in the connection-audit HTML)</em></li>
+        <li><strong>Source MD:</strong> <code>items/09-capacity-skip-t2-increment.md</code> <em>(to be added — currently only lives in the connection-audit HTML)</em></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 12 ============ -->
-<section id="item-12" class="tab-pane">
-  <h2>12 — <code>CL_INSTALLATION_QUALITY_SIGNAL</code>: CL producer record drifted from CL OS S-10 contract</h2>
+<!-- ============ ITEM 10 ============ -->
+<section id="item-10" class="tab-pane">
+  <h2>10 — <code>CL_INSTALLATION_QUALITY_SIGNAL</code>: CL producer record drifted from CL OS S-10 contract</h2>
 
   <div class="classify">
     <div class="classify-head">
@@ -2033,15 +1712,15 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
 --   signalId      "must not be blank"
 --   signalType    "must not be null"
 --   previousState "must not be null"</code></pre></li>
-        <li><strong>Source MD:</strong> <code>items/12-cl-installation-quality-signal-producer-contract-drift.md</code> <em>(to be added)</em></li>
+        <li><strong>Source MD:</strong> <code>items/10-cl-installation-quality-signal-producer-contract-drift.md</code> <em>(to be added)</em></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 13 ============ -->
-<section id="item-13" class="tab-pane">
-  <h2>13 — CAEO <code>customer_id</code> column has CSP-ID for installation task</h2>
+<!-- ============ ITEM 11 ============ -->
+<section id="item-11" class="tab-pane">
+  <h2>11 — CAEO <code>customer_id</code> column has CSP-ID for installation task</h2>
 
   <div class="classify">
     <div class="classify-head">
@@ -2111,47 +1790,77 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
         <li><strong>Code (bug site):</strong> <code>services/csp-customer-access-service/.../InboundEventProcessingServiceImpl.java:82</code>.</li>
         <li><strong>Code (CL emit site to update):</strong> <code>services/csp-connection-lifecycle-service/...</code> — <code>CL_CONNECTION_ACTIVATED</code> producer.</li>
         <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — CAEO row created, <code>customer_id = a0a7b6</code> (the CSP-ID).</li>
-        <li><strong>Source MD:</strong> <code>items/13-caeo-customer-id-wrong-write.md</code> <em>(to be added)</em></li>
+        <li><strong>Source MD:</strong> <code>items/11-caeo-customer-id-wrong-write.md</code> <em>(to be added)</em></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 14 ============ -->
-<section id="item-14" class="tab-pane">
-  <h2>14 — <code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code></h2>
+<!-- ============ ITEM 12 ============ -->
+<section id="item-12" class="tab-pane">
+  <h2>12 — Implement OS-aligned 6-option failure sub-reason picker + 4-field auto-populate</h2>
 
   <div class="classify">
     <div class="classify-head">
       <div class="classify-type">GAP</div>
       <div class="classify-headline">
-        <strong>Partner App fires <code>INSTALLATION_FAILED</code> with all four diagnostic fields blank.</strong> <code>failure_reason</code> defaults to the generic <code>CSP_REPORTED_FAILURE</code>; <code>failure_subreason_code</code>, <code>failure_subreason_source</code>, <code>failure_subreason_confidence</code>, <code>failure_detail</code> all <code>null</code>. Without sub-reason, Quality OS and Enforcement OS cannot differentiate "CSP didn't bother" from "address infeasible" from "customer refused" — the per-CSP pattern-aggregation discipline (BDN-CL-02) collapses at the data-collection step.
+        <strong>Today:</strong> Partner App offers a 4-option picker (<code>LOCATION_UNREACHABLE</code>, <code>CAPACITY_FULL</code>, <code>CUSTOMER_CANCELLED</code>, <code>TECHNICIAN_UNAVAILABLE</code>) that doesn't match the OS sub-reason enum. TAS captures the picker code in <code>extra_data</code> JSON but doesn't propagate it; CL's <code>INSTALLATION_FAILED</code> event lands in prod with all four diagnostic fields blank (<code>failure_subreason_code</code>, <code>failure_subreason_source</code>, <code>failure_subreason_confidence</code>, <code>failure_detail</code> = <code>null</code>; <code>failure_reason</code> collapsed to generic <code>CSP_REPORTED_FAILURE</code>).
+        <br><br>
+        <strong>Want:</strong> implement what the OS already prescribes &mdash; replace the picker with the OS-aligned <strong>6-option sub-reason enum</strong>, and auto-populate the four OS-mandated fields per CL OS §7.2 mapping. No PM-open questions; the OS specifies it.
       </div>
     </div>
     <table class="define-table">
-      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr><td>OS</td><td class="define-yn yes">✓ Yes</td><td class="define-note">CL OS defines <code>failure_reason</code> required enum (CSP_REPORTED_FAILURE / TIMEOUT_P74 / VERIFICATION_FAILED / CUSTOMER_REFUSED / ACCESS_DENIED / BINDING_MISSING). <code>failure_subreason_code</code> diagnostic enum (CSP_NO_SHOW / COVERAGE_NOT_FEASIBLE / CUSTOMER_CANCELLED / PRICE_CONFUSION / SCHEDULE_CONFLICT / DEVICE_UNAVAILABLE / BACKHAUL_ISSUE). Per BDN-CL-02, Quality + Enforcement OS consume sub-reason for per-CSP pattern detection.</td></tr>
-      <tr><td>Spec (ES PRD)</td><td class="define-yn no">✗ No</td><td class="define-note">ES PRD does not currently mandate the picker UX or carrier-fields contract end-to-end.</td></tr>
-      <tr><td>Partner App</td><td class="define-yn no">✗ No</td><td class="define-note">No sub-reason picker surface on the "report installation failure" action. CSP taps a single button; app fires with the generic reason and null sub-reason.</td></tr>
-      <tr><td>Code (TAS handler)</td><td class="define-yn no">✗ No</td><td class="define-note">Handler accepts the event with null sub-reason — no rejection / no enforcement.</td></tr>
-      <tr><td>Prod</td><td class="define-yn no">✗ Blank</td><td class="define-note">Verified on the audited connection: <code>failure_reason = "CSP_REPORTED_FAILURE"</code>, <code>failure_subreason_code = null</code>, <code>failure_subreason_source = null</code>, <code>failure_subreason_confidence = null</code>, <code>failure_detail = null</code>. Pattern holds across the install-failure cohort.</td></tr>
+      <tr><th>Layer</th><th class="define-yn">Today</th><th>Want</th></tr>
+      <tr><td>OS (CL §7.2 + v1.2 amendment)</td><td class="define-yn yes">✓ Defined</td><td class="define-note">7-enum sub-reason; 6 are CSP-pickable (CSP_NO_SHOW is system-detected). Sub-reason source/confidence/detail also enums. Quality + Enforcement OS consume per BDN-CL-02.</td></tr>
+      <tr><td>Partner App picker</td><td class="define-yn no">✗ 4 misaligned options</td><td class="define-note">Replace with the 6 OS-aligned options below.</td></tr>
+      <tr><td>Backend (TAS → CL) propagation</td><td class="define-yn no">✗ Picker code buried in <code>extra_data</code></td><td class="define-note">TAS handler maps the picker code to the 4 OS fields and propagates them on the events it emits; CL's <code>INSTALLATION_FAILED</code> handler writes the 4 fields to the connection event row.</td></tr>
+      <tr><td>Prod payload</td><td class="define-yn no">✗ All 4 fields null</td><td class="define-note">All 4 fields carry meaningful values for every CSP-reported failure.</td></tr>
     </table>
   </div>
+
+  <h3>The 6 picker options (OS-aligned)</h3>
+  <table>
+    <thead><tr><th>Picker code (= OS <code>failure_subreason_code</code>)</th><th>English text</th><th>Hindi text (placeholder &mdash; copy team to finalise)</th></tr></thead>
+    <tbody>
+      <tr><td><code>COVERAGE_NOT_FEASIBLE</code></td><td>Location can't be served</td><td>जगह पर सेवा नहीं दे सकते</td></tr>
+      <tr><td><code>CUSTOMER_CANCELLED</code></td><td>Customer cancelled</td><td>ग्राहक ने रद्द किया</td></tr>
+      <tr><td><code>PRICE_CONFUSION</code></td><td>Customer didn't agree on price</td><td>ग्राहक ने कीमत पर सहमति नहीं दी</td></tr>
+      <tr><td><code>SCHEDULE_CONFLICT</code></td><td>Schedule didn't work</td><td>समय में टकराव</td></tr>
+      <tr><td><code>DEVICE_UNAVAILABLE</code></td><td>No device available</td><td>डिवाइस उपलब्ध नहीं</td></tr>
+      <tr><td><code>BACKHAUL_ISSUE</code></td><td>Backhaul / connectivity issue</td><td>बैकहॉल / कनेक्शन समस्या</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);"><code>CSP_NO_SHOW</code> (the 7th OS sub-reason) is excluded from the picker &mdash; it's system-detected on P74 timeout, not CSP-picked.</p>
+
+  <h3>The 4-field auto-populate per OS</h3>
+  <p>The picker selection deterministically drives the four OS fields on the emitted <code>INSTALLATION_FAILED</code> event:</p>
+  <table>
+    <thead><tr><th>Picker = <code>failure_subreason_code</code></th><th>→ <code>failure_reason</code></th><th>→ <code>failure_subreason_source</code></th><th>→ <code>failure_subreason_confidence</code></th><th>→ <code>failure_detail</code></th></tr></thead>
+    <tbody>
+      <tr><td><code>COVERAGE_NOT_FEASIBLE</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>optional free text</td></tr>
+      <tr><td><code>CUSTOMER_CANCELLED</code></td><td><code>CUSTOMER_REFUSED</code></td><td><code>CUSTOMER</code></td><td><code>HIGH</code></td><td>optional free text</td></tr>
+      <tr><td><code>PRICE_CONFUSION</code></td><td><code>CUSTOMER_REFUSED</code></td><td><code>CUSTOMER</code></td><td><code>HIGH</code></td><td>optional free text</td></tr>
+      <tr><td><code>SCHEDULE_CONFLICT</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>optional free text</td></tr>
+      <tr><td><code>DEVICE_UNAVAILABLE</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>optional free text</td></tr>
+      <tr><td><code>BACKHAUL_ISSUE</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>optional free text</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.88rem; color: var(--ink-soft);"><strong>Confidence = HIGH</strong> for picker-driven submissions because the CSP is making a direct, deliberate selection from a finite menu. MEDIUM/LOW only apply to system-inferred sub-reasons (e.g. NLP on free text), which aren't in the picker path.</p>
 
   <h3>Backend flow — today vs. want</h3>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
     <div>
       <div class="sub-head bad">Today</div>
       <div class="flow">
-        <div class="node">CSP taps "Report failure" on the partner app</div>
+        <div class="node">CSP taps "Report failure"</div>
         <div class="arrow">↓</div>
-        <div class="node error">No picker; one-tap submit</div>
+        <div class="node warn">4-option picker (not OS-aligned)<br><small>LOCATION_UNREACHABLE · CAPACITY_FULL · CUSTOMER_CANCELLED · TECHNICIAN_UNAVAILABLE</small></div>
         <div class="arrow">↓</div>
-        <div class="node">App fires <code>INSTALLATION_FAILED</code><br><small>failure_reason = CSP_REPORTED_FAILURE<br>subreason / source / confidence / detail = null</small></div>
+        <div class="node">App sends <code>reason</code> + <code>reason_code</code> to TAS</div>
         <div class="arrow">↓</div>
-        <div class="node warn">TAS handler accepts blindly</div>
+        <div class="node warn">TAS buries <code>reason_code</code> in <code>extra_data</code> JSON; only forwards the text</div>
         <div class="arrow">↓</div>
-        <div class="node error">Quality + Enforcement OS<br><small>can't tell misuse from legit failure</small></div>
+        <div class="node error">CL writes <code>INSTALLATION_FAILED</code> with all 4 OS fields = null; <code>failure_reason</code> = generic <code>CSP_REPORTED_FAILURE</code></div>
       </div>
     </div>
     <div>
@@ -2159,47 +1868,51 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
       <div class="flow">
         <div class="node">CSP taps "Report failure"</div>
         <div class="arrow">↓</div>
-        <div class="node new">Sub-reason picker shown<br><small>CSP_NO_SHOW / COVERAGE_NOT_FEASIBLE / CUSTOMER_CANCELLED / PRICE_CONFUSION / SCHEDULE_CONFLICT / DEVICE_UNAVAILABLE / BACKHAUL_ISSUE</small></div>
-        <div class="arrow-label">required field</div>
+        <div class="node new">6-option OS-aligned picker<br><small>COVERAGE_NOT_FEASIBLE · CUSTOMER_CANCELLED · PRICE_CONFUSION · SCHEDULE_CONFLICT · DEVICE_UNAVAILABLE · BACKHAUL_ISSUE</small></div>
         <div class="arrow">↓</div>
-        <div class="node">App fires <code>INSTALLATION_FAILED</code><br><small>failure_subreason_code = &lt;picker value&gt;<br>failure_subreason_source = CSP<br>failure_subreason_confidence = HIGH</small></div>
+        <div class="node">App sends the OS-enum picker code to TAS</div>
         <div class="arrow">↓</div>
-        <div class="node new">TAS handler enforces: reject if sub-reason null</div>
+        <div class="node new">TAS applies the deterministic mapping → populates all 4 OS fields; propagates on the events it emits</div>
         <div class="arrow">↓</div>
-        <div class="node success">Quality + Enforcement OS<br><small>per-CSP pattern aggregation works</small></div>
+        <div class="node success">CL writes <code>INSTALLATION_FAILED</code> with the 4 OS fields populated per the mapping table</div>
       </div>
     </div>
   </div>
 
   <h3>The fix</h3>
   <ol class="fix-plan">
-    <li><span class="svc-tag es">ES&nbsp;PRD</span><span class="step-text">ES PRD specifies the sub-reason picker as a required pre-step before <code>INSTALLATION_FAILED</code> can fire. List the OS enum values + copy text. ESR registers the field mappings.</span></li>
-    <li><span class="svc-tag app">App</span><span class="step-text">Partner App: replace the one-tap "report failure" CTA with a two-step modal — (1) sub-reason picker, (2) optional free-text <code>failure_detail</code>. Block submit until sub-reason is picked.</span></li>
-    <li><span class="svc-tag code">Code</span><span class="step-text"><code>csp-tas-service</code>: TAS handler rejects <code>INSTALLATION_FAILED</code> with <code>failure_subreason_code = null</code> (HTTP 400 with error code <code>SUB_REASON_REQUIRED</code>).</span></li>
+    <li><span class="svc-tag code">Code (TAS)</span><span class="step-text">In <code>csp-tas-service / CancellationReason.java</code>, replace the 4 enum entries with the 6 OS-aligned codes (<code>COVERAGE_NOT_FEASIBLE</code>, <code>CUSTOMER_CANCELLED</code>, <code>PRICE_CONFUSION</code>, <code>SCHEDULE_CONFLICT</code>, <code>DEVICE_UNAVAILABLE</code>, <code>BACKHAUL_ISSUE</code>) with the English + Hindi labels from the table above. <code>GET /api/install/cancellation-reasons</code> now serves these 6.</span></li>
+    <li><span class="svc-tag code">Code (TAS)</span><span class="step-text">In <code>CandidateWorkflowServiceImpl.reportInstallationFailed</code>, apply the deterministic mapping → set <code>failure_reason</code>, <code>failure_subreason_code</code>, <code>failure_subreason_source</code>, <code>failure_subreason_confidence</code> on the candidate entity and on the emitted <code>EsInstallReportedFailed</code> + <code>TasInstallTerminal</code> events. Stop burying <code>reason_code</code> in <code>extra_data</code>.</span></li>
+    <li><span class="svc-tag code">Code (CL)</span><span class="step-text">In <code>csp-connection-lifecycle-service</code>'s INSTALLATION_FAILED handler, accept the 4 OS fields off the inbound event and write them to <code>connection_event_history.payload</code>.</span></li>
+    <li><span class="svc-tag app">App</span><span class="step-text">Partner App: no code change needed beyond re-fetching the picker list from <code>GET /install/cancellation-reasons</code>. The 6 new options surface automatically once TAS ships.</span></li>
+    <li><span class="svc-tag es">ES&nbsp;PRD</span><span class="step-text">ES PRD documents the picker contract (6 options, English + Hindi labels, mapping table). ESR registers the 4 carrier fields.</span></li>
   </ol>
 
   <h3>Edge cases (business)</h3>
   <ol style="padding-left: 1.4rem;">
-    <li><strong>Old partner-app version still in field.</strong> Tech ships server-side enforcement before forcing app update; transitional period accepts old payloads with a deprecation warning logged. Sunset window TBD with mobile team.</li>
-    <li><strong>CSP can't decide between two reasons.</strong> Single-pick only; the picker UX shows short descriptions for disambiguation. If a CSP genuinely needs to flag two issues, free-text <code>failure_detail</code> carries the secondary note.</li>
-    <li><strong>TIMEOUT-driven failures (P74).</strong> The system-driven path also writes <code>failure_subreason_code</code> — fixed to <code>TIMEOUT_P74</code> at the CL side; no picker shown to anyone.</li>
+    <li><strong>Old partner-app version still in field.</strong> Picker list comes from the backend; old app fetches the new 6 options on next launch. No app-version gate needed.</li>
+    <li><strong>System-driven failures (P74 timeout etc.).</strong> System-emitted <code>INSTALLATION_FAILED</code> sets <code>failure_subreason_code = CSP_NO_SHOW</code>, <code>failure_subreason_source = SYSTEM</code>, <code>failure_reason = TIMEOUT_P74</code>. No picker involved; this is the path Item 04 wires.</li>
+    <li><strong>Optional free-text <code>failure_detail</code>.</strong> If the picker UX gains a "notes" field after selection, the entered text lands in <code>failure_detail</code>. Otherwise <code>null</code>. No OS impact either way.</li>
+    <li><strong>Backfill of historical install-failures.</strong> Out of scope &mdash; the existing buried <code>extra_data.report_installation_failed_reason_code</code> values in TAS rows can be migrated forward on a one-shot basis if Quality OS wants the historical attribution, but the picker-code → OS-enum mapping is not 1:1 (old <code>CAPACITY_FULL</code> and <code>TECHNICIAN_UNAVAILABLE</code> don't have direct OS targets).</li>
   </ol>
 
   <details>
     <summary>Source quotes &amp; references</summary>
     <div>
       <ul>
-        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> BDN-CL-02 (per-CSP pattern detection).</li>
-        <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — partner a0a9m4 fired <code>INSTALLATION_FAILED</code> after 2 h 13 m with all four diagnostic fields blank.</li>
-        <li><strong>Source MD:</strong> <code>items/14-failure-subreason-blank.md</code> <em>(to be added)</em></li>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §7.2 Sub-reason fields (v1.2 amendment) + failure_reason enum; BDN-CL-02 (per-CSP pattern detection).</li>
+        <li><strong>Code (current picker — to replace):</strong> <code>services/csp-tas-service/.../CancellationReason.java</code> + <code>CancellationReasonController.java</code> + <code>CancellationReasonResponse.java</code>.</li>
+        <li><strong>Code (TAS handler — to update):</strong> <code>services/csp-tas-service/.../CandidateWorkflowServiceImpl.java:649-712</code> (<code>reportInstallationFailed</code>).</li>
+        <li><strong>Prod evidence (verified 2026-06-03):</strong> CSP <code>a0a7a5</code>, connection <code>876d39e1-…</code> &mdash; CSP picked option 3 "Customer cancelled" (TAS <code>extra_data.report_installation_failed_reason_code = "CUSTOMER_CANCELLED"</code>); CL event payload landed with all 4 diagnostic fields = <code>null</code>, <code>failure_reason = "CSP_REPORTED_FAILURE"</code>.</li>
+        <li><strong>Source MD:</strong> <code>items/12-failure-subreason-blank.md</code> <em>(to be added)</em></li>
       </ul>
     </div>
   </details>
 </section>
 
-<!-- ============ ITEM 15 ============ -->
-<section id="item-15" class="tab-pane">
-  <h2>15 — DAS doesn't publish supply-side events when a zone has only one CSP</h2>
+<!-- ============ ITEM 13 ============ -->
+<section id="item-13" class="tab-pane">
+  <h2>13 — DAS doesn't publish supply-side events when a zone has only one CSP</h2>
 
   <div class="classify">
     <div class="classify-head">
@@ -2271,7 +1984,7 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
   <ul>
     <li><strong>Both sides of the bridge already exist.</strong> Capacity OS receivers are production-quality (idempotency, mark-processed, state update). This is purely about adding trigger calls on the DAS side.</li>
     <li><strong>Out of scope:</strong> Capacity OS's auto-onboarding decision logic on receiving <code>ZONE_SUPPLY_DEFICIT_SIGNAL</code>. Capacity OS owns that; this item just makes the signal arrive.</li>
-    <li><strong>Related pattern:</strong> the same "publisher methods exist but trigger call sites missing" shape shows up in P195 counter (Item 01) and post-AMENDMENT-02 wiring (Item 07). DAS's outbound surface is partially scaffolded across several state-machine branches.</li>
+    <li><strong>Related pattern:</strong> the same "publisher methods exist but trigger call sites missing" shape shows up in P195 counter (Item 01) and post-AMENDMENT-02 wiring (Item 06). DAS's outbound surface is partially scaffolded across several state-machine branches.</li>
   </ul>
 
   <details>
@@ -2282,7 +1995,71 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
         <li><strong>Code (DAS — half-built emit side):</strong> <code>SingleProviderContinuityActive.java</code>, <code>ZoneSupplyDeficitSignal.java</code>, <code>EventTypes.java:30-32</code>; <code>EventSender.java:55,62</code>; <code>application.yml:146</code>.</li>
         <li><strong>Code (Capacity OS — fully-built receive side):</strong> <code>InboundEventController.java:146-185</code>; <code>InboundEventProcessingServiceImpl.java:269-357</code>.</li>
         <li><strong>Prod evidence:</strong> 0 events of any of the three types received in Capacity OS.</li>
-        <li><strong>Source MD:</strong> <code>items/15-das-single-csp-zone-events.md</code> <em>(to be added)</em></li>
+        <li><strong>Source MD:</strong> <code>items/13-das-single-csp-zone-events.md</code> <em>(to be added)</em></li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ ITEM 14 ============ -->
+<section id="item-14" class="tab-pane">
+  <h2>14 — CLOS P74 (72h) + DAS P41 (2h): does the timer start from <code>ASSIGNED</code> or from <code>ACCEPTED</code>?</h2>
+
+  <div class="classify">
+    <div class="classify-head">
+      <div class="classify-type" style="background: var(--new-bg); color: var(--new);">DECISION<span class="classify-subtype">Pending on Dhruv</span></div>
+      <div class="classify-headline">
+        <strong>Two of the timer sweeps in Items 04 and 05 (CLOS P74 install window + DAS P41 acceptance window) need a product decision before they can be safely wired in prod:</strong> when does the clock start? From the moment the candidate enters the <code>ASSIGNED</code> state (per the OS state diagram), or from the moment the CSP <em>accepts</em> the allocation (the <code>ACCEPTED</code> state)? The answer changes who gets penalised when there's wiring latency, and it changes the effective length of the customer-facing install window.
+      </div>
+    </div>
+    <table class="define-table">
+      <tr><th>Layer</th><th class="define-yn">Status</th><th>Notes</th></tr>
+      <tr><td>OS (CL + DAS)</td><td class="define-yn partial">⚠ Ambiguous</td><td class="define-note">CL OS L572 (P74 = 72h install window) and DAS OS (P41 = 2h acceptance window) define the durations but don't explicitly fix the start anchor across both interpretations. Reasonable readings exist for both <code>ASSIGNED</code> and <code>ACCEPTED</code>.</td></tr>
+      <tr><td>Items 04 + 05</td><td class="define-yn no">✗ Carved out</td><td class="define-note">Items 04 (CLOS scheduler) and 05 (DAS scheduler) explicitly exclude P74 and P41 respectively. They wire P75/P76/P77/P78 and P191 only, until this decision lands.</td></tr>
+      <tr><td>Prod impact</td><td class="define-yn partial">⚠ Downstream</td><td class="define-note">Once Dhruv decides, Items 04 and 05 absorb the answer and become unblocked. Anchor choice also affects the TAS T3-retry co-fix semantics under Item 04.</td></tr>
+    </table>
+  </div>
+
+  <h3>The two options</h3>
+  <table>
+    <thead><tr><th>Option</th><th>Start anchor</th><th>What it means for P74 (72h install window)</th><th>What it means for P41 (2h acceptance window)</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Option A</strong></td>
+        <td><code>ASSIGNED</code> entry</td>
+        <td>Customer's 72h clock starts the moment DAS picks the CSP, even if the CSP hasn't acknowledged. Wiring delays / push-notification slowness eat into the customer's window.</td>
+        <td>2h cap measured from DAS's pick. Acceptance signal must reach DAS within 2h of the candidate row being written.</td>
+      </tr>
+      <tr>
+        <td><strong>Option B</strong></td>
+        <td><code>ACCEPTED</code> entry</td>
+        <td>72h clock starts when the CSP accepts. Customer gets the full 72h of CSP-engaged install time, regardless of pre-accept latency.</td>
+        <td>2h cap measured from when the CSP acknowledges (or auto-accept fires). Pre-accept wait doesn't count.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>What each option changes downstream</h3>
+  <ul>
+    <li><strong>Item 04 (CLOS scheduler):</strong> P74 sweep query joins on the start-anchor column. Option A: <code>WHERE assigned_at &lt; now() - 72h</code>. Option B: <code>WHERE accepted_at &lt; now() - 72h</code>. TAS T3-retry handling follows the same anchor.</li>
+    <li><strong>Item 05 (DAS scheduler):</strong> P41 sweep query similarly. Option A: <code>WHERE assigned_at &lt; now() - 2h AND state = 'ASSIGNED'</code>. Option B: <code>WHERE accepted_at &lt; now() - 2h</code> (which makes P41 effectively redundant if auto-accept is fast).</li>
+    <li><strong>Customer-facing install-window guarantees:</strong> Option A gives a worst-case shorter window if there's pre-accept latency; Option B gives a stable 72h guarantee regardless of wiring lag.</li>
+    <li><strong>CSP penalty surface:</strong> Option A penalises CSPs (and Wiom) for system-side latency; Option B penalises only post-accept inactivity.</li>
+  </ul>
+
+  <h3>What this item asks</h3>
+  <p style="font-size: 0.95rem;"><strong>PM decision required from Dhruv:</strong> for both P74 (CL install window, 72h) and P41 (DAS acceptance window, 2h), is the start anchor <code>ASSIGNED</code> entry (Option A) or <code>ACCEPTED</code> entry (Option B)? Same answer applies to both timers, or do they need separate anchors?</p>
+
+  <h3>Why this is in Bucket 2 (Pending on Dhruv)</h3>
+  <p>Items 04 and 05 cannot ship the P74 / P41 portions until this is locked. The rest of those items (P75/P76/P77/P78 in CLOS, P191 in DAS) is independent of this decision and proceeds under Bucket 1.</p>
+
+  <details>
+    <summary>Source quotes &amp; references</summary>
+    <div>
+      <ul>
+        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> L572 (P74 = 72h install window); <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> (P41 = 2h acceptance window).</li>
+        <li><strong>Related items:</strong> <a href="#item-04" class="tab-link" data-tab="item-04">Item 04</a> (CLOS scheduler — P74 carved out here), <a href="#item-05" class="tab-link" data-tab="item-05">Item 05</a> (DAS scheduler — P41 carved out here).</li>
+        <li><strong>Source MD:</strong> <code>items/14-p74-p41-start-time.md</code> <em>(to be added)</em></li>
       </ul>
     </div>
   </details>
