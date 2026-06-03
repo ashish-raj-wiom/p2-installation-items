@@ -2,7 +2,7 @@
 
 **Owner:** Ashish Raj · **Started:** 2026-05-29 · **Target audience:** Wiom CSP tech for implementation
 
-16 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff. The HTML groups the items into three ownership buckets (Go-ahead from Vaibhav / Working-hour dependency / Decision pending on Dhruv) so a wider audience can see the current waiting line at a glance.
+15 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff. The HTML groups the items into three ownership buckets (Go-ahead from Vaibhav / Working-hour dependency / Decision pending on Dhruv) so a wider audience can see the current waiting line at a glance.
 
 ## How the PM team writes items
 
@@ -52,7 +52,6 @@ Every BUG item's classification card carries this sub-type. GAP items don't need
 
 | # | Title | Type | Bucket | Service(s) to update | Status |
 |---|---|---|---|---|---|
-| 01 | [Connection stuck when CSP doesn't propose a slot](items/01-no-slot-action-stuck.md) | Gap | 2 · Working-hour dep | csp-tas-service, OS, CLOS infra, csp-notification-service, partner app, CleverTap | Open |
 | 02 | [Same CSP re-assigned in single-CSP zones (P51 bypass)](items/02-same-csp-loop-single-zone.md) | Bug | 3 · Dhruv decision | csp-demand-allocation-service (single behavioral fix) | Open |
 | 03 | [Propose 2 slots + customer counter-proposal](items/03-two-slots-and-counter-proposal.md) | Gap | 3 · Dhruv decision | ES PRD, csp-tas-service (schema + DTO + handler), partner app, customer app | Open |
 | 04 | [FPN for Rohit (technician) on assignment](items/04-fpn-for-rohit-on-technician-assignment.md) | Gap | 1 · Vaibhav go-ahead | Technician app, CleverTap campaign | Open |
@@ -71,10 +70,10 @@ Every BUG item's classification card carries this sub-type. GAP items don't need
 
 ## Three ownership buckets (as of 2026-06-02)
 
-The 16 items above are grouped into three buckets in the HTML, by who needs to weigh in next:
+The 15 items above are grouped into three buckets in the HTML, by who needs to weigh in next:
 
 - **Bucket 1 — Go-ahead from Vaibhav** (no OS change, pure ES / app / backend): items **04, 05, 08, 09, 10, 12, 13, 14, 15, 16**
-- **Bucket 2 — Working-hour dependency** (waiting on Vaibhav's working-hour governance): items **01, 06, 07, 11**
+- **Bucket 2 — Working-hour dependency** (waiting on Vaibhav's working-hour governance): items **06, 07, 11**
 - **Bucket 3 — Decision pending on Dhruv** (shared question: should a CSP who self-marked `INSTALLATION_FAILED` be re-eligible after P51 cooloff? Partner-complaint pattern: *"mujhe same booking baar baar bhejte ho jo maine decline kari hai"*): items **02, 03**
 
 ## On items 12–16

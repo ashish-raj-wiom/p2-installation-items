@@ -204,14 +204,13 @@
     <strong>Owner:</strong> Ashish Raj &middot;
     <strong>Started:</strong> 2026-05-29 &middot;
     <strong>For:</strong> Wiom CSP Tech &middot;
-    <span id="status-counter">16 items &middot; grouped into 3 ownership buckets</span>
+    <span id="status-counter">15 items &middot; grouped into 3 ownership buckets</span>
   </div>
 </header>
 
 <nav class="tabs">
   <div class="tabstrip">
     <button class="tab-btn active" data-tab="overview">Overview</button>
-    <button class="tab-btn" data-tab="item-01"><span class="num">01</span>Slot proposal</button>
     <button class="tab-btn" data-tab="item-02"><span class="num">02</span>Same-CSP loop</button>
     <button class="tab-btn" data-tab="item-03"><span class="num">03</span>2 slots + counter</button>
     <button class="tab-btn" data-tab="item-04"><span class="num">04</span>Tech FPN</button>
@@ -261,11 +260,10 @@
   <div style="border: 1px solid var(--warn); border-left: 4px solid var(--warn); border-radius: 8px; padding: 1rem 1.2rem 1.1rem; margin: 0 0 1rem; background: var(--warn-bg);">
     <div style="display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.5rem;">
       <span style="font-size: 1.1rem; font-weight: 800; color: var(--gap); letter-spacing: 0.01em;">Bucket 2 &mdash; Working-hour dependency</span>
-      <span style="font-size: 0.85rem; color: var(--ink-soft);">4 items</span>
+      <span style="font-size: 0.85rem; color: var(--ink-soft);">3 items</span>
     </div>
     <p style="margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--ink);"><strong>Blocked on working-hour governance.</strong> Vaibhav is currently defining the working-hour rule that these items lean on (SLA-timer behaviour during off-hours, CSP availability windows, IVR routing windows). Items resume once that governance is finalised.</p>
     <ul style="margin: 0; padding-left: 1.2rem;">
-      <li><a href="#item-01" class="tab-link" data-tab="item-01"><strong>01</strong> &mdash; Connection request gets stuck (no retrigger) if a CSP doesn't choose a slot</a></li>
       <li><a href="#item-06" class="tab-link" data-tab="item-06"><strong>06</strong> &mdash; CLOS timeout scheduler unwired: P74 / P75 / P76 / P77 / P78 not firing</a></li>
       <li><a href="#item-07" class="tab-link" data-tab="item-07"><strong>07</strong> &mdash; DAS scheduler unwired: P41 acceptance sweep + P191 reroute not firing</a></li>
       <li><a href="#item-11" class="tab-link" data-tab="item-11"><strong>11</strong> &mdash; IVR 2.0 integration for Cx ↔ Px interaction <span style="color: var(--ink-soft); font-size: 0.85rem;">(spec linked)</span></a></li>
@@ -292,13 +290,6 @@
       <tr><th style="width: 42px;">#</th><th>Title</th><th style="width: 90px;">Type</th><th style="width: 110px;">Status</th><th style="width: 220px;">Service(s) to change</th></tr>
     </thead>
     <tbody>
-      <tr>
-        <td><strong>01</strong></td>
-        <td><a href="#item-01" class="tab-link" data-tab="item-01">Connection stuck when CSP doesn't propose a slot</a></td>
-        <td><span class="pill gap">GAP</span></td>
-        <td><span class="bucket-tag b2">Bucket 2</span></td>
-        <td><span class="mono">TAS</span>, OS, <span class="mono">CL infra</span>, <span class="mono">notif</span>, <span class="mono">app</span></td>
-      </tr>
       <tr>
         <td><strong>02</strong></td>
         <td><a href="#item-02" class="tab-link" data-tab="item-02">Same CSP re-assigned in single-CSP zones (P51 bypass)</a></td>
@@ -416,221 +407,6 @@
     <li><strong>Risks / dependencies</strong> — one-liners.</li>
     <li><strong>Evidence and references</strong> — collapsed by default.</li>
   </ol>
-</section>
-
-<!-- ============ ITEM 01 ============ -->
-<section id="item-01" class="tab-pane">
-  <h2>01 — Connection stuck when CSP doesn't propose a slot</h2>
-
-  <!-- CLASSIFICATION -->
-  <div class="classify">
-    <div class="classify-head">
-      <div class="classify-type">GAP</div>
-      <div class="classify-headline">
-        <strong>Nothing defines a slot-proposal SLA</strong> — not the OS, not the spec, not the code, not the app UI, not the notification stack.
-      </div>
-    </div>
-    <table class="define-table">
-      <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr class="group"><td colspan="3">Backend</td></tr>
-      <tr>
-        <td>OS</td><td class="define-yn no">✗ No</td>
-        <td class="define-note">Only <code>P74 = 72h</code> for the whole <code>PENDING_INSTALL</code> window; no slot-proposal sub-SLA.</td>
-      </tr>
-      <tr>
-        <td>Spec (ES PRD)</td><td class="define-yn no">✗ No</td>
-        <td class="define-note">UI reminder only (<code>SLOT_PROPOSAL_URGENT</code> at +1h); no state-machine expiry path.</td>
-      </tr>
-      <tr>
-        <td>Code (TAS)</td><td class="define-yn no">✗ No</td>
-        <td class="define-note">No <code>TIMER_TASK_EXPIRED</code> from <code>AWAITING_SLOT_PROPOSAL</code>; guard blocks pre-arrival expiry.</td>
-      </tr>
-      <tr class="group"><td colspan="3">CSP-facing communication</td></tr>
-      <tr>
-        <td>Partner app UI</td><td class="define-yn no">✗ No</td>
-        <td class="define-note">No countdown / no warning state on the task card.</td>
-      </tr>
-      <tr>
-        <td>PN / CleverTap</td><td class="define-yn no">✗ No</td>
-        <td class="define-note">No CT event configured for warning or reassignment.</td>
-      </tr>
-      <tr class="group"><td colspan="3">Prod</td></tr>
-      <tr>
-        <td>Behaviour today</td><td class="define-yn no">✗ Broken</td>
-        <td class="define-note">10 candidates stuck &gt; 87 h, oldest <strong>6.5 days</strong>; even the existing UI reminder doesn't fire (scheduler off).</td>
-      </tr>
-    </table>
-  </div>
-
-  <h3>Parameters used in this item</h3>
-  <table>
-    <thead><tr><th style="width: 170px;">Term</th><th>Meaning</th></tr></thead>
-    <tbody>
-      <tr><td><code>P74</code></td><td>CL <strong>install window</strong> — 72h hard cap on how long a connection can sit in <code>PENDING_INSTALL</code>. The overall envelope inside which this item's new 4h slot-proposal SLA lives.</td></tr>
-      <tr><td><code>P78</code></td><td>CL <strong>install retry cap</strong> — 3 retries before retry-exhaustion forces permanent deactivation. Determines how many times this item's reroute can fire on a given connection.</td></tr>
-      <tr><td><code>P51</code></td><td>DAS <strong>decline cooldown</strong> — 4h. After a CSP "exits" via this item's path (or declines), that CSP is excluded from being re-assigned the same connection for 4h.</td></tr>
-      <tr><td><code>P41</code></td><td>DAS <strong>acceptance window</strong> — 2h. The post-reroute acceptance window for the <em>next</em> CSP, once this item's reroute fires.</td></tr>
-      <tr><td><strong>4h SLA (new)</strong></td><td>This item's introduced <strong>slot-proposal SLA</strong> — lives entirely in the ES PRD, not OS. Times out if the CSP doesn't propose a slot within 4 hours of receiving the booking. Warning at T+3h, reroute at T+4h.</td></tr>
-    </tbody>
-  </table>
-
-  <!-- BACKEND FLOW -->
-  <h3>Backend flow — today vs. want</h3>
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-    <div>
-      <div class="sub-head bad">Today</div>
-      <div class="flow">
-        <div class="node">ALLOCATION_ACCEPTED</div>
-        <div class="arrow">↓</div>
-        <div class="node warn">AWAITING_SLOT_PROPOSAL</div>
-        <div class="arrow-label">CSP does nothing</div>
-        <div class="arrow">↓</div>
-        <div class="node error">∞ STUCK FOREVER</div>
-        <div style="font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.5rem; text-align: center;">no timer · no exit · no reroute</div>
-      </div>
-    </div>
-    <div>
-      <div class="sub-head good">Want &mdash; SLA = 4 h</div>
-      <div class="flow">
-        <div class="node">ALLOCATION_ACCEPTED</div>
-        <div class="arrow">↓</div>
-        <div class="node warn">AWAITING_SLOT_PROPOSAL <small>4h timer running</small></div>
-        <div class="arrow">↓ T+3h (1h before expiry)</div>
-        <div class="node new">⚠ WARNING <small>PN to CSP</small></div>
-        <div class="arrow">↓ T+4h, no slot</div>
-        <div class="node error">INSTALLATION_FAILED <small>TIMEOUT_SLOT_PROPOSAL</small></div>
-        <div class="arrow-label">CL T3 · DAS reroute · P51 cooldown on old CSP</div>
-        <div class="arrow">↓</div>
-        <div class="node success">NEW CSP TAKES IT</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SPEC (PM HAND-OFF) -->
-  <h3>Spec &mdash; handed to tech</h3>
-
-  <h4>Today</h4>
-  <ul>
-    <li>CSP is allocated; candidate enters <code>AWAITING_SLOT_PROPOSAL</code>.</li>
-    <li>No SLA — the candidate sits indefinitely if the CSP doesn't act.</li>
-    <li>Neither the CSP nor the customer is informed about any deadline.</li>
-  </ul>
-
-  <h4>Want</h4>
-  <p><strong>SLA:</strong> the slot must be proposed within <strong>4 hours</strong> of the candidate entering <code>AWAITING_SLOT_PROPOSAL</code>. The CSP is warned at the <strong>3-hour</strong> mark (i.e. 1 hour before SLA expiry — last-call style).</p>
-
-  <p><strong>Timeline of what the CSP sees:</strong></p>
-  <table class="comm-table">
-    <thead><tr><th>When</th><th>Backend</th><th>Notification (PN via CleverTap)</th><th>Partner app UI</th></tr></thead>
-    <tbody>
-      <tr>
-        <td>T + 0</td>
-        <td>Candidate enters <code>AWAITING_SLOT_PROPOSAL</code>; 4h SLA starts</td>
-        <td>(existing assignment PN)</td>
-        <td>Task appears with <strong>"4h to propose"</strong> countdown</td>
-      </tr>
-      <tr class="new-pn">
-        <td>T + 3h</td>
-        <td>Warning fires (no state change)</td>
-        <td><strong>NEW</strong> CT event <code>slot_proposal_warning</code><br>→ PN (placeholder copy — product to finalise): <em>"1 hour left to propose a slot, else this booking goes to another partner."</em></td>
-        <td>Task card switches to <strong>warning state</strong> (amber border, prominent "Propose slot" CTA)</td>
-      </tr>
-      <tr class="new-pn">
-        <td>T + 4h</td>
-        <td>Candidate exits <code>AWAITING_SLOT_PROPOSAL</code> via the existing system-driven <code>INSTALLATION_FAILED</code> (reason <code>TIMEOUT_SLOT_PROPOSAL</code>) → CL T3 retry → DAS reroute → P51 cooldown on the failing CSP. Customer is reassigned to a different CSP.</td>
-        <td><strong>NEW</strong> CT event <code>slot_proposal_expired</code><br>→ PN (placeholder copy — product to finalise): <em>"Your booking was reassigned because no slot was proposed in 4 hours."</em></td>
-        <td>Task disappears from active list; appears in history with <strong>"Reassigned"</strong> badge</td>
-      </tr>
-    </tbody>
-  </table>
-  <p>If the SLA expires, the candidate exits <code>AWAITING_SLOT_PROPOSAL</code> via the system-driven equivalent of <code>INSTALLATION_FAILED</code> with reason <code>TIMEOUT_SLOT_PROPOSAL</code>. This then flows through the <strong>existing</strong> downstream path: CL T3 retry → DAS reroute → P51 cooldown on the failing CSP. The customer is reassigned to a different CSP without any further action from anyone. No new OS-level concept is introduced.</p>
-
-  <h4>Edge cases (well-scoped)</h4>
-  <ol style="padding-left: 1.4rem;">
-    <li><strong>CSP proposes the slot just before T+4h</strong> (e.g. T+3:59:30). Within window — counts as proposed; the 4h timer is cancelled.</li>
-    <li><strong>CSP attempts to propose just after T+4h fires.</strong> Rejected — the candidate has already exited <code>AWAITING_SLOT_PROPOSAL</code>; the partner app shows the "Reassigned" badge.</li>
-    <li><strong>CSP marks <code>REPORT_INSTALLATION_FAILED</code> before T+4h.</strong> Existing voluntary-exit path. Both timers cancel; no PNs from this spec fire.</li>
-    <li><strong>Customer cancels before T+4h.</strong> Cancellation wins — candidate moves to <code>CANCELLED_BY_CUSTOMER</code>. Both timers cancel; no PNs from this spec fire.</li>
-    <li><strong>Single-CSP zone</strong> — today reassignment loops back to the same CSP. Once <a href="#item-02" class="tab-link" data-tab="item-02">Item 02</a> ships (P51 cooldown bypass removed), single-CSP zones correctly fail to allocate; the booking sits unallocated and Capacity OS sees a supply deficit. Behaviour change is intentional and consistent with OS L540 (<em>"service vacuum accepted"</em>).</li>
-    <li><strong>P78 retry cap = 3.</strong> If three consecutive CSPs each ignore the booking for 4h, retries exhaust (3 × 4h = 12h) and the connection deactivates via T12. Confirm this is the intended terminal for "no CSP wanted this anywhere."</li>
-    <li><strong>CSP proposes the slot in the seconds between the T+3h warning being scheduled and the PN firing.</strong> The warning PN is <strong>suppressed</strong> — the CSP doesn't get a confusing "1 hour left" notification after they've already proposed the slot.</li>
-  </ol>
-
-  <h4>Out of scope</h4>
-  <ul>
-    <li><strong>Customer-side visibility into install progress.</strong> Customer-app concern, not this spec.</li>
-    <li><strong>Backfill for connections already stuck</strong> at launch — handle via one-off ops, not retroactively.</li>
-  </ul>
-
-  <!-- RISKS -->
-  <h3>Risks / dependencies</h3>
-  <ul class="risks">
-    <li><strong>Hard prerequisite on the scheduler infrastructure landing.</strong> <code>AWS_SCHEDULER_ENABLED</code> is <code>false</code> in prod for TAS / CLOS / DAS today; the prod EventBridge dispatcher (Lambda + IAM role + bearer token) was never provisioned. Without it, no timers fire — neither the existing CL P74 backstop nor this item's new 4h SLA. <strong>This item cannot ship until <a href="#item-06" class="tab-link" data-tab="item-06">Item 06</a> (CLOS scheduler) and <a href="#item-07" class="tab-link" data-tab="item-07">Item 07</a> (DAS scheduler) land in prod</strong> — those items deliver the same scheduler-infrastructure fix this one depends on. See the README's cross-item rollout-sequencing note.</li>
-    <li><strong>Single-CSP zones</strong> depend on <a href="#item-02" class="tab-link" data-tab="item-02">Item 02</a>. Without it, reassignment in single-CSP zones routes back to the same CSP. With it, those zones correctly stay unallocated until the supply problem is resolved.</li>
-    <li><strong>P78 retry cap = 3.</strong> Three ignored 4h cycles ⇒ 12h to <code>T12 → PENDING_DEACTIVATION</code>. Confirm that is the intended terminal.</li>
-    <li><strong>Warning PN race conditions</strong> (edge cases 7, 8) — the notification dispatcher must check candidate state at firing time and suppress the PN if the candidate has already moved past <code>AWAITING_SLOT_PROPOSAL</code>.</li>
-    <li><strong>Customer is not notified</strong> that their booking has been reassigned (per Out-of-scope decision). If product wants customer-side messaging, that's a separate item.</li>
-    <li><strong>Timer alignment.</strong> <code>T_slot_proposal_window = 4h = P51 cooldown</code> — keeps the failed CSP excluded throughout the immediate reroute attempt.</li>
-  </ul>
-
-  <!-- WHAT THE SPEC AND CODE SAY TODAY (visible, exhaustive) -->
-  <h3>What the existing spec and code say today</h3>
-
-  <h4>OS</h4>
-  <p><code>Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §S5 L456:</p>
-<pre><code>P74 / T_install_window — Max time in PENDING_INSTALL before
-system-triggered INSTALLATION_FAILED — 72 hours</code></pre>
-  <p style="font-size: 0.88rem; color: var(--ink-soft);">That's the only PENDING_INSTALL timer — too coarse to catch a CSP ignoring slot proposal for hours. No slot-proposal sub-SLA anywhere in CL OS or D&amp;A OS. This item does not add one — the 4h SLA lives entirely in the ES PRD.</p>
-
-  <h4>ES PRD (v2.5, current latest)</h4>
-  <p><code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> L536:</p>
-<pre><code>AWAITING_SLOT_PROPOSAL: "Partner must propose a slot
-(up to ES_INSTALL_MAX_SLOTS_CONFIG_PER_DAY per day)."</code></pre>
-  <p style="font-size: 0.88rem; color: var(--ink-soft);">Spec defines a <code>SLOT_PROPOSAL_URGENT</code> reminder (UI nudge at +1h, attention-only) but no SLA-driven exit. <code>INSTALLATION_EXPIRED</code> (L672) is reachable only from post-arrival states; pre-arrival expiry is not in the spec.</p>
-
-  <h4>Code today (for tech context — not the fix)</h4>
-  <ul>
-    <li>TAS attempts to schedule a <code>SLOT_PROPOSAL_URGENT</code> attention at +1h on entry to <code>AWAITING_SLOT_PROPOSAL</code>. Even this doesn't fire in prod because <code>AWS_SCHEDULER_ENABLED</code> is <code>false</code> (<code>application-prod.yml:18</code>) — the prod EventBridge dispatcher was never provisioned.</li>
-    <li>The state machine has no <code>TIMER_TASK_EXPIRED → INSTALLATION_EXPIRED</code> transition from <code>AWAITING_SLOT_PROPOSAL</code>; the guard <code>GUARD-ES-INSTALL-19</code> explicitly rejects pre-arrival expiry; the expiry method is a no-op pending DIFF I (deferred).</li>
-  </ul>
-
-  <h4>Prod evidence</h4>
-  <p>10 candidates currently stuck in <code>AWAITING_SLOT_PROPOSAL</code> &gt; 87h; oldest <strong>6.5 days</strong>. Sample (last 7 days):</p>
-  <table>
-    <thead><tr><th>connection_id</th><th>CSP</th><th>hrs stuck</th><th>proposed_slot</th></tr></thead>
-    <tbody>
-      <tr><td><span class="mono">f38c4c02-…</span></td><td><span class="mono">a0a7e3</span></td><td><strong>157.7</strong></td><td>null</td></tr>
-      <tr><td><span class="mono">c69c160c-…</span></td><td><span class="mono">a0a7d3</span></td><td>144.8</td><td>null</td></tr>
-      <tr><td><span class="mono">eaaf8fcc-…</span></td><td><span class="mono">a0a7e3</span></td><td>142.6</td><td>null</td></tr>
-      <tr><td><span class="mono">6c14d4d3-…</span></td><td><span class="mono">a0a7g4</span></td><td>141.0</td><td>null</td></tr>
-      <tr><td><span class="mono">acb05f7d-…</span></td><td><span class="mono">a0a7b0</span></td><td>139.8</td><td>null</td></tr>
-      <tr><td colspan="4" style="font-style: italic; color: var(--ink-soft);">…5 more, all &gt; 87h since create, all with <code>proposed_slot_date = null</code>.</td></tr>
-    </tbody>
-  </table>
-<pre><code>SELECT execution_candidate_id, connection_id, csp_id,
-       ROUND(EXTRACT(EPOCH FROM (NOW() - created_at))/3600, 1) AS hrs_stuck,
-       proposed_slot_date
-FROM csp_tas_service.install_execution_candidates
-WHERE current_state='AWAITING_SLOT_PROPOSAL' AND task_status='OPEN'
-  AND created_at &gt;= NOW() - INTERVAL '7 days'
-ORDER BY created_at ASC;</code></pre>
-
-  <h3>References</h3>
-  <ul>
-    <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §S5 L456 (P74 = 72h backstop). <strong>No OS change in this item.</strong></li>
-    <li><strong>Spec:</strong> <code>yaml-prd/es-installation-service-prd-v2.5.yaml</code> (current latest) — L536 (single-slot, no SLA exit), L672 (INSTALLATION_EXPIRED post-arrival only), L93–94 (OPEN-PARAM-2), L138 (AMENDMENT-03 DIFF A documentation-only).</li>
-    <li><strong>Code evidence (not the fix):</strong> <code>InstallationStateMachine.java:87,226–230</code> · <code>InstallationGuards.java:212–226</code> (<code>GUARD-ES-INSTALL-19</code>) · <code>CandidateWorkflowServiceImpl.java:986–1002</code> (inert expireCandidate) · <code>application.yml:261</code> (slot-proposal-urgent-hours: 1h) · <code>application-prod.yml:18</code> (<code>AWS_SCHEDULER_ENABLED: false</code>).</li>
-    <li><strong>Notification:</strong> <code>csp-notification-service</code> (existing) · new CleverTap events: <code>slot_proposal_warning</code>, <code>slot_proposal_expired</code>.</li>
-    <li><strong>Related findings:</strong> <code>cl-timer-enforcement-gap</code> (memory) — BUG-1 (scheduler off in prod, see Out-of-scope), BUG-3 (DIFF I deferred), BUG-8 (DAS single-CSP cooldown bypass — see Item 02).</li>
-    <li><strong>Sample connection IDs for retesting:</strong> <code>f38c4c02-…</code> (157.7h stuck), <code>c69c160c-…</code> (144.8h), <code>eaaf8fcc-…</code> (142.6h), plus 7 more in the same window.</li>
-    <li><strong>Source MD (PM working notes):</strong> <code>items/01-no-slot-action-stuck.md</code></li>
-  </ul>
-
-  <h3>Investigation log</h3>
-  <ul>
-    <li><strong>2026-05-29 — filed.</strong> 10 candidates currently stuck &gt; 87h, oldest 6.5 days. Gap across spec, code, partner app, and PN/CT.</li>
-    <li><strong>2026-05-29 — revised per new PM-spec guideline.</strong> Rewrote §8 as a well-scoped human-readable spec with 10 enumerated edge cases and per-surface pre/post diffs. <strong>Removed the proposed new OS parameter</strong> — the SLA now lives entirely in the ES PRD; per the guideline to minimise OS changes. Scheduler infrastructure moved out of the fix plan into Out-of-scope + Risks as a Tier-0 dependency. Spec references updated v2.4 → v2.5 (current latest). All previously collapsed sections (evidence, source quotes, references) made visible for tech handoff.</li>
-  </ul>
 </section>
 
 <!-- ============ PLACEHOLDERS ============ -->
@@ -798,7 +574,6 @@ ORDER BY created_at ASC;</code></pre>
     <li><strong>Both fixes must ship together.</strong> Removing the bypass alone leaves the rapid-reject vector partially open (CSP fails install, waits out 4h cooldown, gets re-selected, fails again — bounded only by CL P78 = 3). Wiring P195 alone is overridden by the bypass (which re-includes the cooled-down CSP regardless of the P195 predicate). Together: the P195 cap (value per AWS Parameter Store) actually bounds per-CSP attempts, with a 4h gap between them — the OS-intended behaviour at OS L572.</li>
     <li><strong>Customer impact data.</strong> In the last 14 days, <strong>27 of 39 connections (69%)</strong> that hit the <code>SINGLE_CSP_ZONE_CONTINUITY</code> bypass ended retry-exhausted (<code>PENDING_DEACTIVATION</code> with <code>retry_exhausted=true</code>). Median gap between consecutive install-failures: <strong>34 seconds</strong>. Minimum: <strong>7 seconds</strong>. The bypass + missing P195 combo is actively killing bookings.</li>
     <li><strong>Single-CSP zones will see longer customer waits (visibly).</strong> Once both fixes ship, low-supply zones where the lone CSP refuses installs will have bookings sit <code>UNASSIGNED</code> after the second install-failure rather than thrashing for ~3 minutes until P78 kills them. This is the OS-mandated behaviour (L540 — <em>"service vacuum accepted"</em>) but it is a visible product change. The OS expects <strong>Capacity OS</strong> to resolve the supply problem, not DAS to paper over it.</li>
-    <li><strong>Closes the loop on Item 01.</strong> Item 01's retrigger plan calls out that single-CSP zones would loop because of this bug. Fixing this item removes that caveat.</li>
     <li><strong>No schema change.</strong> <code>V17__cooldown_audit_columns.sql</code> (<code>cooldown_bypassed</code>, <code>cooldown_bypass_reason</code>) can stay — they'll be <code>false</code> / <code>null</code> after the fix. The <code>assignment_count_per_csp</code> column is already in place; the fix just starts populating it.</li>
     <li><strong>Test fallout.</strong> Search <code>RoutingEngineServiceImplTest</code> and friends for <code>cooldownBypass</code> / <code>SINGLE_CSP_ZONE_CONTINUITY</code> — those tests assert the buggy behaviour and must be updated/removed. Also add tests that verify <code>assignment_count_per_csp</code> advances on every <code>handleClStateChanged</code> call with <code>entry_reason=RETRY</code>.</li>
   </ul>
@@ -833,7 +608,7 @@ eligibility_gate must now route through the new pre-filter."</code></pre>
     <li><strong>Code (correct, keep):</strong> <code>InboundEventProcessingServiceImpl.java:429</code> (P51 cooldown write on install-failure path) · <code>AllocationServiceImpl.java:174–191</code> (<code>addDeclineCooldown</code> helper).</li>
     <li><strong>Provenance:</strong> PR #184 <code>DAS-reallocation-logic-fix</code> · commit <code>82d24be6</code> <em>"DAS v1.5 changes"</em> by Raushan Kapoor (2026-05-09) · migration <code>V17__cooldown_audit_columns.sql</code>.</li>
     <li><strong>Sample connection IDs (smoking gun in last 7 days):</strong> <code>a4a1aaeb-…</code> (zone_3167, csp <code>a0b3l5</code>, 3× in 2h) · <code>d1e0bd49-…</code> (zone_3425, csp <code>a0a7c1</code>, 3× in 68 seconds, deactivated at 4th attempt) · <code>f5c17758-…</code> (zone_3372, csp <code>a0a7b3</code>) · <code>e6e3346b-…</code> (zone_3250, csp <code>a0a7a7</code>).</li>
-    <li><strong>Related:</strong> <code>cl-timer-enforcement-gap</code> BUG-8 (the bypass finding) · Item 01 (closes its single-CSP-zone caveat once this fix lands).</li>
+    <li><strong>Related:</strong> <code>cl-timer-enforcement-gap</code> BUG-8 (the bypass finding).</li>
     <li><strong>Source MD (PM working notes):</strong> <code>items/02-same-csp-loop-single-zone.md</code></li>
   </ul>
 
@@ -1022,7 +797,7 @@ eligibility_gate must now route through the new pre-filter."</code></pre>
     <li><strong>CSP2 taps "Propose my own 2 slots."</strong> The inherited slot is discarded. The customer goes through the normal Item 03 flow against CSP2's 2 new slots — 3 choices (CSP slot 1 / CSP slot 2 / counter). Whichever slot the customer confirms now becomes the new connection-level confirmed slot.</li>
     <li><strong>CSP2 proceeds; then CSP2 also fails.</strong> CSP3 is allocated. The same carry-forward logic applies: if the inherited slot (unchanged from when CSP2 inherited it) is still ≥ 1h from now(), CSP3 sees the same <em>Proceed</em> / <em>Propose own</em> screen.</li>
     <li><strong>CSP2 proposes new slots; customer counter-proposes a fresh slot via CSP2; then CSP2 also fails.</strong> The customer's <em>new</em> counter-proposed slot is what travels forward to CSP3 (the latest confirmed slot is what's persisted at the connection level).</li>
-    <li><strong>CSP2 ignores the inherited-slot screen entirely</strong> (doesn't tap either CTA). Item 01's 4-hour SLA applies — Proceed-or-Propose counts as "the CSP must act"; if 4 hours pass with no action, the system re-assigns to CSP3 (and the inherited slot continues to travel forward if still ≥ 1h away).</li>
+    <li><strong>CSP2 ignores the inherited-slot screen entirely</strong> (doesn't tap either CTA). Treated like any other CSP no-action on a fresh allocation — the standard slot-proposal SLA-expiry path applies; on expiry the system re-assigns to CSP3 (and the inherited slot continues to travel forward if still ≥ 1h away).</li>
   </ol>
 
 
