@@ -182,10 +182,12 @@
 
 <!-- ============ TOC ============ -->
 <nav class="toc">
-  <h2>Document</h2>
+  <h2 class="gap-h">Gaps (4)</h2>
   <ol>
-    <li><a href="#overview"><span class="ix">§0</span>Overview</a></li>
-    <li><a href="#format-notes"><span class="ix">§0.1</span>How to read</a></li>
+    <li><a href="#gap-01"><span class="ix">GAP-01</span>Cancel bifurcation</a></li>
+    <li><a href="#gap-02"><span class="ix">GAP-02</span>Change team member (install)</a></li>
+    <li><a href="#gap-03"><span class="ix">GAP-03</span>Failure sub-reason (OS-aligned)</a></li>
+    <li><a href="#gap-04"><span class="ix">GAP-04</span>DAS single-CSP zone events</a></li>
   </ol>
   <h2 class="bug-h">Bugs (6)</h2>
   <ol>
@@ -195,13 +197,6 @@
     <li><a href="#bug-04"><span class="ix">BUG-04</span>Capacity OS skips T2</a></li>
     <li><a href="#bug-05"><span class="ix">BUG-05</span>Quality signal contract drift</a></li>
     <li><a href="#bug-06"><span class="ix">BUG-06</span>CAEO customer_id wrong</a></li>
-  </ol>
-  <h2 class="gap-h">Gaps (4)</h2>
-  <ol>
-    <li><a href="#gap-01"><span class="ix">GAP-01</span>Cancel bifurcation</a></li>
-    <li><a href="#gap-02"><span class="ix">GAP-02</span>Change team member (install)</a></li>
-    <li><a href="#gap-03"><span class="ix">GAP-03</span>Failure sub-reason (OS-aligned)</a></li>
-    <li><a href="#gap-04"><span class="ix">GAP-04</span>DAS single-CSP zone events</a></li>
   </ol>
 </nav>
 
@@ -223,525 +218,7 @@
 </header>
 
 <!-- ============ §0 OVERVIEW ============ -->
-<section id="overview">
-  <h2>§0. Overview</h2>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 70px;">ID</th>
-        <th>Title</th>
-        <th style="width: 80px;">Type</th>
-        <th>Service(s) to update</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td><a href="#bug-01"><strong>BUG-01</strong></a></td><td>Same CSP re-assigned in single-CSP zones (P51 cooldown bypass + P195 counter never increments)</td><td><span class="pill bug">BUG</span></td><td><code>csp-demand-allocation-service</code></td></tr>
-      <tr><td><a href="#bug-01"><strong>BUG-01</strong></a></td><td>CLOS timeout scheduler unwired (P75 / P76 / P77 / P78 inert)</td><td><span class="pill bug">BUG</span></td><td><code>csp-connection-lifecycle-service</code>, <code>csp-tas-service</code> (T3 retry co-fix)</td></tr>
-      <tr><td><a href="#bug-02"><strong>BUG-02</strong></a></td><td>DAS scheduler unwired (P191 held-allocation reroute inert)</td><td><span class="pill bug">BUG</span></td><td><code>csp-demand-allocation-service</code></td></tr>
-      <tr><td><a href="#bug-03"><strong>BUG-03</strong></a></td><td>DAS allocation state never reaches <code>ACCEPTED</code> (DAS-internal atomic write required)</td><td><span class="pill bug">BUG</span></td><td><code>csp-demand-allocation-service</code></td></tr>
-      <tr><td><a href="#bug-04"><strong>BUG-04</strong></a></td><td>Capacity OS skips connection increment after installation</td><td><span class="pill bug">BUG</span></td><td><code>csp-capacity-coverage-service</code></td></tr>
-      <tr><td><a href="#bug-05"><strong>BUG-05</strong></a></td><td><code>CL_INSTALLATION_QUALITY_SIGNAL</code> producer-record contract drift</td><td><span class="pill bug">BUG</span></td><td><code>csp-connection-lifecycle-service</code></td></tr>
-      <tr><td><a href="#bug-06"><strong>BUG-06</strong></a></td><td>CAEO <code>customer_id</code> column populated with CSP-ID</td><td><span class="pill bug">BUG</span></td><td>CL OS, <code>csp-connection-lifecycle-service</code>, <code>csp-customer-access-service</code></td></tr>
-      <tr><td><a href="#gap-01"><strong>GAP-01</strong></a></td><td>Bifurcate booking cancellations by source (customer vs system)</td><td><span class="pill gap">GAP</span></td><td>Customer backend, <code>csp-tas-service</code>, ES PRD</td></tr>
-      <tr><td><a href="#gap-02"><strong>GAP-02</strong></a></td><td>Change-team-member workflow post technician assignment (install only)</td><td><span class="pill gap">GAP</span></td><td><code>csp-tas-service</code>, gateway, CSP App</td></tr>
-      <tr><td><a href="#gap-03"><strong>GAP-03</strong></a></td><td>IVR 2.0 integration for Cx ↔ Px interaction</td><td><span class="pill gap">GAP</span></td><td>IVR routing-table refactor (external spec)</td></tr>
-      <tr><td><a href="#gap-03"><strong>GAP-03</strong></a></td><td>OS-aligned 6-option failure sub-reason picker + 4-field auto-populate</td><td><span class="pill gap">GAP</span></td><td><code>csp-tas-service</code>, <code>csp-connection-lifecycle-service</code>, ES PRD</td></tr>
-      <tr><td><a href="#gap-04"><strong>GAP-04</strong></a></td><td>DAS supply-side events for single-CSP zones</td><td><span class="pill gap">GAP</span></td><td><code>csp-demand-allocation-service</code></td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- ============ §0.1 HOW TO READ ============ -->
-<section id="format-notes">
-  <h2>§0.1 How to read</h2>
-  <h3>Bug format</h3>
-  <p>A <strong>bug</strong> is a behaviour that the spec already prescribes but the code either never implemented or has broken. Each bug item carries:</p>
-  <ul>
-    <li><strong>Original spec citation</strong> — file path + section / line reference where the prescribed behaviour lives.</li>
-    <li><strong>Test-case table</strong> — one row per Given/When/Then. Three columns: <em>Acceptance criterion</em> · <em>Expected outcome per spec</em> · <em>Observed outcome in prod</em>.</li>
-    <li><strong>Expected-behaviour flow</strong> (Mermaid) — included where the flow is non-obvious from the table.</li>
-    <li><strong>Code evidence</strong> (collapsed) — pointers to the deviating site for tech to ground the fix.</li>
-  </ul>
-
-  <h3>Gap format</h3>
-  <p>A <strong>gap</strong> is a behaviour the spec does <em>not</em> cover; PM needs to spec the behaviour change before tech can build. Each gap item uses the
-    <a href="./Wiom_Change_Spec_Template_v1_0.html" target="_blank">Wiom Change Spec template</a> at <strong>Light tier</strong>
-    (per the <a href="./Wiom_Change_Spec_Template_v1_0_AuthoringGuide.md" target="_blank">Authoring Guide</a> §1.2):</p>
-  <ul>
-    <li><strong>Quick Check</strong> — 7-line triage header.</li>
-    <li><strong>A1</strong> Metadata · <strong>A2</strong> Why This Change · <strong>A5</strong> The Delta · <strong>A6</strong> Must-Not-Change · <strong>A8</strong> OS Impact &amp; Sign-off · <strong>B5</strong> Acceptance Criteria + coverage matrix.</li>
-  </ul>
-  <p class="muted" style="font-size: 13px;">Per the Authoring Guide, sections A3 (Current) and A4 (Desired) are skipped at Light tier — A5 then stands alone with self-contained rows.</p>
-</section>
-
-<!-- ============================================================ -->
-<!-- ============ BUGS ============ -->
-<!-- ============================================================ -->
-
-<h2 id="bugs" style="margin-top: 48px; padding-top: 8px; border-top: 3px solid var(--bug); color: var(--bug);">Bugs (6)</h2>
-
-<!-- ====================== BUG-01 ====================== -->
-<section class="item" id="bug-01">
-  <div class="head">
-    <span class="id">BUG-01</span>
-    <h2>CLOS timeout scheduler unwired (P75 / P76 / P77 / P78 inert)</h2>
-    <span class="pill bug">BUG</span>
-  </div>
-  <p class="muted">CL OS defines four system-driven timeouts that must fire on background sweeps. The batch methods, endpoints, and scheduler hooks all exist in code — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>. Zero system-driven CL transitions in 90 days. <strong>P74 is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
-
-  <div class="spec-ref">
-    <strong>Original spec:</strong>
-    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
-    <strong>§5 State Machine</strong> (transitions T9, T12 + timeout edges) &middot;
-    <strong>SPR params:</strong> P75 (7d REQUESTED expiry), P76 (90d PAUSE limit), P77 (45d PENDING_DEACTIVATION), P78 (3 retry cap).
-    <br>
-    <strong>PRD:</strong> <code>yaml-prd/connection-lifecycle-prd-v1.6.yaml</code> — state machine + system-source transitions all defined.
-  </div>
-
-  <h3>Test cases — expected vs observed</h3>
-  <table class="tc-table">
-    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>TC-1.</strong> When a connection sits in <code>REQUESTED</code> for &gt; P75 (7d), then the P75 sweep transitions it to <code>DEACTIVATED</code> via T9.</td>
-        <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>transition_type = T9</code>, source = SYSTEM, <code>new_state = DEACTIVATED</code>.</td>
-        <td class="observed">No T9 transitions emitted in 90d. Stale <code>REQUESTED</code> rows accumulate indefinitely.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-2.</strong> When a connection sits in <code>PAUSED</code> for &gt; P76 (90d), then the P76 sweep transitions it to <code>PENDING_DEACTIVATION</code> via <code>PAUSE_DURATION_EXCEEDED</code>.</td>
-        <td class="expected">CL emits <code>CL_DEACTIVATION_INITIATED</code>; downstream Exit OS / RECHARGE_VALIDATOR receive the signal.</td>
-        <td class="observed">No such transitions. 11k+ <code>PAUSED</code> rows past 90d sit untouched.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-3.</strong> When a connection sits in <code>PENDING_DEACTIVATION</code> for &gt; P77 (45d), then the P77 sweep transitions it to <code>DEACTIVATED</code> via <code>DEACTIVATION_COMPLETE</code>.</td>
-        <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>new_state = DEACTIVATED</code>, source = SYSTEM.</td>
-        <td class="observed">No such transitions. Stale <code>PENDING_DEACTIVATION</code> rows accumulate.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-4.</strong> When P78 retry-cap is hit on a connection (3 install-failure cycles), then the next failure transitions to <code>PENDING_DEACTIVATION</code> via T12 (<code>RETRY_EXHAUSTION_DEACTIVATION</code>).</td>
-        <td class="expected">CL emits T12 transition; DAS stops re-routing the connection.</td>
-        <td class="observed">P78 logic is event-driven (not scheduler-driven), so this works in isolation. <strong>Listed for completeness — no fix needed for P78 within this item.</strong></td>
-      </tr>
-      <tr>
-        <td><strong>TC-5.</strong> When the sweep cadence runs (15-minute granularity is acceptable; finer is fine), then sweep methods are invoked from a recurring schedule.</td>
-        <td class="expected"><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> is called at service-startup with the four sweep batches registered. <code>AWS_SCHEDULER_ENABLED: true</code> in <code>application-prod.yml</code>.</td>
-        <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> at <code>application-prod.yml:18</code>. <code>scheduleRecurring(...)</code> never called. Sweep methods reachable only via internal endpoints, which nothing calls.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>TAS co-fix required for P78 retry-exhaustion path</h3>
-  <p>P78's T12 transition (PENDING_INSTALL → PENDING_DEACTIVATION on retry exhaustion) requires TAS to also handle <code>CL_STATE_CHANGED transitionType=T12</code>. Today TAS's <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains T11; T12 is missing. Without this, retried-and-exhausted connections orphan TAS install candidates.</p>
-  <table class="tc-table">
-    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>TC-6.</strong> When CL emits <code>T12</code>, then TAS closes any open install candidate for that connection.</td>
-        <td class="expected">TAS marks candidate <code>CANCELLED_BY_UPSTREAM</code> reason <code>RETRY_EXHAUSTED</code>.</td>
-        <td class="observed">Handler logs "no action required"; candidate stays OPEN. Tech must add T12 to the trigger set.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <details>
-    <summary>Code evidence</summary>
-    <div>
-      <ul>
-        <li><strong>Scheduler config:</strong> <code>services/csp-connection-lifecycle-service/.../application-prod.yml:18</code> (<code>AWS_SCHEDULER_ENABLED: false</code>).</li>
-        <li><strong>Scheduler hook (unwired):</strong> <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> — defined, never called.</li>
-        <li><strong>Sweep batches (correct, reachable):</strong> <code>SchedulingServiceImpl</code> (the four batch methods) &middot; <code>InternalTaskController</code> (their endpoints).</li>
-        <li><strong>TAS T12 co-fix site:</strong> <code>services/csp-tas-service/.../ClStateChangedHandler.java</code> — <code>UPSTREAM_RETRY_TRIGGERS</code> set.</li>
-      </ul>
-    </div>
-  </details>
-</section>
-
-<!-- ====================== BUG-02 ====================== -->
-<section class="item" id="bug-02">
-  <div class="head">
-    <span class="id">BUG-02</span>
-    <h2>DAS scheduler unwired (P191 held-allocation reroute inert)</h2>
-    <span class="pill bug">BUG</span>
-  </div>
-  <p class="muted">Same scheduler-wiring failure as BUG-01, this time on DAS. P191's held-allocation reroute sweep is supposed to retry <code>UNASSIGNED</code> allocations periodically; instead 230 rows sit untouched. <strong>P41 (acceptance window) is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
-
-  <div class="spec-ref">
-    <strong>Original spec:</strong>
-    <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> &middot;
-    <strong>P191</strong> (held-allocation reroute cadence — <code>UNASSIGNED</code> allocations past P50 retry-exhaustion get re-attempted on this schedule).
-    <br>
-    <strong>PRD:</strong> <code>yaml-prd/demand-allocation-prd-v1.2.yaml</code> — state machine includes held-state reroute; <code>trigger_source = SYSTEM</code>.
-  </div>
-
-  <h3>Test cases — expected vs observed</h3>
-  <table class="tc-table">
-    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>TC-1.</strong> When an allocation exhausts P50 routing retries (5 attempts), then it lands in <code>UNASSIGNED</code> held state.</td>
-        <td class="expected">DAS writes <code>UNASSIGNED</code> + <code>p50_exhausted_at = now()</code>.</td>
-        <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-2.</strong> When the P191 sweep cadence fires, then it re-enters routing for all <code>UNASSIGNED</code> rows past their held-state max.</td>
-        <td class="expected">Held rows re-attempt routing. If a previously-cooled-down CSP becomes eligible, they're re-assigned. Otherwise extend held-state.</td>
-        <td class="observed">Sweep never fires. 230 <code>UNASSIGNED</code> rows in prod, oldest &gt; 24h, never re-routed.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded.</td>
-        <td class="expected">DAS writes <code>routing_failure_count++</code> on the allocation row. After sustained failure, allocation eventually transitions to expired.</td>
-        <td class="observed">Counter never advances; rows sit indefinitely.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-4.</strong> When the scheduler config is set correctly at service startup, then <code>scheduleRecurring(...)</code> registers the P191 batch.</td>
-        <td class="expected"><code>AWS_SCHEDULER_ENABLED: true</code> in DAS <code>application-prod.yml</code>; <code>scheduleRecurring</code> called with the P191 batch (and the other 5 DAS sweep batches, which are out of scope for PM but co-wired by tech).</td>
-        <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> in DAS <code>application-prod.yml</code>. Same root cause as BUG-01.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <details>
-    <summary>Code evidence</summary>
-    <div>
-      <ul>
-        <li><strong>Scheduler config:</strong> DAS <code>application-prod.yml</code> — <code>AWS_SCHEDULER_ENABLED: false</code>.</li>
-        <li><strong>Sweep batches (correct, reachable):</strong> <code>BatchTriggerServiceImpl</code> (six sweep methods) &middot; <code>BatchTriggerController</code> (their endpoints).</li>
-        <li><strong>Other DAS sweeps co-wired by tech (out of PM scope):</strong> <code>reallocation_dwell</code>, <code>override_watchdog</code>, <code>conversion_eval</code>, <code>exposure_recalc</code>. Share the same root cause; tech wires them together.</li>
-      </ul>
-    </div>
-  </details>
-</section>
-
-<!-- ====================== BUG-03 ====================== -->
-<section class="item" id="bug-03">
-  <div class="head">
-    <span class="id">BUG-03</span>
-    <h2>DAS allocation state never reaches <code>ACCEPTED</code> (DAS-internal atomic write required)</h2>
-    <span class="pill bug">BUG</span>
-  </div>
-  <p class="muted">AMENDMENT-02 (Apr 2026) deleted the explicit CSP-accept call and declared acceptance "automatic on assignment". DAS has the receiver fully wired (<code>POST /api/demand-allocation/csps/{cspId}/accept</code> + <code>AllocationServiceImpl.acceptAllocation(...)</code>); no service calls it. Result in prod: <strong>0 rows ever in <code>ACCEPTED</code>; 504 / 504 stuck at <code>ASSIGNED</code> / <code>UNASSIGNED</code>; <code>acceptance_timestamp</code> NULL on every row.</strong></p>
-
-  <div class="hint">
-    <strong>Direction (per PM):</strong> the fix is a <strong>DAS-internal atomic write</strong>. When DAS routes an allocation to <code>ASSIGNED</code>, it transitions to <code>ACCEPTED</code> in the same database transaction — no cross-service call, no auto-accept sender to define. AMENDMENT-02's "automatic on assignment" phrasing matches this when read as <em>same-service atomic</em> rather than <em>cross-service deferred</em>. Removes the "who calls who" question entirely.
-  </div>
-
-  <div class="spec-ref">
-    <strong>Original spec:</strong>
-    <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> &middot;
-    <strong>§4.1, §4.3</strong> (allocation state machine — <code>ASSIGNED</code> → <code>ACCEPTED</code> transition) &middot;
-    <strong>INV-DAO-03</strong> (stickiness post-<code>ACCEPTED</code>).
-    <br>
-    <strong>AMENDMENT-02</strong> (Installation Flow, Apr 2026) — declares acceptance "automatic on assignment" but does not name the sender; this item is the disambiguation.
-    <br>
-    <strong>PRD:</strong> <code>yaml-prd/demand-allocation-prd-v1.2.yaml</code> — state + field + transition validation all present.
-  </div>
-
-  <h3>Test cases — expected vs observed</h3>
-  <table class="tc-table">
-    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>TC-1.</strong> When DAS routes an allocation to a CSP, then the allocation row transitions to <code>ACCEPTED</code> with <code>acceptance_timestamp = now()</code>.</td>
-        <td class="expected">Allocation row: <code>state = ACCEPTED</code>, <code>acceptance_timestamp</code> set. INV-DAO-03 stickiness now applies — subsequent re-routes blocked.</td>
-        <td class="observed">Allocation row: <code>state = ASSIGNED</code>, <code>acceptance_timestamp = NULL</code>. 504 / 504 rows in this state across prod history.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-2.</strong> When TAS reads the allocation to drive install candidate creation, then it observes <code>ACCEPTED</code> state.</td>
-        <td class="expected">TAS reads <code>state = ACCEPTED</code>; install candidate created with confirmed allocation.</td>
-        <td class="observed">TAS still creates the install candidate (via the parallel <code>ALLOCATION_ACCEPTED</code> event path), but reads <code>state = ASSIGNED</code> on the allocation row. State and event are out of sync.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-3.</strong> When the same connection is reallocated after CSP install-failure, then INV-DAO-03 stickiness has already terminated for the prior allocation.</td>
-        <td class="expected">Prior allocation row stays in <code>ACCEPTED</code> until install completes or fails. After failure, INV-DAO-03 releases stickiness and the new allocation enters the pipeline.</td>
-        <td class="observed">INV-DAO-03 stickiness is inert because nothing reaches <code>ACCEPTED</code>. Re-allocation works by accident, but the guard isn't actually guarding anything.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-4.</strong> When the routing happy-path completes (DAS picks CSP-A successfully), then the database state-transition <code>ASSIGNED → ACCEPTED</code> happens in a single atomic write.</td>
-        <td class="expected">DAS routing engine writes <code>state = ACCEPTED</code> in the same SQL transaction as the initial allocation write. No cross-service call, no auto-accept event. Atomic.</td>
-        <td class="observed">Routing engine writes <code>state = ASSIGNED</code> and stops. AMENDMENT-02 deleted the prior cross-service call; the replacement atomic-write was never added.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-5.</strong> When the integration-spec mentions <code>InstallDasClient.notifyAccepted()</code>, then that class either exists in code OR the integration spec is updated to reflect the atomic-write approach.</td>
-        <td class="expected">Integration spec is internally consistent — either the named sender exists, or the spec describes the atomic-write fix.</td>
-        <td class="observed">Integration spec at <code>app-specs/das-install-integration-flow.md</code> names <code>InstallDasClient.notifyAccepted()</code> — a class that does not exist in any service. Spec is stale.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Expected behaviour — flow (after fix)</h3>
-  <div class="mermaid">
-sequenceDiagram
-    participant Cust as Customer App
-    participant CL as CL Service
-    participant DAS as DAS Service
-    participant TAS as TAS Service
-    Cust->>CL: CONNECTION_REQUEST
-    CL->>DAS: ALLOCATION_REQUESTED (via event)
-    Note over DAS: Routing engine picks CSP-A
-    Note over DAS: SAME DB TRANSACTION:<br/>1. INSERT allocation (state=ASSIGNED)<br/>2. UPDATE allocation (state=ACCEPTED, acceptance_ts=now)<br/>3. INSERT outbox event ALLOCATION_ACCEPTED
-    DAS->>TAS: ALLOCATION_ACCEPTED event
-    TAS->>TAS: Create install candidate
-    Note over DAS: INV-DAO-03 stickiness now ENFORCED on this row
-  </div>
-
-  <details>
-    <summary>Code evidence</summary>
-    <div>
-      <ul>
-        <li><strong>Receiver (already wired, won't be needed after atomic-write fix):</strong> <code>services/csp-demand-allocation-service/.../AllocationServiceImpl.acceptAllocation(...)</code> &middot; <code>POST /api/demand-allocation/csps/{cspId}/accept</code>.</li>
-        <li><strong>Routing engine (the atomic-write site):</strong> <code>services/csp-demand-allocation-service/.../RoutingEngineServiceImpl</code> — where the allocation write happens; the fix adds the <code>state = ACCEPTED</code> transition in the same transaction.</li>
-        <li><strong>Stale integration-spec reference (to update):</strong> <code>app-specs/das-install-integration-flow.md</code> — names <code>InstallDasClient.notifyAccepted()</code> (does not exist). Either delete or rewrite to reflect atomic-write.</li>
-        <li><strong>Prod evidence:</strong> 504 / 504 rows in <code>ASSIGNED</code> / <code>UNASSIGNED</code> across prod; zero in <code>ACCEPTED</code>; every <code>acceptance_timestamp</code> NULL.</li>
-      </ul>
-    </div>
-  </details>
-</section>
-
-<!-- ====================== BUG-04 ====================== -->
-<section class="item" id="bug-04">
-  <div class="head">
-    <span class="id">BUG-04</span>
-    <h2>Capacity OS skips connection-count increment after installation</h2>
-    <span class="pill bug">BUG</span>
-  </div>
-  <p class="muted">The OS prescribes "<strong>Capacity OS counts +1 on T2</strong>" in four explicit places. The code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — so the normal happy-path <code>INITIAL</code> installs silently fall into an empty <code>else</code> branch and the counter doesn't move. <strong>Not CSP-app-visible</strong> — partner app reads CL directly. Affects internal routing decisions (load-ratio + zone-retire guard) only.</p>
-
-  <div class="spec-ref">
-    <strong>Original spec:</strong>
-    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
-    <strong>§4.3 T2 (L250):</strong> "Consumers: Capacity OS (active count +1), Quality OS (measurement begins), D&amp;A OS (allocation confirmed)…"
-    <strong>§4.1 (L202)</strong> &middot;
-    <strong>§6.3 (L508):</strong> identical wording.
-    <br>
-    <code>os/Capacity_Coverage_OS_LOCKED.md</code> &middot; <strong>§2.5:</strong> "Counter reflects all ACTIVE connections in the zone, regardless of how they entered ACTIVE state."
-  </div>
-
-  <h3>Test cases — expected vs observed</h3>
-  <table class="tc-table">
-    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>TC-1.</strong> When a connection completes T2 (<code>PENDING_INSTALL → ACTIVE</code>, <code>activation_source = INITIAL</code>), then Capacity OS increments <code>zones.active_connection_count</code> for the zone by 1.</td>
-        <td class="expected">Counter advances by 1 per <code>INITIAL</code> T2 event.</td>
-        <td class="observed">Code at <code>InboundEventProcessingServiceImpl.java:446-461</code> gates increment to <code>if ("RESUME".equals(activationSource))</code>. <code>INITIAL</code> hits the <code>else</code> branch with debug log <code>LOG_CONNECTION_ACTIVATION_SKIP</code>. Counter unchanged.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-2.</strong> When a connection transitions <code>PAUSED → ACTIVE</code> (<code>activation_source = RESUME</code>), then Capacity OS increments the counter.</td>
-        <td class="expected">Counter advances by 1.</td>
-        <td class="observed">This path works — RESUME hits the <code>if</code> branch correctly.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-3.</strong> When the load-ratio is computed in the batch-evaluation cycle, then it reads accurate <code>active_connection_count</code>.</td>
-        <td class="expected">Load ratio at <code>BatchEvaluationServiceImpl:105</code> = real ACTIVE / cap. Cap-calibration cycles compute correctly.</td>
-        <td class="observed">Load ratio reads stale counter (under-counted for zones with high INITIAL throughput). Cap-calibration cycles miscalibrate.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-4.</strong> When a zone's last ACTIVE connection deactivates, then <code>guardActiveConnectionCountZeroForRetire</code> allows the zone to retire.</td>
-        <td class="expected">Counter reaches 0; retire-guard at <code>ZoneServiceImpl:136</code> allows zone retirement.</td>
-        <td class="observed">If the zone had INITIAL activations that never incremented, the counter may report 0 prematurely (when ACTIVE connections still exist) — or remain stuck at 0 if it was never advanced. Direction of drift depends on RESUME / INITIAL mix.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-5.</strong> When the CSP partner views their active-connection count on the partner app, then the number matches CL truth.</td>
-        <td class="expected">Partner app count = CL <code>connections</code> table count for <code>(csp_id, state=ACTIVE)</code>.</td>
-        <td class="observed">Already correct — partner app reads CL directly via <code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code>. <strong>Bypasses Capacity OS entirely.</strong> Capacity OS bug doesn't affect this surface.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Backfill</h3>
-  <p>Once the guard is removed, future T2 events increment correctly. Historical drift requires a one-shot reconciliation: <code>UPDATE zones SET active_connection_count = (SELECT count(*) FROM csp_connection_lifecycle_service.connections WHERE current_state='ACTIVE' AND zone_id = zones.zone_id)</code>. Run during a window with cap-calibration paused.</p>
-
-  <details>
-    <summary>Code evidence</summary>
-    <div>
-      <ul>
-        <li><strong>Bug site:</strong> <code>services/csp-capacity-coverage-service/.../InboundEventProcessingServiceImpl.java:446-461</code> — remove the RESUME-only guard.</li>
-        <li><strong>Reader sites (where the drift matters):</strong> <code>BatchEvaluationServiceImpl:105</code> (load-ratio for cap-calibration) &middot; <code>ZoneServiceImpl:136</code> (<code>guardActiveConnectionCountZeroForRetire</code>).</li>
-        <li><strong>Proof bug doesn't affect CSP app:</strong> <code>services/csp-connection-lifecycle-service/.../CspConnectionQueryController.java:62</code> &middot; <code>services/csp-gateway-service/.../AssuranceStripFacadeService.java:520-525</code>.</li>
-      </ul>
-    </div>
-  </details>
-</section>
-
-<!-- ====================== BUG-05 ====================== -->
-<section class="item" id="bug-05">
-  <div class="head">
-    <span class="id">BUG-05</span>
-    <h2><code>CL_INSTALLATION_QUALITY_SIGNAL</code> — producer-record contract drifted from CL OS §S-10</h2>
-    <span class="pill bug">BUG</span>
-  </div>
-  <p class="muted">CL emits the signal on every T2; <strong>Quality OS rejects every single one</strong> with HTTP 400 <code>VALIDATION_FAILED</code>. 53 emissions, 0 delivered, 100 % failure rate. Root cause: payload-contract drift in the CL producer record. Three required fields don't match the CL OS S-10 + base-schema contract.</p>
-
-  <div class="spec-ref">
-    <strong>Original spec:</strong>
-    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
-    <strong>§7.2 Signal Schema (Outbound) — base schema</strong> &middot;
-    <strong>§7.4 Outbound Signal Types catalogue (L512)</strong> &middot;
-    <strong>Appendix A S-10 (L1305-1326):</strong> full payload spec for <code>CL_INSTALLATION_QUALITY_SIGNAL</code> &middot;
-    <strong>Idempotency rule (L1325):</strong> <code>connection_id + activation_event_ref</code> &middot;
-    <strong>Emit rule (L1504):</strong> on successful T2 (<code>activation_source = INITIAL</code>) only.
-    <br>
-    <code>os/esr/ESR_v2_27_LOCKED.md</code> &middot; <strong>EVENT: CL_INSTALLATION_QUALITY_SIGNAL (L448)</strong> — registered as FACT event from CLS.
-  </div>
-
-  <h3>Test cases — expected vs observed</h3>
-  <table class="tc-table">
-    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>TC-1.</strong> When T2 fires (<code>PENDING_INSTALL → ACTIVE</code>, source INITIAL), then CL emits a payload with field name <code>signal_id</code> (per §7.2 base schema).</td>
-        <td class="expected">JSON payload contains <code>"signal_id": "&lt;UUID&gt;"</code>.</td>
-        <td class="observed">JSON payload contains <code>"event_id": "&lt;UUID&gt;"</code> — wrong field name. Quality OS validates <code>@NotBlank signalId</code>, gets blank, rejects. Producer record at <code>ClInstallationQualitySignal.java</code> inherits <code>eventId</code> from <code>DomainEvent</code> envelope.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-2.</strong> When CL emits the payload, then field <code>signal_type</code> carries the §7.4 enum entry for this signal.</td>
-        <td class="expected">JSON contains <code>"signal_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> (string-typed enum entry).</td>
-        <td class="observed">JSON contains <code>"event_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> — wrong field name. Producer record has no <code>signalType</code> field; relies on base <code>getEventType()</code>.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-3.</strong> When T2 fires, then field <code>previous_state</code> is populated.</td>
-        <td class="expected">JSON contains <code>"previous_state": "PENDING_INSTALL"</code> (per §7.2 — required for state transitions, and T2 is one).</td>
-        <td class="observed">JSON contains <code>"previous_state": null</code>. Producer code passes <code>null</code> at the T2 emit site instead of <code>"PENDING_INSTALL"</code>.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-4.</strong> When the payload reaches Quality OS, then it passes the receiver's <code>@NotBlank</code> / <code>@NotNull</code> validation.</td>
-        <td class="expected">HTTP 200; <code>install_maturation_ledger</code> row written.</td>
-        <td class="observed">HTTP 400 <code>VALIDATION_FAILED</code> on three fields (<code>signalId</code>, <code>signalType</code>, <code>previousState</code>). 53 / 53 outbox rows marked FAILED. Receiver matches the OS exactly — the producer is the side that drifted.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-5.</strong> When CL re-emits an existing signal (e.g. on retry), then Quality OS dedupes by <code>(connection_id, activation_event_ref)</code> per the OS idempotency rule.</td>
-        <td class="expected">Duplicate signals don't create duplicate <code>install_maturation_ledger</code> rows.</td>
-        <td class="observed">Receiver-side idempotency works correctly (already implemented). Once the producer is fixed and historical FAILED rows are replayed, dedupe handles it cleanly.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-6.</strong> When the signal is emitted, then the payload does <strong>not</strong> include fields not in the OS contract.</td>
-        <td class="expected">Payload contains only the base schema + S-10 specific fields. No <code>correlation_id</code>, no <code>causation_id</code>.</td>
-        <td class="observed">Payload contains <code>correlation_id: null</code> and <code>causation_id: &lt;UUID&gt;</code>. Receiver tolerates unknown fields (Jackson default), so these are noise — but the producer record should be trimmed to S-10.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Verbatim validation error from prod (captured by the dispatcher into <code>failure_reason</code>)</h3>
-  <pre><code>400 Bad Request: {
-  "field_errors": [
-    {"field": "signalId",      "message": "must not be blank"},
-    {"field": "signalType",    "message": "must not be null"},
-    {"field": "previousState", "message": "must not be null"}
-  ],
-  "error_code": "VALIDATION_FAILED",
-  "message":    "Request validation failed"
-}</code></pre>
-
-  <details>
-    <summary>Code evidence — side-by-side</summary>
-    <div>
-      <p><strong>Producer (drifted) — <code>services/csp-connection-lifecycle-service/.../domain/event/outbound/ClInstallationQualitySignal.java</code>:</strong></p>
-<pre><code>public record ClInstallationQualitySignal(
-    String eventId,            // ← should be signalId
-    String correlationId,      // ← not in S-10
-    String causationId,        // ← not in S-10
-    String connectionId,
-    Instant timestamp,
-    String previousState,      // ← populated as null at emit
-    String newState,
-    String cspId,
-    ...
-) implements DomainEvent {
-    @Override public String getEventType() {        // ← serializes as event_type
-        return "CL_INSTALLATION_QUALITY_SIGNAL";
-    }
-}</code></pre>
-      <p><strong>Receiver (OS-aligned) — <code>services/csp-quality-service/.../domain/event/inbound/ClInstallationQualitySignal.java</code>:</strong></p>
-<pre><code>public record ClInstallationQualitySignal(
-    @NotBlank String signalId,
-    @NotNull  String signalType,
-    @NotBlank String connectionId,
-    @NotNull  Instant timestamp,
-    @NotNull  String previousState,
-    @NotNull  String newState,
-    @NotBlank String cspId,
-    ...
-) {}</code></pre>
-      <p><strong>Reproducing the evidence in prod:</strong></p>
-<pre><code>SELECT failure_reason FROM csp_connection_lifecycle_service.outbox_record
-WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClInstallationQualitySignal'
-  AND status = 'FAILED';
--- 53 rows, every one with the same 3 field_errors.</code></pre>
-    </div>
-  </details>
-</section>
-
-<!-- ====================== BUG-06 ====================== -->
-<section class="item" id="bug-06">
-  <div class="head">
-    <span class="id">BUG-06</span>
-    <h2>CAEO <code>customer_id</code> column populated with CSP-ID for installation task</h2>
-    <span class="pill bug">BUG</span>
-  </div>
-  <p class="muted"><code>CL_CONNECTION_ACTIVATED</code> doesn't carry <code>customer_id</code> in its payload, so the CAEO consumer plugs <code>cspId</code> in as a placeholder. Want: <code>customer_id</code> gets populated in the CL event so that CAEO's <code>customer_id</code> column carries the actual customer.</p>
-
-  <div class="spec-ref">
-    <strong>Original spec:</strong>
-    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
-    <strong>S-03: <code>CL_CONNECTION_ACTIVATED</code></strong> payload definition (L1195-1213).
-    <strong>Missing field today</strong> — CL OS S-03 does not currently include <code>customer_id</code>. The fix has two parts: OS amendment + CL service emit + CAEO consumer.
-    <br>
-    <strong>CAEO impact:</strong> Customer Access Entitlement Object should hold the real customer the entitlement belongs to.
-  </div>
-
-  <h3>Test cases — expected vs observed</h3>
-  <table class="tc-table">
-    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>TC-1.</strong> When CL emits <code>CL_CONNECTION_ACTIVATED</code> on T2 (after the OS amendment + CL emit fix), then the payload contains <code>customer_id</code>.</td>
-        <td class="expected">JSON contains <code>"customer_id": "&lt;UUID&gt;"</code> — the customer the connection serves, read directly from the CL <code>connections</code> table.</td>
-        <td class="observed">Payload has no <code>customer_id</code> field. CL OS S-03 contract doesn't include it.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-2.</strong> When CAEO consumes <code>CL_CONNECTION_ACTIVATED</code>, then it writes <code>customer_access_entitlement.customer_id</code> from the event's <code>customer_id</code> field.</td>
-        <td class="expected"><code>customer_id</code> column = real customer's UUID.</td>
-        <td class="observed">CAEO at <code>InboundEventProcessingServiceImpl.java:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> — the CSP-ID lands in the customer-id column. Author: Aryan Gaurav, Apr 10 2026.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-3.</strong> When a downstream consumer queries CAEO by <code>customer_id</code>, then it finds entitlement rows for the matching customer.</td>
-        <td class="expected">A query like <code>findByCustomerId("&lt;real-customer-uuid&gt;")</code> returns rows.</td>
-        <td class="observed">Method exists in the repository (<code>findByCustomerId</code>) but is never called anywhere in the monorepo today — because the column has the wrong value. Once fixed, the column becomes queryable.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-4.</strong> When sibling <code>CL_CONNECTION_*</code> events fire (PAUSED, RESCUED, DEACTIVATED), then their payloads also include <code>customer_id</code> if any consumer needs it.</td>
-        <td class="expected">Sibling-event contract uniformity. If only <code>CL_CONNECTION_ACTIVATED</code> needs it for now, document the scope decision in the OS amendment.</td>
-        <td class="observed">Sibling events also lack <code>customer_id</code>. Tech to audit which siblings need the field and roll the OS amendment to cover them together.</td>
-      </tr>
-      <tr>
-        <td><strong>TC-5.</strong> When the historical backfill runs (one-shot), then existing CAEO rows with <code>customer_id = &lt;some-CSP-ID&gt;</code> get corrected.</td>
-        <td class="expected"><code>UPDATE customer_access_entitlement SET customer_id = c.customer_id FROM csp_connection_lifecycle_service.connections c WHERE customer_access_entitlement.connection_id = c.connection_id</code>. Join via <code>connection_id</code> (always present on both sides).</td>
-        <td class="observed">Backfill not yet run. ~50 of 19,573 CAEO rows currently have CSP-IDs in <code>customer_id</code> column.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Source of truth — already in place</h3>
-  <p>The CL <code>connections</code> table holds the <code>connection_id → customer_id</code> mapping on every row. CL has the value at T2 emit time — adding it to the event payload is a column read on the same row. No new upstream lookup needed. Backfill is similarly trivial via the connection-id join.</p>
-
-  <details>
-    <summary>Code evidence</summary>
-    <div>
-      <ul>
-        <li><strong>Bug site:</strong> <code>services/csp-customer-access-service/.../InboundEventProcessingServiceImpl.java:82</code> — the placeholder write.</li>
-        <li><strong>CL emit site (to update):</strong> <code>services/csp-connection-lifecycle-service/...</code> — <code>CL_CONNECTION_ACTIVATED</code> producer.</li>
-        <li><strong>Source-of-truth column:</strong> <code>csp_connection_lifecycle_service.connections.customer_id</code>.</li>
-        <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — CAEO row created, <code>customer_id = a0a7b6</code> (the CSP-ID).</li>
-      </ul>
-    </div>
-  </details>
-</section>
-
-<!-- ============================================================ -->
-<!-- ============ GAPS ============ -->
-<!-- ============================================================ -->
-
-<h2 id="gaps" style="margin-top: 48px; padding-top: 8px; border-top: 3px solid var(--gap); color: var(--gap);">Gaps (5)</h2>
+<h2 id="gaps" style="margin-top: 48px; padding-top: 8px; border-top: 3px solid var(--gap); color: var(--gap);">Gaps (4)</h2>
 
 <!-- ====================== GAP-01 ====================== -->
 <section class="item" id="gap-01">
@@ -754,12 +231,12 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
   <div class="quickcheck">
     <h3>Quick Check</h3>
     <dl>
-      <dt>What is changing?</dt>     <dd>Booking cancellation telemetry distinguishes customer-initiated from system-initiated.</dd>
-      <dt>What triggered it?</dt>    <dd>Metric ambiguity — today all cancellations look the same; can't tell user behaviour from operational events.</dd>
-      <dt>Blast radius</dt>          <dd>Customer-backend cancellation flow; TAS inbound handler; ES PRD wording; dashboards consuming cancellation events.</dd>
-      <dt>Reversible?</dt>           <dd>Yes — additive field on the event; rollback = ignore the field.</dd>
-      <dt>Money / PII / migration?</dt> <dd>No / No / No.</dd>
-      <dt>OS impact / sign-off?</dt> <dd>CL OS — additive field on the cancellation-event contract. Sign-off: <strong>Pending</strong> (Akhil — Installation Flow OS).</dd>
+      <dt>What is changing?</dt>     <dd>Stop dropping the cancellation cause at the customer-backend → install boundary. Cancellations land in the correct existing terminal state (<code>CANCELLED_BY_CUSTOMER</code> vs <code>CANCELLED_BY_UPSTREAM</code>).</dd>
+      <dt>What triggered it?</dt>    <dd>Prod data: <strong>61 / 61</strong> recent cancellations (14d) land in <code>CANCELLED_BY_UPSTREAM</code> with the same generic reason; <strong>0 candidates</strong> have ever reached <code>CANCELLED_BY_CUSTOMER</code> in the entire database, despite the terminal existing in spec.</dd>
+      <dt>Blast radius</dt>          <dd>Customer-backend cancellation emit; CL service is already correct; TAS inbound handler for <code>ClDeactivationInitiated</code>; ES PRD wording.</dd>
+      <dt>Reversible?</dt>           <dd>Yes — additive field handling; rollback = ignore the field.</dd>
+      <dt>Money / PII / migration?</dt> <dd>No / No / No (no retroactive re-classification of historical rows).</dd>
+      <dt>OS impact / sign-off?</dt> <dd>No — CL OS already carries the cause on <code>CL_DEACTIVATION_INITIATED</code>. ES PRD update only.</dd>
       <dt>Tier</dt>                  <dd>Light</dd>
     </dl>
   </div>
@@ -767,66 +244,73 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
   <div class="ab what"><h3>A1. Metadata <span class="pill ok">WHAT</span></h3>
     <table>
       <tr><th>Field</th><th>Value</th></tr>
-      <tr><td>Change title</td><td>Bifurcate booking cancellations by source</td></tr>
+      <tr><td>Change title</td><td>Bifurcate booking cancellations by source (customer vs system)</td></tr>
       <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
       <tr><td>Status</td><td>Draft → For tech review</td></tr>
       <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
-      <tr><td>Baseline</td><td><code>installation-flow-execution-spec-yaml/pre-installation-es/es-connection-installation-service-preinst-prd.yaml</code> (cancellation events) + customer-backend cancel endpoint</td></tr>
+      <tr><td>Baseline</td><td><code>installation-flow-execution-spec-yaml/.../es-connection-installation-service-preinst-prd.yaml</code> v2.5 — has both terminal states (<code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>) but doesn't yet document the system-cancel-via-customer-backend path</td></tr>
     </table>
   </div>
 
   <div class="ab what"><h3>A2. Why This Change <span class="pill ok">WHAT</span></h3>
     <ul>
-      <li><strong>What is wrong today:</strong> A booking that gets cancelled looks the same in prod whether the customer hit "cancel" in the app or the system auto-cancelled (timeout, supply-vacuum, P78 retry-exhaustion, etc.). Funnel metrics can't separate "customer wanted out" from "we couldn't deliver".</li>
-      <li><strong>Who experiences it:</strong> Ops + analytics teams investigating cancellation spikes; the PM team working on retention / install-completion rates; Quality OS pattern-detection.</li>
-      <li><strong>Cost of leaving it:</strong> RCA on a cancellation surge takes manual SQL joins across event-history to attribute source. Quality OS's per-CSP pattern attribution is muddied when system-cancellations are blamed on the CSP.</li>
+      <li><strong>What is wrong today:</strong> The customer backend routes <em>both</em> customer-initiated cancellations and system-initiated cancellations (booking-stuck watchdog, all-CSPs-declined, auto-expiry, etc.) through the same <code>POST /events/user-cancellation</code> endpoint on CL. CL records the cause correctly and emits <code>CL_DEACTIVATION_INITIATED</code> with the reason in the payload. <strong>TAS's <code>ClDeactivationInitiated</code> record only deserializes 4 fields</strong> (<code>eventId, correlationId, causationId, connectionId</code>) — <code>deactivation_reason</code> and <code>actor_type</code> are silently dropped at the HTTP boundary. The handler hard-codes <code>reason = "DEACTIVATION"</code> and always calls <code>cancelByUpstream(...)</code>.</li>
+      <li><strong>Who experiences it:</strong> ES candidate analytics — the <code>CANCELLED_BY_CUSTOMER</code> branch is dead code; Quality OS / Enforcement OS attribution — system-cancels look like customer-cancels (or vice versa); ops investigating cancellation patterns can't tell which type spiked.</li>
+      <li><strong>Cost of leaving it:</strong> 100 % of cancellations are mis-routed in TAS today. The spec-mandated bifurcation exists but never fires.</li>
     </ul>
   </div>
 
   <div class="ab what"><h3>A5. The Delta <span class="pill ok">WHAT</span></h3>
-    <p>Atomic changes. Each row is one change, self-contained.</p>
+    <p>The fix is in two places: <strong>customer backend</strong> stops lumping at source; <strong>TAS</strong> stops dropping the cause. <strong>No OS change. No new terminal states.</strong></p>
     <table>
-      <thead><tr><th style="width: 28%;">What changes</th><th style="width: 24%;">Before</th><th style="width: 28%;">After</th><th>Why</th></tr></thead>
+      <thead><tr><th style="width: 22%;">What changes</th><th style="width: 26%;">Before</th><th style="width: 26%;">After</th><th>Why</th></tr></thead>
       <tbody>
         <tr>
-          <td>Cancellation event payload</td>
-          <td>Single event type <code>BOOKING_CANCELLED</code> with no source field</td>
-          <td>Two enum values on a new <code>source</code> field: <code>CUSTOMER</code>, <code>SYSTEM</code>. Event type remains <code>BOOKING_CANCELLED</code>.</td>
-          <td>One source-of-truth event; the source field is the bifurcation.</td>
+          <td>Customer backend cancellation emit</td>
+          <td>Both customer-initiated and system-initiated cancellations route through the same <code>POST /events/user-cancellation</code> on CL. Cause is collapsed at source.</td>
+          <td>Customer backend bifurcates at source: customer-initiated uses the user-cancellation path; system-initiated uses a distinct path (separate endpoint, OR same endpoint with an explicit cause flag — <strong>mechanism is tech's call</strong>). Whichever scenarios the customer backend already classifies as system-initiated route to the system path.</td>
+          <td>The cause must be tagged at the emit site; the install side can't infer it.</td>
         </tr>
         <tr>
-          <td>Customer-app cancel endpoint</td>
-          <td>Fires <code>BOOKING_CANCELLED</code> with no source</td>
-          <td>Fires <code>BOOKING_CANCELLED</code> with <code>source = CUSTOMER</code></td>
-          <td>Customer-initiated cancellations are explicitly tagged at the emit site.</td>
+          <td>CL service — <code>handleUserCancellation</code> and the system-cancel handler</td>
+          <td>Already records <code>deactivation_reason</code> correctly; emits it on <code>CL_DEACTIVATION_INITIATED</code></td>
+          <td>Unchanged — CL is already correct</td>
+          <td>The propagation works; the loss happens downstream.</td>
         </tr>
         <tr>
-          <td>System-driven cancellation paths (timeout sweeps, supply-vacuum failover, P78 retry-exhaustion)</td>
-          <td>Fire <code>BOOKING_CANCELLED</code> with no source</td>
-          <td>Fire <code>BOOKING_CANCELLED</code> with <code>source = SYSTEM</code> + a sub-field <code>system_cause</code> ∈ {<code>TIMEOUT_PXX</code>, <code>SUPPLY_VACUUM</code>, <code>RETRY_EXHAUSTED</code>, <code>OPS_OVERRIDE</code>}</td>
-          <td>System paths get attributable telemetry; ops queries become precise.</td>
+          <td>TAS inbound DTO — <code>ClDeactivationInitiated</code> record</td>
+          <td>Deserializes only 4 fields (<code>eventId, correlationId, causationId, connectionId</code>)</td>
+          <td>Extends to deserialize <code>deactivation_reason</code> (and ideally <code>actor_type</code>) that CL already emits</td>
+          <td>Wire contract honours the full payload CL is sending.</td>
         </tr>
         <tr>
-          <td>TAS inbound handler</td>
-          <td>Accepts cancellation event regardless of source</td>
-          <td>Accepts both; on <code>source = SYSTEM</code>, records the <code>system_cause</code> in the install candidate's terminal state.</td>
-          <td>Down-stream consumers (Quality OS, install ledger) get the cause without re-deriving it.</td>
+          <td>TAS handler for <code>ClDeactivationInitiated</code></td>
+          <td>Hard-codes <code>reason = "DEACTIVATION"</code>; always calls <code>cancelByUpstream(...)</code>; every cancellation lands in <code>CANCELLED_BY_UPSTREAM</code></td>
+          <td>Branches on <code>deactivation_reason</code>:<br>
+            • <code>USER_CANCELLATION</code> → <code>cancelByCustomer(...)</code> → <code>CANCELLED_BY_CUSTOMER</code><br>
+            • anything else → <code>cancelByUpstream(...)</code> → <code>CANCELLED_BY_UPSTREAM</code> with the reason carried through to <code>reason_code</code></td>
+          <td>The existing two terminals get used as the spec intended.</td>
         </tr>
         <tr>
-          <td>ES PRD (preinst-prd)</td>
-          <td>Doesn't mention cancellation source</td>
-          <td>One sentence in §X documenting the source field and the system-cause enum.</td>
-          <td>PM-side documentation matches the event contract.</td>
+          <td>ES PRD documentation</td>
+          <td>Both terminal states defined; doesn't yet document the customer-backend system-cancel path</td>
+          <td>One sentence in the cancellation handling § that the system-cancel-via-customer-backend path routes to <code>CANCELLED_BY_UPSTREAM</code> with the system-cause in <code>reason_code</code>.</td>
+          <td>PM-side documentation matches the wire contract.</td>
         </tr>
       </tbody>
     </table>
+    <div class="hint">
+      <strong>Note on <code>reason_code</code> taxonomy:</strong> PM is <strong>not</strong> defining a canonical enum for system-cancel sub-reasons in this item. The customer backend sends whatever string it has (e.g. <em>"auto-expired"</em>, <em>"stalled-at-tech-assign-5d"</em>, <em>"all-csps-declined"</em>); TAS records it as-is on the <code>CANCELLED_BY_UPSTREAM</code> candidate. The customer-vs-system bifurcation (the actual goal of this item) is satisfied by the routing branch, not by sub-reason granularity. A locked enum can be a separate item later if dashboards / differentiated PNs need it.
+    </div>
   </div>
 
   <div class="ab guard"><h3>A6. Must-Not-Change — Regression Guard <span class="pill bug">GUARD</span></h3>
     <ul>
-      <li><strong>Existing cancellation flow shape.</strong> The state transitions that fire <code>BOOKING_CANCELLED</code> today (customer-app cancel, P75 timeout, P78 retry-exhaustion, etc.) all continue to fire on the same triggers. The change is additive — a new field, no transitions added or removed.</li>
-      <li><strong>Downstream consumers tolerant of missing <code>source</code>.</strong> Any subscriber that reads <code>BOOKING_CANCELLED</code> today must continue to function if the field is absent (graceful default — treat as <code>UNKNOWN</code>). No subscriber should hard-fail on the absence during rollout.</li>
-      <li><strong>Existing aggregate cancellation count.</strong> Total cancellation count per booking / per CSP / per zone stays accurate (sum of CUSTOMER + SYSTEM = today's count).</li>
+      <li><strong>CL OS state transitions for cancellation.</strong> T13 (PENDING_INSTALL → PENDING_DEACTIVATION on USER_CANCELLATION) and T9 (REQUESTED → DEACTIVATED on USER_CANCELLATION) continue to fire on the same triggers. No state-machine change.</li>
+      <li><strong>CSP-side cancel paths.</strong> CL T11 SYSTEM_DEACTIVATION, T12 retry-exhaustion, D&amp;A REALLOCATION_PENDING, Exit OS, Enforcement SUSPENDED/TERMINATED — all continue to land in <code>CANCELLED_BY_UPSTREAM</code> as today. No routing change for these.</li>
+      <li><strong>Existing aggregate cancellation count.</strong> Total cancellations per booking / CSP / zone stays accurate (the bifurcation re-distributes among the two existing terminals; total unchanged).</li>
+      <li><strong>Customer-app + partner-app UX.</strong> No UI change in this item. The bifurcated data simply becomes available for future PN / UX work to consume.</li>
+      <li><strong>Idempotency.</strong> If the customer-app cancel and the customer-backend system-cancel watchdog fire close in time, the existing TAS idempotency (on candidate state) continues to dedupe.</li>
     </ul>
   </div>
 
@@ -835,39 +319,21 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
       <thead><tr><th>OS</th><th>Impacted?</th><th>Amendment</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
       <tbody>
         <tr>
-          <td>CL OS</td><td>Yes</td>
-          <td>Add optional <code>source</code> + <code>system_cause</code> fields to <code>BOOKING_CANCELLED</code> outbound contract.</td>
-          <td>Cross-OS contract</td>
-          <td>Satyam (CL OS)</td>
+          <td>CL OS</td><td>No</td>
+          <td>Already records <code>deactivation_reason</code> on <code>CL_DEACTIVATION_INITIATED</code> per §5.1 T13 / T9. The propagation works; the gap is downstream.</td>
+          <td>None</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td>Installation Flow / ES PRD</td><td>Yes</td>
+          <td>Document the customer-backend system-cancel path and the TAS branching on <code>deactivation_reason</code>. Both terminals already in spec.</td>
+          <td>Behaviour-change documentation</td>
+          <td>Installation Flow OS owner</td>
           <td>Pending</td>
         </tr>
         <tr>
-          <td>Installation Flow OS</td><td>Yes</td>
-          <td>Document source-bifurcation in the cancellation handling §.</td>
-          <td>Behaviour change</td>
-          <td>Akhil (Installation Flow OS)</td>
-          <td>Pending</td>
-        </tr>
-        <tr>
-          <td>Quality OS</td><td>No</td>
+          <td>Quality OS / D&amp;A OS / Capacity OS</td><td>No</td>
           <td>—</td>
-          <td>None</td>
-          <td>—</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>D&amp;A OS</td><td>No</td>
-          <td>—</td>
-          <td>None</td>
-          <td>—</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td>ESR</td><td>Yes</td>
-          <td>Register the new fields in the <code>BOOKING_CANCELLED</code> event schema.</td>
-          <td>Cross-OS contract</td>
-          <td>Vaibhav (ESR)</td>
-          <td>Pending</td>
+          <td>None</td><td>—</td><td>—</td>
         </tr>
       </tbody>
     </table>
@@ -876,77 +342,121 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
   <div class="ab how"><h3>B5. Acceptance Criteria — Verification Layer <span class="pill ok">HOW</span></h3>
 
     <h4>Business logic</h4>
-    <pre><code>LOGIC-1: Customer cancellation tagged as CUSTOMER
-  Given a customer with an active booking
+    <pre><code>LOGIC-1: Customer cancellation lands in CANCELLED_BY_CUSTOMER
+  Given a customer with an in-flight install candidate
   When the customer fires the cancel CTA from the customer app
-  Then the system emits BOOKING_CANCELLED with source="CUSTOMER" and system_cause=null
+  Then the customer backend routes to the customer-initiated path
+  And  CL emits CL_DEACTIVATION_INITIATED with deactivation_reason="USER_CANCELLATION"
+  And  TAS deserializes the reason
+  And  TAS calls cancelByCustomer(...)
+  And  the install candidate lands in CANCELLED_BY_CUSTOMER terminal
 
-LOGIC-2: System-driven timeout cancellation tagged as SYSTEM/TIMEOUT
-  Given a booking that has been in PENDING_INSTALL for > P74
-  When the P74 timeout sweep fires
-  Then the system emits BOOKING_CANCELLED with source="SYSTEM", system_cause="TIMEOUT_P74"
+LOGIC-2: System cancellation (customer-backend watchdog) lands in CANCELLED_BY_UPSTREAM
+  Given a stuck booking that the customer-backend watchdog gives up on
+  When the watchdog fires
+  Then the customer backend routes to the system-initiated path (not the user-cancellation path)
+  And  CL emits CL_DEACTIVATION_INITIATED with deactivation_reason=&lt;system cause string&gt;
+  And  TAS deserializes the reason
+  And  TAS calls cancelByUpstream(...) with reason_code=&lt;the system cause string&gt;
+  And  the install candidate lands in CANCELLED_BY_UPSTREAM with the cause preserved
 
-LOGIC-3: Retry-exhaustion cancellation tagged as SYSTEM/RETRY_EXHAUSTED
-  Given a booking that has gone through P78 install-failure retries (3)
-  When the system marks the booking exhausted
-  Then BOOKING_CANCELLED is emitted with source="SYSTEM", system_cause="RETRY_EXHAUSTED"
+LOGIC-3 (negative): TAS preserves the reason field on the wire
+  Given any CL_DEACTIVATION_INITIATED arriving at TAS
+  When TAS deserializes the payload
+  Then deactivation_reason is read (not silently dropped)
+  And  the handler branches on the reason value
 
-LOGIC-4 (negative): Source must be set
-  Given any cancellation emit site
-  When BOOKING_CANCELLED is emitted
-  Then source field is NEVER null on post-rollout emissions
-  (Pre-rollout payloads in flight may have null source; subscribers tolerate it as UNKNOWN.)</code></pre>
+LOGIC-4 (negative): Unrecognised cause does not default to CANCELLED_BY_CUSTOMER
+  Given a CL_DEACTIVATION_INITIATED with an unrecognised or null deactivation_reason
+  When TAS processes the event
+  Then the handler rejects / logs the malformed payload
+  And  does NOT silently route to CANCELLED_BY_CUSTOMER
+       (the fix is to make the cause explicit, not to pick a fallback terminal)</code></pre>
 
     <h4>Use &amp; edge cases</h4>
-    <pre><code>EDGE-1: Customer cancels just as a system timeout fires (race)
-  Given a booking near a system-timeout boundary
-  When both customer cancel and system timeout fire within the same second
-  Then exactly ONE BOOKING_CANCELLED is emitted; the first to land wins
-       (event-store idempotency on booking_id deduplicates the loser)
-  Then the winner's source determines the tag
+    <pre><code>EDGE-1: CSP-side cancel paths preserve today's behaviour
+  Given CL T11 SYSTEM_DEACTIVATION, T12 retry-exhaustion, Exit S3/S4/R2,
+        Enforcement SUSPENDED/TERMINATED, or D&A REALLOCATION_PENDING
+  When the cancel fires (none of these go through customer-backend)
+  Then the install candidate lands in CANCELLED_BY_UPSTREAM as today
+  And  routing for these paths is UNCHANGED
 
-EDGE-2: Customer cancels a booking that's already SYSTEM-cancelled
-  Given a booking already in CANCELLED state (from a prior system event)
-  When the customer hits cancel
-  Then no new BOOKING_CANCELLED is emitted; the customer-app shows
-       "booking already cancelled"
+EDGE-2: Customer-app cancel and customer-backend watchdog race
+  Given a booking near a watchdog-fire boundary
+  When both the customer cancel and the watchdog fire within seconds
+  Then the first event to land wins (existing TAS idempotency dedupes the second)
+  And  the winner's source determines the terminal
 
-EDGE-3: Ops-override cancellation
-  Given an admin uses the ops-tool to force-cancel a booking
-  When the ops endpoint fires
-  Then BOOKING_CANCELLED is emitted with source="SYSTEM", system_cause="OPS_OVERRIDE"
-       and the admin's identity is logged separately for audit (not on the event)</code></pre>
+EDGE-3: Backfill / cutover
+  Given the fix ships
+  When historical bookings (cancelled before this change) are queried
+  Then they continue to look like CANCELLED_BY_UPSTREAM with reason="DEACTIVATION"
+  And  no retroactive re-classification happens
+
+EDGE-4: Dashboards / ops queries
+  Given an internal dashboard that counted "customer cancellations" today
+  When this fix ships
+  Then the customer-cancel count rises from ~0 to its real value
+  And  the upstream-cancel count drops correspondingly
+  And  ops should be told the swing is NOT a customer-behaviour change</code></pre>
 
     <h4>Regression</h4>
-    <pre><code>REGRESSION-1 (A6 row 1): Existing cancellation triggers unchanged
-  Given the customer-app cancel CTA from any state
-  When the user taps cancel
-  Then BOOKING_CANCELLED fires (now with source="CUSTOMER")
-       AND the state transition (BOOKING -> CANCELLED) is identical to today
+    <pre><code>REGRESSION-1 (A6 row 1): CL OS state transitions unchanged
+  Given a customer cancel or system cancel via customer backend
+  When CL processes
+  Then T13 (PENDING_INSTALL -> PENDING_DEACTIVATION) or T9 (REQUESTED -> DEACTIVATED)
+       fires on USER_CANCELLATION exactly as today
 
-REGRESSION-2 (A6 row 2): Subscribers without source-awareness keep working
-  Given a downstream subscriber that reads BOOKING_CANCELLED without checking source
-  When a BOOKING_CANCELLED arrives (with or without source)
-  Then the subscriber processes it correctly
-       (i.e. the new field is additive; no subscriber requires it)
+REGRESSION-2 (A6 row 2): CSP-side cancel paths unchanged
+  Given any non-customer-backend cancellation source
+  When the cancel fires
+  Then it lands in CANCELLED_BY_UPSTREAM exactly as today
+       (no routing change for these paths)
 
-REGRESSION-3 (A6 row 3): Aggregate counts preserved
+REGRESSION-3 (A6 row 3): Aggregate cancellation count preserved
   Given a 30-day window of cancellations
-  When we count BOOKING_CANCELLED events for any booking / CSP / zone
-  Then the count equals (CUSTOMER count + SYSTEM count + pre-rollout null-source count)</code></pre>
+  When we count terminal-state cancellations per booking / CSP / zone
+  Then the count = (CANCELLED_BY_CUSTOMER + CANCELLED_BY_UPSTREAM)
+       equals today's total cancellation count
+       (the bifurcation re-distributes, doesn't add or remove)
+
+REGRESSION-4 (A6 row 4): No UI change
+  Given customer or partner app UI for cancellations
+  When this fix ships
+  Then no copy / layout / surface changes
+
+REGRESSION-5 (A6 row 5): Idempotency holds on close-in-time double-cancel
+  Given a customer cancel and a watchdog cancel within seconds of each other
+  When both reach TAS
+  Then exactly one terminal transition occurs (existing TAS dedupe)</code></pre>
 
     <h4 style="margin-top: 16px;">B5.1 Coverage matrix</h4>
     <table class="coverage">
       <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
       <tbody>
-        <tr><td>Business logic</td><td>A5 rows 1-5</td><td>5 rules</td><td>LOGIC-1..4</td><td class="cov-ok">All covered</td></tr>
+        <tr><td>Business logic</td><td>A5 rows 1-5</td><td>5 deltas</td><td>LOGIC-1..4</td><td class="cov-ok">All covered</td></tr>
         <tr><td>Computation</td><td>—</td><td>N/A (no computation)</td><td>—</td><td class="cov-ok">N/A</td></tr>
         <tr><td>Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td class="cov-ok">N/A</td></tr>
-        <tr><td>Use / edge</td><td>EDGE-1..3</td><td>3 edges</td><td>EDGE-1..3</td><td class="cov-ok">All covered</td></tr>
-        <tr><td>Regression</td><td>A6 rows 1-3</td><td>3 guards</td><td>REGRESSION-1..3</td><td class="cov-ok">All covered</td></tr>
+        <tr><td>Use / edge</td><td>EDGE-1..4</td><td>4 edges</td><td>EDGE-1..4</td><td class="cov-ok">All covered</td></tr>
+        <tr><td>Regression</td><td>A6 rows 1-5</td><td>5 guards</td><td>REGRESSION-1..5</td><td class="cov-ok">All covered</td></tr>
       </tbody>
     </table>
   </div>
+
+  <details>
+    <summary>Code evidence</summary>
+    <div>
+      <ul>
+        <li><strong>Customer backend (the source of the lumping):</strong> <code>POST /events/user-cancellation</code> on CL — both customer cancels and system-cancel watchdog paths route here today.</li>
+        <li><strong>CL service (correct — propagates the cause):</strong> <code>handleUserCancellation</code> — records <code>deactivation_reason</code>; emits <code>CL_DEACTIVATION_INITIATED</code> with the field in the payload.</li>
+        <li><strong>TAS inbound DTO (the drop site):</strong> <code>services/csp-tas-service/.../ClDeactivationInitiated</code> record — currently only 4 fields. Extend to include <code>deactivation_reason</code> + <code>actor_type</code>.</li>
+        <li><strong>TAS handler (the routing site):</strong> <code>services/csp-tas-service/.../InboundEventController</code> handler for <code>ClDeactivationInitiated</code> — currently hard-codes reason; needs branching on <code>deactivation_reason</code>.</li>
+        <li><strong>ES PRD (both terminals already defined):</strong> <code>installation-flow-execution-spec-yaml/.../es-connection-installation-service-preinst-prd.yaml</code> v2.5 L818-831 (<code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>).</li>
+        <li><strong>CL OS reference:</strong> <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §5.1 T13 (PENDING_INSTALL → PENDING_DEACTIVATION on USER_CANCELLATION); §5.1 downstream consequences (L412-421) — Compensation OS / Quality OS already treat USER_CANCELLATION distinctly when they receive it.</li>
+        <li><strong>Prod evidence (last 14 days):</strong> 61 / 61 cancellations in <code>CANCELLED_BY_UPSTREAM</code> with <code>reason_code = "DEACTIVATION"</code>; 0 candidates ever in <code>CANCELLED_BY_CUSTOMER</code>.</li>
+      </ul>
+    </div>
+  </details>
 </section>
 
 <!-- ====================== GAP-02 ====================== -->
@@ -1618,6 +1128,469 @@ REGRESSION-4 (A6 row 4): Exit signal symmetric
 </section>
 
 <!-- ============ Footer ============ -->
+<h2 id="bugs" style="margin-top: 48px; padding-top: 8px; border-top: 3px solid var(--bug); color: var(--bug);">Bugs (6)</h2>
+
+<!-- ====================== BUG-01 ====================== -->
+<section class="item" id="bug-01">
+  <div class="head">
+    <span class="id">BUG-01</span>
+    <h2>CLOS timeout scheduler unwired (P75 / P76 / P77 / P78 inert)</h2>
+    <span class="pill bug">BUG</span>
+  </div>
+  <p class="muted">CL OS defines four system-driven timeouts that must fire on background sweeps. The batch methods, endpoints, and scheduler hooks all exist in code — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>. Zero system-driven CL transitions in 90 days. <strong>P74 is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
+
+  <div class="spec-ref">
+    <strong>Original spec:</strong>
+    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
+    <strong>§5 State Machine</strong> (transitions T9, T12 + timeout edges) &middot;
+    <strong>SPR params:</strong> P75 (7d REQUESTED expiry), P76 (90d PAUSE limit), P77 (45d PENDING_DEACTIVATION), P78 (3 retry cap).
+    <br>
+    <strong>PRD:</strong> <code>yaml-prd/connection-lifecycle-prd-v1.6.yaml</code> — state machine + system-source transitions all defined.
+  </div>
+
+  <h3>Test cases — expected vs observed</h3>
+  <table class="tc-table">
+    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TC-1.</strong> When a connection sits in <code>REQUESTED</code> for &gt; P75 (7d), then the P75 sweep transitions it to <code>DEACTIVATED</code> via T9.</td>
+        <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>transition_type = T9</code>, source = SYSTEM, <code>new_state = DEACTIVATED</code>.</td>
+        <td class="observed">No T9 transitions emitted in 90d. Stale <code>REQUESTED</code> rows accumulate indefinitely.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-2.</strong> When a connection sits in <code>PAUSED</code> for &gt; P76 (90d), then the P76 sweep transitions it to <code>PENDING_DEACTIVATION</code> via <code>PAUSE_DURATION_EXCEEDED</code>.</td>
+        <td class="expected">CL emits <code>CL_DEACTIVATION_INITIATED</code>; downstream Exit OS / RECHARGE_VALIDATOR receive the signal.</td>
+        <td class="observed">No such transitions. 11k+ <code>PAUSED</code> rows past 90d sit untouched.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-3.</strong> When a connection sits in <code>PENDING_DEACTIVATION</code> for &gt; P77 (45d), then the P77 sweep transitions it to <code>DEACTIVATED</code> via <code>DEACTIVATION_COMPLETE</code>.</td>
+        <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>new_state = DEACTIVATED</code>, source = SYSTEM.</td>
+        <td class="observed">No such transitions. Stale <code>PENDING_DEACTIVATION</code> rows accumulate.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-4.</strong> When P78 retry-cap is hit on a connection (3 install-failure cycles), then the next failure transitions to <code>PENDING_DEACTIVATION</code> via T12 (<code>RETRY_EXHAUSTION_DEACTIVATION</code>).</td>
+        <td class="expected">CL emits T12 transition; DAS stops re-routing the connection.</td>
+        <td class="observed">P78 logic is event-driven (not scheduler-driven), so this works in isolation. <strong>Listed for completeness — no fix needed for P78 within this item.</strong></td>
+      </tr>
+      <tr>
+        <td><strong>TC-5.</strong> When the sweep cadence runs (15-minute granularity is acceptable; finer is fine), then sweep methods are invoked from a recurring schedule.</td>
+        <td class="expected"><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> is called at service-startup with the four sweep batches registered. <code>AWS_SCHEDULER_ENABLED: true</code> in <code>application-prod.yml</code>.</td>
+        <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> at <code>application-prod.yml:18</code>. <code>scheduleRecurring(...)</code> never called. Sweep methods reachable only via internal endpoints, which nothing calls.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>TAS co-fix required for P78 retry-exhaustion path</h3>
+  <p>P78's T12 transition (PENDING_INSTALL → PENDING_DEACTIVATION on retry exhaustion) requires TAS to also handle <code>CL_STATE_CHANGED transitionType=T12</code>. Today TAS's <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains T11; T12 is missing. Without this, retried-and-exhausted connections orphan TAS install candidates.</p>
+  <table class="tc-table">
+    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TC-6.</strong> When CL emits <code>T12</code>, then TAS closes any open install candidate for that connection.</td>
+        <td class="expected">TAS marks candidate <code>CANCELLED_BY_UPSTREAM</code> reason <code>RETRY_EXHAUSTED</code>.</td>
+        <td class="observed">Handler logs "no action required"; candidate stays OPEN. Tech must add T12 to the trigger set.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Code evidence</summary>
+    <div>
+      <ul>
+        <li><strong>Scheduler config:</strong> <code>services/csp-connection-lifecycle-service/.../application-prod.yml:18</code> (<code>AWS_SCHEDULER_ENABLED: false</code>).</li>
+        <li><strong>Scheduler hook (unwired):</strong> <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> — defined, never called.</li>
+        <li><strong>Sweep batches (correct, reachable):</strong> <code>SchedulingServiceImpl</code> (the four batch methods) &middot; <code>InternalTaskController</code> (their endpoints).</li>
+        <li><strong>TAS T12 co-fix site:</strong> <code>services/csp-tas-service/.../ClStateChangedHandler.java</code> — <code>UPSTREAM_RETRY_TRIGGERS</code> set.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ====================== BUG-02 ====================== -->
+<section class="item" id="bug-02">
+  <div class="head">
+    <span class="id">BUG-02</span>
+    <h2>DAS scheduler unwired (P191 held-allocation reroute inert)</h2>
+    <span class="pill bug">BUG</span>
+  </div>
+  <p class="muted">Same scheduler-wiring failure as BUG-01, this time on DAS. P191's held-allocation reroute sweep is supposed to retry <code>UNASSIGNED</code> allocations periodically; instead 230 rows sit untouched. <strong>P41 (acceptance window) is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
+
+  <div class="spec-ref">
+    <strong>Original spec:</strong>
+    <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> &middot;
+    <strong>P191</strong> (held-allocation reroute cadence — <code>UNASSIGNED</code> allocations past P50 retry-exhaustion get re-attempted on this schedule).
+    <br>
+    <strong>PRD:</strong> <code>yaml-prd/demand-allocation-prd-v1.2.yaml</code> — state machine includes held-state reroute; <code>trigger_source = SYSTEM</code>.
+  </div>
+
+  <h3>Test cases — expected vs observed</h3>
+  <table class="tc-table">
+    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TC-1.</strong> When an allocation exhausts P50 routing retries (5 attempts), then it lands in <code>UNASSIGNED</code> held state.</td>
+        <td class="expected">DAS writes <code>UNASSIGNED</code> + <code>p50_exhausted_at = now()</code>.</td>
+        <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-2.</strong> When the P191 sweep cadence fires, then it re-enters routing for all <code>UNASSIGNED</code> rows past their held-state max.</td>
+        <td class="expected">Held rows re-attempt routing. If a previously-cooled-down CSP becomes eligible, they're re-assigned. Otherwise extend held-state.</td>
+        <td class="observed">Sweep never fires. 230 <code>UNASSIGNED</code> rows in prod, oldest &gt; 24h, never re-routed.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded.</td>
+        <td class="expected">DAS writes <code>routing_failure_count++</code> on the allocation row. After sustained failure, allocation eventually transitions to expired.</td>
+        <td class="observed">Counter never advances; rows sit indefinitely.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-4.</strong> When the scheduler config is set correctly at service startup, then <code>scheduleRecurring(...)</code> registers the P191 batch.</td>
+        <td class="expected"><code>AWS_SCHEDULER_ENABLED: true</code> in DAS <code>application-prod.yml</code>; <code>scheduleRecurring</code> called with the P191 batch (and the other 5 DAS sweep batches, which are out of scope for PM but co-wired by tech).</td>
+        <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> in DAS <code>application-prod.yml</code>. Same root cause as BUG-01.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Code evidence</summary>
+    <div>
+      <ul>
+        <li><strong>Scheduler config:</strong> DAS <code>application-prod.yml</code> — <code>AWS_SCHEDULER_ENABLED: false</code>.</li>
+        <li><strong>Sweep batches (correct, reachable):</strong> <code>BatchTriggerServiceImpl</code> (six sweep methods) &middot; <code>BatchTriggerController</code> (their endpoints).</li>
+        <li><strong>Other DAS sweeps co-wired by tech (out of PM scope):</strong> <code>reallocation_dwell</code>, <code>override_watchdog</code>, <code>conversion_eval</code>, <code>exposure_recalc</code>. Share the same root cause; tech wires them together.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ====================== BUG-03 ====================== -->
+<section class="item" id="bug-03">
+  <div class="head">
+    <span class="id">BUG-03</span>
+    <h2>DAS allocation state never reaches <code>ACCEPTED</code> (DAS-internal atomic write required)</h2>
+    <span class="pill bug">BUG</span>
+  </div>
+  <p class="muted">AMENDMENT-02 (Apr 2026) deleted the explicit CSP-accept call and declared acceptance "automatic on assignment". DAS has the receiver fully wired (<code>POST /api/demand-allocation/csps/{cspId}/accept</code> + <code>AllocationServiceImpl.acceptAllocation(...)</code>); no service calls it. Result in prod: <strong>0 rows ever in <code>ACCEPTED</code>; 504 / 504 stuck at <code>ASSIGNED</code> / <code>UNASSIGNED</code>; <code>acceptance_timestamp</code> NULL on every row.</strong></p>
+
+  <div class="hint">
+    <strong>Direction (per PM):</strong> the fix is a <strong>DAS-internal atomic write</strong>. When DAS routes an allocation to <code>ASSIGNED</code>, it transitions to <code>ACCEPTED</code> in the same database transaction — no cross-service call, no auto-accept sender to define. AMENDMENT-02's "automatic on assignment" phrasing matches this when read as <em>same-service atomic</em> rather than <em>cross-service deferred</em>. Removes the "who calls who" question entirely.
+  </div>
+
+  <div class="spec-ref">
+    <strong>Original spec:</strong>
+    <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> &middot;
+    <strong>§4.1, §4.3</strong> (allocation state machine — <code>ASSIGNED</code> → <code>ACCEPTED</code> transition) &middot;
+    <strong>INV-DAO-03</strong> (stickiness post-<code>ACCEPTED</code>).
+    <br>
+    <strong>AMENDMENT-02</strong> (Installation Flow, Apr 2026) — declares acceptance "automatic on assignment" but does not name the sender; this item is the disambiguation.
+    <br>
+    <strong>PRD:</strong> <code>yaml-prd/demand-allocation-prd-v1.2.yaml</code> — state + field + transition validation all present.
+  </div>
+
+  <h3>Test cases — expected vs observed</h3>
+  <table class="tc-table">
+    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TC-1.</strong> When DAS routes an allocation to a CSP, then the allocation row transitions to <code>ACCEPTED</code> with <code>acceptance_timestamp = now()</code>.</td>
+        <td class="expected">Allocation row: <code>state = ACCEPTED</code>, <code>acceptance_timestamp</code> set. INV-DAO-03 stickiness now applies — subsequent re-routes blocked.</td>
+        <td class="observed">Allocation row: <code>state = ASSIGNED</code>, <code>acceptance_timestamp = NULL</code>. 504 / 504 rows in this state across prod history.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-2.</strong> When TAS reads the allocation to drive install candidate creation, then it observes <code>ACCEPTED</code> state.</td>
+        <td class="expected">TAS reads <code>state = ACCEPTED</code>; install candidate created with confirmed allocation.</td>
+        <td class="observed">TAS still creates the install candidate (via the parallel <code>ALLOCATION_ACCEPTED</code> event path), but reads <code>state = ASSIGNED</code> on the allocation row. State and event are out of sync.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-3.</strong> When the same connection is reallocated after CSP install-failure, then INV-DAO-03 stickiness has already terminated for the prior allocation.</td>
+        <td class="expected">Prior allocation row stays in <code>ACCEPTED</code> until install completes or fails. After failure, INV-DAO-03 releases stickiness and the new allocation enters the pipeline.</td>
+        <td class="observed">INV-DAO-03 stickiness is inert because nothing reaches <code>ACCEPTED</code>. Re-allocation works by accident, but the guard isn't actually guarding anything.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-4.</strong> When the routing happy-path completes (DAS picks CSP-A successfully), then the database state-transition <code>ASSIGNED → ACCEPTED</code> happens in a single atomic write.</td>
+        <td class="expected">DAS routing engine writes <code>state = ACCEPTED</code> in the same SQL transaction as the initial allocation write. No cross-service call, no auto-accept event. Atomic.</td>
+        <td class="observed">Routing engine writes <code>state = ASSIGNED</code> and stops. AMENDMENT-02 deleted the prior cross-service call; the replacement atomic-write was never added.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-5.</strong> When the integration-spec mentions <code>InstallDasClient.notifyAccepted()</code>, then that class either exists in code OR the integration spec is updated to reflect the atomic-write approach.</td>
+        <td class="expected">Integration spec is internally consistent — either the named sender exists, or the spec describes the atomic-write fix.</td>
+        <td class="observed">Integration spec at <code>app-specs/das-install-integration-flow.md</code> names <code>InstallDasClient.notifyAccepted()</code> — a class that does not exist in any service. Spec is stale.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Expected behaviour — flow (after fix)</h3>
+  <div class="mermaid">
+sequenceDiagram
+    participant Cust as Customer App
+    participant CL as CL Service
+    participant DAS as DAS Service
+    participant TAS as TAS Service
+    Cust->>CL: CONNECTION_REQUEST
+    CL->>DAS: ALLOCATION_REQUESTED (via event)
+    Note over DAS: Routing engine picks CSP-A
+    Note over DAS: SAME DB TRANSACTION:<br/>1. INSERT allocation (state=ASSIGNED)<br/>2. UPDATE allocation (state=ACCEPTED, acceptance_ts=now)<br/>3. INSERT outbox event ALLOCATION_ACCEPTED
+    DAS->>TAS: ALLOCATION_ACCEPTED event
+    TAS->>TAS: Create install candidate
+    Note over DAS: INV-DAO-03 stickiness now ENFORCED on this row
+  </div>
+
+  <details>
+    <summary>Code evidence</summary>
+    <div>
+      <ul>
+        <li><strong>Receiver (already wired, won't be needed after atomic-write fix):</strong> <code>services/csp-demand-allocation-service/.../AllocationServiceImpl.acceptAllocation(...)</code> &middot; <code>POST /api/demand-allocation/csps/{cspId}/accept</code>.</li>
+        <li><strong>Routing engine (the atomic-write site):</strong> <code>services/csp-demand-allocation-service/.../RoutingEngineServiceImpl</code> — where the allocation write happens; the fix adds the <code>state = ACCEPTED</code> transition in the same transaction.</li>
+        <li><strong>Stale integration-spec reference (to update):</strong> <code>app-specs/das-install-integration-flow.md</code> — names <code>InstallDasClient.notifyAccepted()</code> (does not exist). Either delete or rewrite to reflect atomic-write.</li>
+        <li><strong>Prod evidence:</strong> 504 / 504 rows in <code>ASSIGNED</code> / <code>UNASSIGNED</code> across prod; zero in <code>ACCEPTED</code>; every <code>acceptance_timestamp</code> NULL.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ====================== BUG-04 ====================== -->
+<section class="item" id="bug-04">
+  <div class="head">
+    <span class="id">BUG-04</span>
+    <h2>Capacity OS skips connection-count increment after installation</h2>
+    <span class="pill bug">BUG</span>
+  </div>
+  <p class="muted">The OS prescribes "<strong>Capacity OS counts +1 on T2</strong>" in four explicit places. The code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — so the normal happy-path <code>INITIAL</code> installs silently fall into an empty <code>else</code> branch and the counter doesn't move. <strong>Not CSP-app-visible</strong> — partner app reads CL directly. Affects internal routing decisions (load-ratio + zone-retire guard) only.</p>
+
+  <div class="spec-ref">
+    <strong>Original spec:</strong>
+    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
+    <strong>§4.3 T2 (L250):</strong> "Consumers: Capacity OS (active count +1), Quality OS (measurement begins), D&amp;A OS (allocation confirmed)…"
+    <strong>§4.1 (L202)</strong> &middot;
+    <strong>§6.3 (L508):</strong> identical wording.
+    <br>
+    <code>os/Capacity_Coverage_OS_LOCKED.md</code> &middot; <strong>§2.5:</strong> "Counter reflects all ACTIVE connections in the zone, regardless of how they entered ACTIVE state."
+  </div>
+
+  <h3>Test cases — expected vs observed</h3>
+  <table class="tc-table">
+    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TC-1.</strong> When a connection completes T2 (<code>PENDING_INSTALL → ACTIVE</code>, <code>activation_source = INITIAL</code>), then Capacity OS increments <code>zones.active_connection_count</code> for the zone by 1.</td>
+        <td class="expected">Counter advances by 1 per <code>INITIAL</code> T2 event.</td>
+        <td class="observed">Code at <code>InboundEventProcessingServiceImpl.java:446-461</code> gates increment to <code>if ("RESUME".equals(activationSource))</code>. <code>INITIAL</code> hits the <code>else</code> branch with debug log <code>LOG_CONNECTION_ACTIVATION_SKIP</code>. Counter unchanged.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-2.</strong> When a connection transitions <code>PAUSED → ACTIVE</code> (<code>activation_source = RESUME</code>), then Capacity OS increments the counter.</td>
+        <td class="expected">Counter advances by 1.</td>
+        <td class="observed">This path works — RESUME hits the <code>if</code> branch correctly.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-3.</strong> When the load-ratio is computed in the batch-evaluation cycle, then it reads accurate <code>active_connection_count</code>.</td>
+        <td class="expected">Load ratio at <code>BatchEvaluationServiceImpl:105</code> = real ACTIVE / cap. Cap-calibration cycles compute correctly.</td>
+        <td class="observed">Load ratio reads stale counter (under-counted for zones with high INITIAL throughput). Cap-calibration cycles miscalibrate.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-4.</strong> When a zone's last ACTIVE connection deactivates, then <code>guardActiveConnectionCountZeroForRetire</code> allows the zone to retire.</td>
+        <td class="expected">Counter reaches 0; retire-guard at <code>ZoneServiceImpl:136</code> allows zone retirement.</td>
+        <td class="observed">If the zone had INITIAL activations that never incremented, the counter may report 0 prematurely (when ACTIVE connections still exist) — or remain stuck at 0 if it was never advanced. Direction of drift depends on RESUME / INITIAL mix.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-5.</strong> When the CSP partner views their active-connection count on the partner app, then the number matches CL truth.</td>
+        <td class="expected">Partner app count = CL <code>connections</code> table count for <code>(csp_id, state=ACTIVE)</code>.</td>
+        <td class="observed">Already correct — partner app reads CL directly via <code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code>. <strong>Bypasses Capacity OS entirely.</strong> Capacity OS bug doesn't affect this surface.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Backfill</h3>
+  <p>Once the guard is removed, future T2 events increment correctly. Historical drift requires a one-shot reconciliation: <code>UPDATE zones SET active_connection_count = (SELECT count(*) FROM csp_connection_lifecycle_service.connections WHERE current_state='ACTIVE' AND zone_id = zones.zone_id)</code>. Run during a window with cap-calibration paused.</p>
+
+  <details>
+    <summary>Code evidence</summary>
+    <div>
+      <ul>
+        <li><strong>Bug site:</strong> <code>services/csp-capacity-coverage-service/.../InboundEventProcessingServiceImpl.java:446-461</code> — remove the RESUME-only guard.</li>
+        <li><strong>Reader sites (where the drift matters):</strong> <code>BatchEvaluationServiceImpl:105</code> (load-ratio for cap-calibration) &middot; <code>ZoneServiceImpl:136</code> (<code>guardActiveConnectionCountZeroForRetire</code>).</li>
+        <li><strong>Proof bug doesn't affect CSP app:</strong> <code>services/csp-connection-lifecycle-service/.../CspConnectionQueryController.java:62</code> &middot; <code>services/csp-gateway-service/.../AssuranceStripFacadeService.java:520-525</code>.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ====================== BUG-05 ====================== -->
+<section class="item" id="bug-05">
+  <div class="head">
+    <span class="id">BUG-05</span>
+    <h2><code>CL_INSTALLATION_QUALITY_SIGNAL</code> — producer-record contract drifted from CL OS §S-10</h2>
+    <span class="pill bug">BUG</span>
+  </div>
+  <p class="muted">CL emits the signal on every T2; <strong>Quality OS rejects every single one</strong> with HTTP 400 <code>VALIDATION_FAILED</code>. 53 emissions, 0 delivered, 100 % failure rate. Root cause: payload-contract drift in the CL producer record. Three required fields don't match the CL OS S-10 + base-schema contract.</p>
+
+  <div class="spec-ref">
+    <strong>Original spec:</strong>
+    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
+    <strong>§7.2 Signal Schema (Outbound) — base schema</strong> &middot;
+    <strong>§7.4 Outbound Signal Types catalogue (L512)</strong> &middot;
+    <strong>Appendix A S-10 (L1305-1326):</strong> full payload spec for <code>CL_INSTALLATION_QUALITY_SIGNAL</code> &middot;
+    <strong>Idempotency rule (L1325):</strong> <code>connection_id + activation_event_ref</code> &middot;
+    <strong>Emit rule (L1504):</strong> on successful T2 (<code>activation_source = INITIAL</code>) only.
+    <br>
+    <code>os/esr/ESR_v2_27_LOCKED.md</code> &middot; <strong>EVENT: CL_INSTALLATION_QUALITY_SIGNAL (L448)</strong> — registered as FACT event from CLS.
+  </div>
+
+  <h3>Test cases — expected vs observed</h3>
+  <table class="tc-table">
+    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TC-1.</strong> When T2 fires (<code>PENDING_INSTALL → ACTIVE</code>, source INITIAL), then CL emits a payload with field name <code>signal_id</code> (per §7.2 base schema).</td>
+        <td class="expected">JSON payload contains <code>"signal_id": "&lt;UUID&gt;"</code>.</td>
+        <td class="observed">JSON payload contains <code>"event_id": "&lt;UUID&gt;"</code> — wrong field name. Quality OS validates <code>@NotBlank signalId</code>, gets blank, rejects. Producer record at <code>ClInstallationQualitySignal.java</code> inherits <code>eventId</code> from <code>DomainEvent</code> envelope.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-2.</strong> When CL emits the payload, then field <code>signal_type</code> carries the §7.4 enum entry for this signal.</td>
+        <td class="expected">JSON contains <code>"signal_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> (string-typed enum entry).</td>
+        <td class="observed">JSON contains <code>"event_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> — wrong field name. Producer record has no <code>signalType</code> field; relies on base <code>getEventType()</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-3.</strong> When T2 fires, then field <code>previous_state</code> is populated.</td>
+        <td class="expected">JSON contains <code>"previous_state": "PENDING_INSTALL"</code> (per §7.2 — required for state transitions, and T2 is one).</td>
+        <td class="observed">JSON contains <code>"previous_state": null</code>. Producer code passes <code>null</code> at the T2 emit site instead of <code>"PENDING_INSTALL"</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-4.</strong> When the payload reaches Quality OS, then it passes the receiver's <code>@NotBlank</code> / <code>@NotNull</code> validation.</td>
+        <td class="expected">HTTP 200; <code>install_maturation_ledger</code> row written.</td>
+        <td class="observed">HTTP 400 <code>VALIDATION_FAILED</code> on three fields (<code>signalId</code>, <code>signalType</code>, <code>previousState</code>). 53 / 53 outbox rows marked FAILED. Receiver matches the OS exactly — the producer is the side that drifted.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-5.</strong> When CL re-emits an existing signal (e.g. on retry), then Quality OS dedupes by <code>(connection_id, activation_event_ref)</code> per the OS idempotency rule.</td>
+        <td class="expected">Duplicate signals don't create duplicate <code>install_maturation_ledger</code> rows.</td>
+        <td class="observed">Receiver-side idempotency works correctly (already implemented). Once the producer is fixed and historical FAILED rows are replayed, dedupe handles it cleanly.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-6.</strong> When the signal is emitted, then the payload does <strong>not</strong> include fields not in the OS contract.</td>
+        <td class="expected">Payload contains only the base schema + S-10 specific fields. No <code>correlation_id</code>, no <code>causation_id</code>.</td>
+        <td class="observed">Payload contains <code>correlation_id: null</code> and <code>causation_id: &lt;UUID&gt;</code>. Receiver tolerates unknown fields (Jackson default), so these are noise — but the producer record should be trimmed to S-10.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Verbatim validation error from prod (captured by the dispatcher into <code>failure_reason</code>)</h3>
+  <pre><code>400 Bad Request: {
+  "field_errors": [
+    {"field": "signalId",      "message": "must not be blank"},
+    {"field": "signalType",    "message": "must not be null"},
+    {"field": "previousState", "message": "must not be null"}
+  ],
+  "error_code": "VALIDATION_FAILED",
+  "message":    "Request validation failed"
+}</code></pre>
+
+  <details>
+    <summary>Code evidence — side-by-side</summary>
+    <div>
+      <p><strong>Producer (drifted) — <code>services/csp-connection-lifecycle-service/.../domain/event/outbound/ClInstallationQualitySignal.java</code>:</strong></p>
+<pre><code>public record ClInstallationQualitySignal(
+    String eventId,            // ← should be signalId
+    String correlationId,      // ← not in S-10
+    String causationId,        // ← not in S-10
+    String connectionId,
+    Instant timestamp,
+    String previousState,      // ← populated as null at emit
+    String newState,
+    String cspId,
+    ...
+) implements DomainEvent {
+    @Override public String getEventType() {        // ← serializes as event_type
+        return "CL_INSTALLATION_QUALITY_SIGNAL";
+    }
+}</code></pre>
+      <p><strong>Receiver (OS-aligned) — <code>services/csp-quality-service/.../domain/event/inbound/ClInstallationQualitySignal.java</code>:</strong></p>
+<pre><code>public record ClInstallationQualitySignal(
+    @NotBlank String signalId,
+    @NotNull  String signalType,
+    @NotBlank String connectionId,
+    @NotNull  Instant timestamp,
+    @NotNull  String previousState,
+    @NotNull  String newState,
+    @NotBlank String cspId,
+    ...
+) {}</code></pre>
+      <p><strong>Reproducing the evidence in prod:</strong></p>
+<pre><code>SELECT failure_reason FROM csp_connection_lifecycle_service.outbox_record
+WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClInstallationQualitySignal'
+  AND status = 'FAILED';
+-- 53 rows, every one with the same 3 field_errors.</code></pre>
+    </div>
+  </details>
+</section>
+
+<!-- ====================== BUG-06 ====================== -->
+<section class="item" id="bug-06">
+  <div class="head">
+    <span class="id">BUG-06</span>
+    <h2>CAEO <code>customer_id</code> column populated with CSP-ID for installation task</h2>
+    <span class="pill bug">BUG</span>
+  </div>
+  <p class="muted"><code>CL_CONNECTION_ACTIVATED</code> doesn't carry <code>customer_id</code> in its payload, so the CAEO consumer plugs <code>cspId</code> in as a placeholder. Want: <code>customer_id</code> gets populated in the CL event so that CAEO's <code>customer_id</code> column carries the actual customer.</p>
+
+  <div class="spec-ref">
+    <strong>Original spec:</strong>
+    <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
+    <strong>S-03: <code>CL_CONNECTION_ACTIVATED</code></strong> payload definition (L1195-1213).
+    <strong>Missing field today</strong> — CL OS S-03 does not currently include <code>customer_id</code>. The fix has two parts: OS amendment + CL service emit + CAEO consumer.
+    <br>
+    <strong>CAEO impact:</strong> Customer Access Entitlement Object should hold the real customer the entitlement belongs to.
+  </div>
+
+  <h3>Test cases — expected vs observed</h3>
+  <table class="tc-table">
+    <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>TC-1.</strong> When CL emits <code>CL_CONNECTION_ACTIVATED</code> on T2 (after the OS amendment + CL emit fix), then the payload contains <code>customer_id</code>.</td>
+        <td class="expected">JSON contains <code>"customer_id": "&lt;UUID&gt;"</code> — the customer the connection serves, read directly from the CL <code>connections</code> table.</td>
+        <td class="observed">Payload has no <code>customer_id</code> field. CL OS S-03 contract doesn't include it.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-2.</strong> When CAEO consumes <code>CL_CONNECTION_ACTIVATED</code>, then it writes <code>customer_access_entitlement.customer_id</code> from the event's <code>customer_id</code> field.</td>
+        <td class="expected"><code>customer_id</code> column = real customer's UUID.</td>
+        <td class="observed">CAEO at <code>InboundEventProcessingServiceImpl.java:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> — the CSP-ID lands in the customer-id column. Author: Aryan Gaurav, Apr 10 2026.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-3.</strong> When a downstream consumer queries CAEO by <code>customer_id</code>, then it finds entitlement rows for the matching customer.</td>
+        <td class="expected">A query like <code>findByCustomerId("&lt;real-customer-uuid&gt;")</code> returns rows.</td>
+        <td class="observed">Method exists in the repository (<code>findByCustomerId</code>) but is never called anywhere in the monorepo today — because the column has the wrong value. Once fixed, the column becomes queryable.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-4.</strong> When sibling <code>CL_CONNECTION_*</code> events fire (PAUSED, RESCUED, DEACTIVATED), then their payloads also include <code>customer_id</code> if any consumer needs it.</td>
+        <td class="expected">Sibling-event contract uniformity. If only <code>CL_CONNECTION_ACTIVATED</code> needs it for now, document the scope decision in the OS amendment.</td>
+        <td class="observed">Sibling events also lack <code>customer_id</code>. Tech to audit which siblings need the field and roll the OS amendment to cover them together.</td>
+      </tr>
+      <tr>
+        <td><strong>TC-5.</strong> When the historical backfill runs (one-shot), then existing CAEO rows with <code>customer_id = &lt;some-CSP-ID&gt;</code> get corrected.</td>
+        <td class="expected"><code>UPDATE customer_access_entitlement SET customer_id = c.customer_id FROM csp_connection_lifecycle_service.connections c WHERE customer_access_entitlement.connection_id = c.connection_id</code>. Join via <code>connection_id</code> (always present on both sides).</td>
+        <td class="observed">Backfill not yet run. ~50 of 19,573 CAEO rows currently have CSP-IDs in <code>customer_id</code> column.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Source of truth — already in place</h3>
+  <p>The CL <code>connections</code> table holds the <code>connection_id → customer_id</code> mapping on every row. CL has the value at T2 emit time — adding it to the event payload is a column read on the same row. No new upstream lookup needed. Backfill is similarly trivial via the connection-id join.</p>
+
+  <details>
+    <summary>Code evidence</summary>
+    <div>
+      <ul>
+        <li><strong>Bug site:</strong> <code>services/csp-customer-access-service/.../InboundEventProcessingServiceImpl.java:82</code> — the placeholder write.</li>
+        <li><strong>CL emit site (to update):</strong> <code>services/csp-connection-lifecycle-service/...</code> — <code>CL_CONNECTION_ACTIVATED</code> producer.</li>
+        <li><strong>Source-of-truth column:</strong> <code>csp_connection_lifecycle_service.connections.customer_id</code>.</li>
+        <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — CAEO row created, <code>customer_id = a0a7b6</code> (the CSP-ID).</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============================================================ -->
+<!-- ============ GAPS ============ -->
+<!-- ============================================================ -->
+
 <div style="margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 12px;">
   <p>Installation Flow — Tech Handover &middot; 2026-06-03 &middot; Owner: Ashish Raj</p>
 </div>
