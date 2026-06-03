@@ -303,10 +303,10 @@
       </tr>
       <tr>
         <td><strong>05</strong></td>
-        <td><a href="#item-05" class="tab-link" data-tab="item-05">DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)</a></td>
-        <td><span class="pill gap">GAP</span></td>
+        <td><a href="#item-05" class="tab-link" data-tab="item-05">DAS allocation state never reaches ACCEPTED (post-AMENDMENT-02 wiring orphan; DAS-internal atomic write)</a></td>
+        <td><span class="pill bug">BUG</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
-        <td><span class="mono">demand-allocation-service</span> &amp;/or <span class="mono">tas</span> (tech picks)</td>
+        <td><span class="mono">demand-allocation-service</span> (DAS-internal atomic write: route → ACCEPTED in same transaction)</td>
       </tr>
       <tr>
         <td><strong>06</strong></td>
@@ -996,9 +996,11 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
   <div class="classify">
     <div class="classify-head">
-      <div class="classify-type">GAP</div>
+      <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
       <div class="classify-headline">
-        <strong>Not a §4.1-vs-§4.3 OS contradiction.</strong> Real story: AMENDMENT-02 (Apr 2026) deleted the explicit CSP-accept call (<code>/actions/accept</code>) and declared acceptance "automatic on assignment" — but never named a backend sender for the auto-accept. DAS has the receiver (<code>POST /api/demand-allocation/csps/{cspId}/accept</code> + <code>AllocationServiceImpl.acceptAllocation(...)</code>) fully wired; <strong>no service calls it</strong>. Result in prod: <strong>0 rows in ACCEPTED, ever.</strong> 504/504 stuck at ASSIGNED/UNASSIGNED. <code>acceptance_timestamp</code> NULL on every row. INV-DAO-03 stickiness inert (no rows to protect).
+        <strong>AMENDMENT-02 (Apr 2026) deleted the explicit CSP-accept call (<code>/actions/accept</code>) and declared acceptance "automatic on assignment" — but never named a backend sender for the auto-accept.</strong> DAS has the receiver (<code>POST /api/demand-allocation/csps/{cspId}/accept</code> + <code>AllocationServiceImpl.acceptAllocation(...)</code>) fully wired; <strong>no service calls it</strong>. Result in prod: <strong>0 rows in ACCEPTED, ever.</strong> 504/504 stuck at ASSIGNED/UNASSIGNED. <code>acceptance_timestamp</code> NULL on every row. INV-DAO-03 stickiness inert (no rows to protect).
+        <br><br>
+        <strong>Direction (per PM):</strong> the auto-accept must be a <strong>DAS-internal atomic write</strong> &mdash; when DAS routes an allocation, it transitions directly to <code>ACCEPTED</code> in the same transaction as the <code>ASSIGNED</code> write, no cross-service call. Removes the "who calls who" question entirely. AMENDMENT-02's "automatic on assignment" wording matches this when read as <em>same-service atomic</em> rather than <em>cross-service deferred</em>.
       </div>
     </div>
     <table class="define-table">
