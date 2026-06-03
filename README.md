@@ -2,7 +2,7 @@
 
 **Owner:** Ashish Raj · **Started:** 2026-05-29 · **Target audience:** Wiom CSP tech for implementation
 
-14 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff. The HTML groups the items into two ownership buckets (Go-ahead from Vaibhav / Pending on Dhruv) so a wider audience can see the current waiting line at a glance.
+13 items on the installation journey, each classified as **Gap** or **Bug**, captured one per markdown file in `items/` and (at the end) rendered to a single human-readable `index.html` for handoff. The HTML groups the items into two ownership buckets (Go-ahead from Vaibhav / Pending on Dhruv) so a wider audience can see the current waiting line at a glance.
 
 ## How the PM team writes items
 
@@ -53,48 +53,47 @@ Every BUG item's classification card carries this sub-type. GAP items don't need
 | # | Title | Type | Bucket | Service(s) to update | Status |
 |---|---|---|---|---|---|
 | 01 | [Same CSP re-assigned in single-CSP zones (P51 bypass)](items/01-same-csp-loop-single-zone.md) | Bug | 2 · Pending on Dhruv | csp-demand-allocation-service (single behavioral fix) | Open |
-| 02 | [Propose 2 slots + customer counter-proposal](items/02-two-slots-and-counter-proposal.md) | Gap | 1 · Vaibhav go-ahead | ES PRD, csp-tas-service (schema + DTO + handler), partner app, customer app | Open |
-| 03 | [Bifurcate cancel-by-customer vs cancel-by-system](items/03-cancel-bifurcation-customer-vs-system.md) | Gap | 1 · Vaibhav go-ahead | Customer backend (source), csp-tas-service (handler), ES PRD (sentence) | Open |
-| 04 | [CLOS timeout scheduler unwired (P75/P76/P77/P78 inert — P74 carved out to Item 14)](items/04-clos-scheduler-unwired.md) | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-connection-lifecycle-service (scheduler infra), csp-tas-service (T3 retry co-fix) | Open |
-| 05 | [DAS allocation scheduler unwired (P191 inert — P41 carved out to Item 14)](items/05-das-scheduler-unwired.md) | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-demand-allocation-service (scheduler infra) | Open |
-| 06 | [DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)](items/06-das-state-never-accepted.md) | Gap | 1 · Vaibhav go-ahead | csp-demand-allocation-service / csp-tas-service / csp-gateway-service (tech-picks mechanism); AMENDMENT-02 follow-up (PM) | Open |
-| 07 | [Change-team-member workflow post technician assignment (Install only)](items/07-change-team-member-workflow.md) | Gap | 1 · Vaibhav go-ahead | csp-tas-service (install allowed-actions), csp-gateway-service (`can_reassign` flag), CSP App (UI) | Open |
-| 08 | [IVR 2.0 integration for Cx ↔ Px interaction](https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html) | Gap | 1 · Vaibhav go-ahead | IVR routing-table refactor — external spec on `ashish-raj-wiom/IVR-Routing-Solutioning` | Open |
-| 09 | Capacity OS code skips connection increment after installation | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-capacity-coverage-service (remove RESUME-only guard) + one-time backfill | Open |
-| 10 | `CL_INSTALLATION_QUALITY_SIGNAL` — CL producer record drifted from CL OS S-10 contract (`signal_id` sent as `event_id`, `signal_type` sent as `event_type`, `previous_state=null`) → 53/53 (100%) rejected by Quality OS validation | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-connection-lifecycle-service producer record alignment to CL OS v1.7.1 §S-10 + Part 2 base schema | Open |
-| 11 | CAEO `customer_id` column has CSP-ID for installation task | Bug · Impl-miss | 1 · Vaibhav go-ahead | CL OS (add `customer_id` to outbound contract), csp-connection-lifecycle-service (populate field in `CL_CONNECTION_ACTIVATED`), csp-customer-access-service (read & write) | Open |
-| 12 | `failure_subreason_code` blank on `INSTALLATION_FAILED` — implement OS-aligned 6-option picker + 4-field auto-populate per CL OS §7.2 | Gap | 1 · Vaibhav go-ahead | Partner App (replace picker with OS sub-reason enum), csp-tas-service (propagate sub-reason on event), csp-connection-lifecycle-service (populate 4 OS fields on `INSTALLATION_FAILED`), ES PRD | Open |
-| 13 | DAS doesn't publish supply-side events when a zone has only one CSP | Gap | 1 · Vaibhav go-ahead | csp-demand-allocation-service (continuity-mode detection + 3 publisher call sites — Capacity OS receivers already built) | Open |
-| 14 | CLOS P74 (72h) + DAS P41 (2h) — does the timer start from `ASSIGNED` or from `ACCEPTED`? | Decision | 2 · Pending on Dhruv | PM decision; once made, Items 04 and 05 absorb the answer | Open |
+| 02 | [Bifurcate cancel-by-customer vs cancel-by-system](items/02-cancel-bifurcation-customer-vs-system.md) | Gap | 1 · Vaibhav go-ahead | Customer backend (source), csp-tas-service (handler), ES PRD (sentence) | Open |
+| 03 | [CLOS timeout scheduler unwired (P75/P76/P77/P78 inert — P74 carved out to Item 13)](items/03-clos-scheduler-unwired.md) | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-connection-lifecycle-service (scheduler infra), csp-tas-service (T3 retry co-fix) | Open |
+| 04 | [DAS allocation scheduler unwired (P191 inert — P41 carved out to Item 13)](items/04-das-scheduler-unwired.md) | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-demand-allocation-service (scheduler infra) | Open |
+| 05 | [DAS allocation state never reaches ACCEPTED (AM-02 wiring orphan)](items/05-das-state-never-accepted.md) | Gap | 1 · Vaibhav go-ahead | csp-demand-allocation-service / csp-tas-service / csp-gateway-service (tech-picks mechanism); AMENDMENT-02 follow-up (PM) | Open |
+| 06 | [Change-team-member workflow post technician assignment (Install only)](items/06-change-team-member-workflow.md) | Gap | 1 · Vaibhav go-ahead | csp-tas-service (install allowed-actions), csp-gateway-service (`can_reassign` flag), CSP App (UI) | Open |
+| 07 | [IVR 2.0 integration for Cx ↔ Px interaction](https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html) | Gap | 1 · Vaibhav go-ahead | IVR routing-table refactor — external spec on `ashish-raj-wiom/IVR-Routing-Solutioning` | Open |
+| 08 | Capacity OS code skips connection increment after installation | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-capacity-coverage-service (remove RESUME-only guard) + one-time backfill | Open |
+| 09 | `CL_INSTALLATION_QUALITY_SIGNAL` — CL producer record drifted from CL OS S-10 contract (`signal_id` sent as `event_id`, `signal_type` sent as `event_type`, `previous_state=null`) → 53/53 (100%) rejected by Quality OS validation | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-connection-lifecycle-service producer record alignment to CL OS v1.7.1 §S-10 + Part 2 base schema | Open |
+| 10 | CAEO `customer_id` column has CSP-ID for installation task | Bug · Impl-miss | 1 · Vaibhav go-ahead | CL OS (add `customer_id` to outbound contract), csp-connection-lifecycle-service (populate field in `CL_CONNECTION_ACTIVATED`), csp-customer-access-service (read & write) | Open |
+| 11 | `failure_subreason_code` blank on `INSTALLATION_FAILED` — implement OS-aligned 6-option picker + 4-field auto-populate per CL OS §7.2 | Gap | 1 · Vaibhav go-ahead | Partner App (replace picker with OS sub-reason enum), csp-tas-service (propagate sub-reason on event), csp-connection-lifecycle-service (populate 4 OS fields on `INSTALLATION_FAILED`), ES PRD | Open |
+| 12 | DAS doesn't publish supply-side events when a zone has only one CSP | Gap | 1 · Vaibhav go-ahead | csp-demand-allocation-service (continuity-mode detection + 3 publisher call sites — Capacity OS receivers already built) | Open |
+| 13 | CLOS P74 (72h) + DAS P41 (2h) — does the timer start from `ASSIGNED` or from `ACCEPTED`? | Decision | 2 · Pending on Dhruv | PM decision; once made, Items 03 and 05 absorb the answer | Open |
 
 ## Two ownership buckets (as of 2026-06-03)
 
-The 14 items above are grouped into two buckets in the HTML, by who needs to weigh in next:
+The 13 items above are grouped into two buckets in the HTML, by who needs to weigh in next:
 
-- **Bucket 1 — Go-ahead from Vaibhav** (12 items): **02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12, 13**
-- **Bucket 2 — Pending on Dhruv** (2 items): **01, 14**
+- **Bucket 1 — Go-ahead from Vaibhav** (11 items): **02, 03, 04, 05, 06, 07, 08, 09, 10, 11, 12**
+- **Bucket 2 — Pending on Dhruv** (2 items): **01, 13**
 
-## On items 09–13 (from the connection audit)
+## On items 08–12 (from the connection audit)
 
-Items 09–13 surfaced from the end-to-end audit of connection `f285e07f-85d1-40f6-a6cd-f94ab7742789` and are filed here for tech tracking. Each one carries an important nuance the headline doesn't capture:
+Items 08–12 surfaced from the end-to-end audit of connection `f285e07f-85d1-40f6-a6cd-f94ab7742789` and are filed here for tech tracking. Each one carries an important nuance the headline doesn't capture:
 
-- **Item 09** — CSP-app's active-connection count is NOT affected by this bug; the partner-app reads CL directly, bypassing Capacity OS. The skip only affects Capacity OS's internal counter and the routing / cap-calibration decisions that read from it. Fleet-wide magnitude needs a separate audit.
-- **Item 10** — root cause is a payload-contract drift in the CL producer record, not a dispatcher / infra issue. 53/53 emissions rejected by Quality OS validation with HTTP 400 `VALIDATION_FAILED` on three required fields: `signalId` ("must not be blank" — CL sends `event_id`), `signalType` ("must not be null" — CL sends `event_type`), `previousState` ("must not be null" — CL emits as `null` instead of `"PENDING_INSTALL"`). Quality OS receiver matches CL OS v1.7.1 §S-10 exactly; CL service producer record drifted. Fix lives entirely in `csp-connection-lifecycle-service / ClInstallationQualitySignal.java`.
-- **Item 11** — `CL_CONNECTION_ACTIVATED` doesn't carry `customer_id` in its payload, so CAEO consumer line 82 plugs in the CSP-ID as a placeholder. Want: CL adds `customer_id` to the event payload (it's already on the CL `connections` row — trivial addition), CAEO writes the actual customer.
-- **Item 12** — implement the OS-aligned 6-option sub-reason picker, with auto-populate of all 4 OS fields per CL OS §7.2 (Sub-reason fields, v1.2 amendment).
-- **Item 13** — supply-side escalation loop dead end-to-end. Capacity OS receivers are production-quality; DAS trigger call sites just need to be added.
+- **Item 08** — CSP-app's active-connection count is NOT affected by this bug; the partner-app reads CL directly, bypassing Capacity OS. The skip only affects Capacity OS's internal counter and the routing / cap-calibration decisions that read from it. Fleet-wide magnitude needs a separate audit.
+- **Item 09** — root cause is a payload-contract drift in the CL producer record, not a dispatcher / infra issue. 53/53 emissions rejected by Quality OS validation with HTTP 400 `VALIDATION_FAILED` on three required fields: `signalId` ("must not be blank" — CL sends `event_id`), `signalType` ("must not be null" — CL sends `event_type`), `previousState` ("must not be null" — CL emits as `null` instead of `"PENDING_INSTALL"`). Quality OS receiver matches CL OS v1.7.1 §S-10 exactly; CL service producer record drifted. Fix lives entirely in `csp-connection-lifecycle-service / ClInstallationQualitySignal.java`.
+- **Item 10** — `CL_CONNECTION_ACTIVATED` doesn't carry `customer_id` in its payload, so CAEO consumer line 82 plugs in the CSP-ID as a placeholder. Want: CL adds `customer_id` to the event payload (it's already on the CL `connections` row — trivial addition), CAEO writes the actual customer.
+- **Item 11** — implement the OS-aligned 6-option sub-reason picker, with auto-populate of all 4 OS fields per CL OS §7.2 (Sub-reason fields, v1.2 amendment).
+- **Item 12** — supply-side escalation loop dead end-to-end. Capacity OS receivers are production-quality; DAS trigger call sites just need to be added.
 
-Single-source markdowns for items 09–13 + 14 will follow under `items/`; the HTML carries the full spec in the meantime.
+Single-source markdowns for items 08–12 + 13 will follow under `items/`; the HTML carries the full spec in the meantime.
 
 ## Cross-item rollout sequencing
 
-Items 04, 05, 06 are wiring fixes that share scheduler/state-machine dependencies. **Recommended ship order:**
+Items 03, 05, 06 are wiring fixes that share scheduler/state-machine dependencies. **Recommended ship order:**
 
-1. **Item 06** first — every allocation reaches `ACCEPTED` correctly.
-2. **Item 05** next — turn on the DAS P191 reroute sweep (P41 carved out to Item 14).
-3. **Item 04** last — turn on CLOS P75 / P76 / P77 / P78 sweeps. The TAS T3-retry co-fix must ship as part of Item 04 itself (P74 retry semantics are carved out to Item 14 alongside the start-time decision).
+1. **Item 05** first — every allocation reaches `ACCEPTED` correctly.
+2. **Item 04** next — turn on the DAS P191 reroute sweep (P41 carved out to Item 13).
+3. **Item 03** last — turn on CLOS P75 / P76 / P77 / P78 sweeps. The TAS T3-retry co-fix must ship as part of Item 03 itself (P74 retry semantics are carved out to Item 13 alongside the start-time decision).
 
-Note that P74 (CLOS) and P41 (DAS) are explicitly excluded from Items 04 and 05 until Dhruv decides whether those timers anchor on `ASSIGNED` or `ACCEPTED` (see Item 14).
+Note that P74 (CLOS) and P41 (DAS) are explicitly excluded from Items 03 and 05 until Dhruv decides whether those timers anchor on `ASSIGNED` or `ACCEPTED` (see Item 13).
 
 ## Related background already on file
 
