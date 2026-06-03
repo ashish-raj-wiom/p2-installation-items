@@ -679,10 +679,15 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
   <div class="spec-ref">
     <strong>Original spec:</strong>
     <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
-    <strong>S-03: <code>CL_CONNECTION_ACTIVATED</code></strong> payload definition (L1195-1213).
-    <strong>Missing field today</strong> — CL OS S-03 does not currently include <code>customer_id</code>. The fix has two parts: OS amendment + CL service emit + CAEO consumer.
+    <strong>S-03: <code>CL_CONNECTION_ACTIVATED</code></strong> payload definition (L1195-1213). The CL <code>connections</code> table holds <code>customer_id</code> on every row (it's where CL reads <code>csp_id</code>, <code>zone_id</code>, etc. from at emit time).
+    <br><br>
+    <strong>The fix is in two places — no OS amendment needed:</strong>
     <br>
-    <strong>CAEO impact:</strong> Customer Access Entitlement Object should hold the real customer the entitlement belongs to.
+    1. <strong>CL service:</strong> add <code>customerId</code> to the <code>ClConnectionActivated</code> record and populate from the same <code>connections</code> row that supplies the existing fields. CL already emits additive fields beyond what S-03 lists (e.g. <code>correlationId</code>, <code>causationId</code>, <code>activatedAt</code>) without OS amendments — adding one more is the same pattern.
+    <br>
+    2. <strong>CAEO consumer:</strong> read <code>customerId</code> from the event and write it to the <code>customer_access_entitlement.customer_id</code> column. Replace the placeholder write at <code>InboundEventProcessingServiceImpl.java:82</code>.
+    <br><br>
+    <strong>S-03 documentation update</strong> is a paperwork pass — recommended for hygiene, not a blocker for build. The existing consumers (Compensation, Quality, Capacity, CAEO) ignore unknown fields, so the additive change ships unilaterally on CL's side.
   </div>
 
   <h3>Test cases — expected vs observed</h3>
@@ -690,9 +695,9 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
     <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
     <tbody>
       <tr>
-        <td><strong>TC-1.</strong> When CL emits <code>CL_CONNECTION_ACTIVATED</code> on T2 (after the OS amendment + CL emit fix), then the payload contains <code>customer_id</code>.</td>
-        <td class="expected">JSON contains <code>"customer_id": "&lt;UUID&gt;"</code> — the customer the connection serves, read directly from the CL <code>connections</code> table.</td>
-        <td class="observed">Payload has no <code>customer_id</code> field. CL OS S-03 contract doesn't include it.</td>
+        <td><strong>TC-1.</strong> When CL emits <code>CL_CONNECTION_ACTIVATED</code> on T2, then the payload contains <code>customer_id</code>.</td>
+        <td class="expected">JSON contains <code>"customer_id": "&lt;UUID&gt;"</code> — the customer the connection serves, read directly from the CL <code>connections</code> table (same row that supplies <code>csp_id</code>, <code>zone_id</code>, etc.).</td>
+        <td class="observed">Payload has no <code>customer_id</code> field. The CL service producer record (<code>ClConnectionActivated.java</code>) doesn't include it.</td>
       </tr>
       <tr>
         <td><strong>TC-2.</strong> When CAEO consumes <code>CL_CONNECTION_ACTIVATED</code>, then it writes <code>customer_access_entitlement.customer_id</code> from the event's <code>customer_id</code> field.</td>
@@ -706,8 +711,8 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
       </tr>
       <tr>
         <td><strong>TC-4.</strong> When sibling <code>CL_CONNECTION_*</code> events fire (PAUSED, RESCUED, DEACTIVATED), then their payloads also include <code>customer_id</code> if any consumer needs it.</td>
-        <td class="expected">Sibling-event contract uniformity. If only <code>CL_CONNECTION_ACTIVATED</code> needs it for now, document the scope decision in the OS amendment.</td>
-        <td class="observed">Sibling events also lack <code>customer_id</code>. Tech to audit which siblings need the field and roll the OS amendment to cover them together.</td>
+        <td class="expected">Sibling-event contract uniformity. Engineering audits which sibling events have downstream consumers that would benefit from <code>customer_id</code> and adds the field to those producer records together.</td>
+        <td class="observed">Sibling events also lack <code>customer_id</code>. Out of scope for this item if no downstream consumer needs them — only <code>CL_CONNECTION_ACTIVATED</code> is required to unblock CAEO.</td>
       </tr>
       <tr>
         <td><strong>TC-5.</strong> When the historical backfill runs (one-shot), then existing CAEO rows with <code>customer_id = &lt;some-CSP-ID&gt;</code> get corrected.</td>
