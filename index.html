@@ -223,7 +223,7 @@
     <button class="tab-btn" data-tab="item-10"><span class="num">10</span>Change team member</button>
     <button class="tab-btn" data-tab="item-11"><span class="num">11</span>IVR 2.0 routing</button>
     <button class="tab-btn" data-tab="item-12"><span class="num">12</span>Capacity skip-T2</button>
-    <button class="tab-btn" data-tab="item-13"><span class="num">13</span>Quality signal outbox</button>
+    <button class="tab-btn" data-tab="item-13"><span class="num">13</span>Quality signal contract drift</button>
     <button class="tab-btn" data-tab="item-14"><span class="num">14</span>CAEO customer_id</button>
     <button class="tab-btn" data-tab="item-15"><span class="num">15</span>Sub-reason blank</button>
     <button class="tab-btn" data-tab="item-16"><span class="num">16</span>DAS single-CSP zone</button>
@@ -250,7 +250,7 @@
       <li><a href="#item-09" class="tab-link" data-tab="item-09"><strong>09</strong> &mdash; Voice directions + address-locality + landmark on the CSP / technician app</a></li>
       <li><a href="#item-10" class="tab-link" data-tab="item-10"><strong>10</strong> &mdash; Change-team-member workflow post technician assignment</a></li>
       <li><a href="#item-12" class="tab-link" data-tab="item-12"><strong>12</strong> &mdash; Capacity OS code skips connection increment after installation <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
-      <li><a href="#item-13" class="tab-link" data-tab="item-13"><strong>13</strong> &mdash; <code>CL_INSTALLATION_QUALITY_SIGNAL</code> outbox FAILED — CL never delivers to Quality OS <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
+      <li><a href="#item-13" class="tab-link" data-tab="item-13"><strong>13</strong> &mdash; <code>CL_INSTALLATION_QUALITY_SIGNAL</code> — CL producer record drifted from CL OS S-10 contract (100 % rejected by Quality OS validation) <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
       <li><a href="#item-14" class="tab-link" data-tab="item-14"><strong>14</strong> &mdash; CAEO <code>customer_id</code> column has CSP-ID for installation task <span style="color: var(--ink-soft); font-size: 0.85rem;">(BUG)</span></a></li>
       <li><a href="#item-15" class="tab-link" data-tab="item-15"><strong>15</strong> &mdash; <code>failure_subreason_code</code> blank on <code>INSTALLATION_FAILED</code> <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
       <li><a href="#item-16" class="tab-link" data-tab="item-16"><strong>16</strong> &mdash; DAS doesn't publish supply-side events when a zone has only one CSP <span style="color: var(--ink-soft); font-size: 0.85rem;">(GAP)</span></a></li>
@@ -378,7 +378,7 @@
       </tr>
       <tr>
         <td><strong>13</strong></td>
-        <td><a href="#item-13" class="tab-link" data-tab="item-13"><code>CL_INSTALLATION_QUALITY_SIGNAL</code> outbox FAILED — CL never delivers to Quality OS</a></td>
+        <td><a href="#item-13" class="tab-link" data-tab="item-13"><code>CL_INSTALLATION_QUALITY_SIGNAL</code> — CL producer record drifted from CL OS S-10 contract (3 field-level deviations; 100 % rejected)</a></td>
         <td><span class="pill bug">BUG</span></td>
         <td><span class="bucket-tag b1">Bucket 1</span></td>
         <td><span class="mono">csp-connection-lifecycle-service</span> (fix outbox dispatcher)</td>
@@ -2135,40 +2135,78 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 
 <!-- ============ ITEM 13 ============ -->
 <section id="item-13" class="tab-pane">
-  <h2>13 — <code>CL_INSTALLATION_QUALITY_SIGNAL</code> outbox FAILED &mdash; CL never delivers to Quality OS</h2>
+  <h2>13 — <code>CL_INSTALLATION_QUALITY_SIGNAL</code>: CL producer record drifted from CL OS S-10 contract</h2>
 
   <div class="classify">
     <div class="classify-head">
       <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
       <div class="classify-headline">
-        <strong>CL emits <code>CL_INSTALLATION_QUALITY_SIGNAL</code> on T2; the outbox row sits at status <code>FAILED</code>; Quality OS never receives the signal.</strong> Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> events have been processed by Quality OS in prod. The fix is straightforward: repair the CL outbox dispatcher so the signal gets delivered.
+        <strong>CL emits the signal on every T2; Quality OS rejects every single one with HTTP 400 <code>VALIDATION_FAILED</code>.</strong> <strong>53 emissions, 0 delivered, 100 % failure rate.</strong> Root cause is a payload-contract drift in the CL producer record (<code>csp-connection-lifecycle-service / ClInstallationQualitySignal.java</code>) — three required fields don't match the CL OS v1.7.1 S-10 + base-schema contract: <code>signal_id</code> sent as <code>event_id</code>, <code>signal_type</code> sent as <code>event_type</code>, and <code>previous_state</code> emitted as <code>null</code>. Quality OS receiver follows the OS exactly; CL service is the side that drifted. Dispatcher, infra, retries — all fine. Only the payload shape is wrong.
       </div>
     </div>
     <table class="define-table">
       <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr><td>OS</td><td class="define-yn yes">✓ Yes</td><td class="define-note">CL OS: CL emits <code>CL_INSTALLATION_QUALITY_SIGNAL</code> exactly once per connection lifetime on T2 success. Quality OS subscribes.</td></tr>
-      <tr><td>Code (CL emit)</td><td class="define-yn yes">✓ Wired</td><td class="define-note">Signal IS produced at T2 — outbox row written at 2026-06-02 07:03:48.532 UTC for the audited connection.</td></tr>
-      <tr><td>Code (CL outbox dispatcher)</td><td class="define-yn no">✗ FAILED</td><td class="define-note">Outbox row status = <code>FAILED</code>, <code>completed_at = null</code>, no error context recorded. Never retried.</td></tr>
-      <tr><td>Code (Quality receiver)</td><td class="define-yn yes">✓ Subscribed</td><td class="define-note"><code>/cl-installation-quality-signal</code> endpoint exists and is wired into <code>application.yml</code>.</td></tr>
-      <tr><td>Prod</td><td class="define-yn no">✗ Broken</td><td class="define-note">Zero <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows ever processed in Quality OS prod history.</td></tr>
+      <tr><td>OS (CL v1.7.1 §S-10 + Part 2 base schema)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">Canonical spec: signal_id (UUID, Required), signal_type (enum per §7.4, Required), previous_state (Required for state transitions — T2 is one). Emitted exactly once per connection lifetime on T2 (activation_source = INITIAL). Idempotency key: connection_id + activation_event_ref.</td></tr>
+      <tr><td>OS (ESR v2.27/v2.28)</td><td class="define-yn yes">✓ Yes</td><td class="define-note">Registered as a FACT event from CLS. Schema mirrors S-10.</td></tr>
+      <tr><td>Code (CL producer record)</td><td class="define-yn no">✗ Drifted</td><td class="define-note"><code>ClInstallationQualitySignal.java</code> in CL service uses generic <code>DomainEvent</code> envelope (<code>eventId</code> / <code>eventType</code>) instead of S-10's <code>signalId</code> / <code>signalType</code>. <code>previousState</code> field present but populated as <code>null</code> on emit.</td></tr>
+      <tr><td>Code (CL outbox dispatcher)</td><td class="define-yn yes">✓ Working</td><td class="define-note">Dispatcher picks up the row, POSTs to Quality OS, receives HTTP 400, captures the response into <code>failure_reason</code>, marks <code>status = FAILED</code> with <code>failure_count = 4</code>. Doing its job correctly.</td></tr>
+      <tr><td>Code (Quality OS receiver)</td><td class="define-yn yes">✓ OS-aligned</td><td class="define-note"><code>ClInstallationQualitySignal.java</code> receiver record in Quality OS matches CL OS S-10 exactly (<code>@NotBlank signalId</code>, <code>@NotNull signalType</code>, <code>@NotNull previousState</code>, …). Endpoint <code>/cl-installation-quality-signal</code> wired into <code>application.yml</code>. This is the side that follows the OS.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Broken</td><td class="define-note">53 <code>ClInstallationQualitySignal</code> outbox rows, all <code>FAILED</code>. 0 ever delivered. Quality OS history holds 0 of these events. Each row carries the same validation error.</td></tr>
     </table>
   </div>
+
+  <h3>The verbatim validation error from prod (failure_reason on every FAILED row)</h3>
+  <pre><code>400 Bad Request: {
+  "field_errors": [
+    {"field": "signalId",      "message": "must not be blank"},
+    {"field": "signalType",    "message": "must not be null"},
+    {"field": "previousState", "message": "must not be null"}
+  ],
+  "error_code": "VALIDATION_FAILED",
+  "message":    "Request validation failed"
+}</code></pre>
+
+  <h3>OS contract vs what's implemented — side by side</h3>
+  <p>Source-of-truth = <strong>CL OS v1.7.1 S-10</strong> + <strong>Part 2 base schema</strong>. Both Quality OS receiver and CL service producer record were checked against it.</p>
+
+  <table>
+    <thead><tr><th>OS field (snake_case)</th><th>OS requirement</th><th>CL producer emits (today)</th><th>Quality OS receiver expects</th><th>Match?</th></tr></thead>
+    <tbody>
+      <tr><td colspan="5" style="background: var(--bg-soft); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft);">Base schema (every outbound CL signal)</td></tr>
+      <tr><td><code>signal_id</code></td><td>UUID, Required, unique</td><td><strong style="color: var(--no);">Wrong name:</strong> <code>event_id</code></td><td><code>@NotBlank signalId</code></td><td><span class="pill bug">NO</span></td></tr>
+      <tr><td><code>signal_type</code></td><td>enum per §7.4, Required</td><td><strong style="color: var(--no);">Wrong name:</strong> <code>event_type: "CL_INSTALLATION_QUALITY_SIGNAL"</code> (string literal, not enum)</td><td><code>@NotNull signalType</code></td><td><span class="pill bug">NO</span></td></tr>
+      <tr><td><code>connection_id</code></td><td>UUID, Required</td><td><code>connection_id</code> ✓</td><td><code>@NotBlank connectionId</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>timestamp</code></td><td>ISO-8601, Required</td><td><code>timestamp</code> ✓</td><td><code>@NotNull timestamp</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>previous_state</code></td><td>Required for state transitions (T2 is one). Should be <code>PENDING_INSTALL</code>.</td><td><strong style="color: var(--no);">Value = null</strong> on emit</td><td><code>@NotNull previousState</code></td><td><span class="pill bug">NO</span></td></tr>
+      <tr><td><code>new_state</code></td><td>Required, enum</td><td><code>new_state: "ACTIVE"</code> ✓</td><td><code>@NotNull newState</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>csp_id</code></td><td>UUID, Required</td><td><code>csp_id</code> ✓</td><td><code>@NotBlank cspId</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>zone_id</code></td><td>string, Required</td><td><code>zone_id</code> ✓</td><td><code>@NotNull zoneId</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>triggered_by_event_id</code></td><td>UUID, Required</td><td><code>triggered_by_event_id</code> ✓</td><td><code>@NotBlank triggeredByEventId</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td colspan="5" style="background: var(--bg-soft); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft);">S-10 specific body</td></tr>
+      <tr><td><code>install_completed_on_time</code></td><td>boolean, Required</td><td><code>install_completed_on_time</code> ✓</td><td><code>boolean installCompletedOnTime</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>rework_required</code></td><td>boolean, Required</td><td><code>rework_required</code> ✓</td><td><code>boolean reworkRequired</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>retry_count</code></td><td>integer, Required</td><td><code>retry_count</code> ✓</td><td><code>int retryCount</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>activated_at</code></td><td>ISO-8601, Required</td><td><code>activated_at</code> ✓</td><td><code>@NotNull activatedAt</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+      <tr><td><code>activation_event_ref</code></td><td>UUID, Required — idempotency anchor</td><td><code>activation_event_ref</code> ✓</td><td><code>@NotBlank activationEventRef</code></td><td><span style="color: var(--yes); font-weight: 700;">YES</span></td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size: 0.88rem; color: var(--ink-soft);"><strong>Extra fields CL emits that aren't in the OS contract:</strong> <code>correlation_id</code> (null), <code>causation_id</code>. Receiver ignores unknown fields, so they're noise — not active failures. They suggest the producer record was copy-pasted from a generic <code>DomainEvent</code> base without being trimmed to S-10.</p>
 
   <h3>Backend flow — today vs. want</h3>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
     <div>
       <div class="sub-head bad">Today</div>
       <div class="flow">
-        <div class="node">T2 fires (CL: PENDING_INSTALL → ACTIVE)</div>
+        <div class="node">T2 fires (PENDING_INSTALL → ACTIVE)</div>
         <div class="arrow">↓</div>
-        <div class="node">CL writes outbox row<br><code>CL_INSTALLATION_QUALITY_SIGNAL</code></div>
+        <div class="node error">CL emits payload with<br><code>event_id</code> / <code>event_type</code> / <code>previous_state=null</code><br><small>3 field-level deviations from S-10</small></div>
         <div class="arrow">↓</div>
-        <div class="node warn">CL outbox dispatcher picks up row</div>
+        <div class="node">CL outbox dispatcher POSTs<br>to <code>/cl-installation-quality-signal</code></div>
         <div class="arrow">↓</div>
-        <div class="node error">status = FAILED<br><small>no completed_at, no error context</small></div>
-        <div class="arrow-label">never retried, never delivered</div>
+        <div class="node error">Quality OS validates → HTTP 400<br><small>3 @NotBlank / @NotNull failures</small></div>
         <div class="arrow">↓</div>
-        <div class="node error">Quality OS: 0 events ever received</div>
+        <div class="node error">Outbox row → FAILED · 53 / 53 (100 %)</div>
       </div>
     </div>
     <div>
@@ -2176,29 +2214,51 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       <div class="flow">
         <div class="node">T2 fires</div>
         <div class="arrow">↓</div>
-        <div class="node">CL writes outbox row</div>
+        <div class="node new">CL emits payload with<br><code>signal_id</code> / <code>signal_type</code> / <code>previous_state="PENDING_INSTALL"</code><br><small>matches CL OS S-10 exactly</small></div>
         <div class="arrow">↓</div>
-        <div class="node new">CL dispatcher delivers the signal cleanly</div>
+        <div class="node">CL outbox dispatcher POSTs<br>to <code>/cl-installation-quality-signal</code></div>
         <div class="arrow">↓</div>
-        <div class="node success">Quality OS receives <code>CL_INSTALLATION_QUALITY_SIGNAL</code> once per T2</div>
+        <div class="node success">Quality OS validates → 200 OK<br><small>install_maturation_ledger updated</small></div>
+        <div class="arrow">↓</div>
+        <div class="node success">Outbox row → COMPLETED</div>
       </div>
     </div>
   </div>
 
   <h3>The fix</h3>
   <ol class="fix-plan">
-    <li><span class="svc-tag code">Code</span><span class="step-text">In <code>csp-connection-lifecycle-service</code>, diagnose why the dispatcher leaves <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows in <code>FAILED</code> with no error context. Likely candidates to investigate: routing-registry config mismatch, consumer-endpoint 4xx swallowed, dispatcher swallowing an exception. Fix the delivery so the signal reaches Quality OS.</span></li>
-    <li><span class="svc-tag code">Code</span><span class="step-text">Add error capture / structured logging on outbox failures so any future delivery break is debuggable from the row alone, not from re-reading code paths.</span></li>
-    <li><span class="svc-tag code">Code</span><span class="step-text">Replay the historical <code>FAILED</code> rows once the dispatcher is repaired — Quality OS should idempotently accept duplicate eventIds.</span></li>
+    <li><span class="svc-tag code">Code (CL)</span><span class="step-text">In <code>csp-connection-lifecycle-service / ClInstallationQualitySignal.java</code>, replace the inherited <code>eventId</code> field with <code>signalId</code> (matching CL OS Part 2 base schema). Confirm Jackson serializes as snake-case <code>signal_id</code>.</span></li>
+    <li><span class="svc-tag code">Code (CL)</span><span class="step-text">Add a <code>signalType</code> field on the same record, set to the CL OS §7.4 enum entry for this signal type. Confirm Jackson serializes as snake-case <code>signal_type</code>. Stop relying on the base <code>DomainEvent.getEventType()</code> for this.</span></li>
+    <li><span class="svc-tag code">Code (CL)</span><span class="step-text">At the T2 emit site in CL service, populate <code>previousState = "PENDING_INSTALL"</code> when constructing the signal — currently passed as <code>null</code>.</span></li>
+    <li><span class="svc-tag code">Code (CL)</span><span class="step-text">Trim the stray <code>correlation_id</code> and <code>causation_id</code> fields from the producer record (not in S-10; receiver ignores them but they're contract noise).</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">Replay the 53 historical <code>FAILED</code> outbox rows once the producer is aligned. Idempotency key is <code>connection_id + activation_event_ref</code> per S-10 — Quality OS will dedupe correctly.</span></li>
   </ol>
+
+  <h3>Notes for tech</h3>
+  <ul>
+    <li><strong>The dispatcher is innocent.</strong> Outbox handler is correctly catching the 400, writing <code>failure_reason</code>, marking the row FAILED. It did its job and produced the evidence we used to find this. No dispatcher changes needed.</li>
+    <li><strong>The receiver is innocent.</strong> Quality OS's <code>ClInstallationQualitySignal.java</code> receiver record is exactly what CL OS S-10 prescribes — both the field naming (<code>signalId</code>, <code>signalType</code>) and the <code>@NotNull</code>/<code>@NotBlank</code> validations. It's the only side currently following the OS.</li>
+    <li><strong>Sibling signals to check.</strong> Other CL outbound signals (<code>CL_CONNECTION_REQUESTED</code>, <code>CL_STATE_CHANGED</code>, <code>CL_CONNECTION_ACTIVATED</code>, <code>CL_DEACTIVATION_INITIATED</code>) all use the same <code>DomainEvent</code> base envelope. They currently deliver fine only because their receivers were built when the contract was looser. Once Quality OS or other consumers tighten validation to match the OS base schema, the same drift will surface. Worth a pre-emptive audit of all CL outbound producer records against §7.2 base schema.</li>
+    <li><strong>ESR registration check.</strong> The CL_INSTALLATION_QUALITY_SIGNAL schema is registered in ESR v2.27. If ESR has CI-time enforcement for producer-record-vs-registered-schema, this drift would have been caught at build. Worth confirming with the ESR team whether such enforcement is live; if not, it's the systemic prevention here.</li>
+  </ul>
 
   <details>
     <summary>Source quotes &amp; references</summary>
     <div>
       <ul>
-        <li><strong>OS:</strong> <code>os/Connection_Lifecycle_OS_v1_6_LOCKED.md</code> — CL emit contract for <code>CL_INSTALLATION_QUALITY_SIGNAL</code>.</li>
-        <li><strong>Prod:</strong> outbox row for connection <code>f285e07f-…</code> at 2026-06-02 07:03:48.532 UTC, status <code>FAILED</code>; 0 <code>CL_INSTALLATION_QUALITY_SIGNAL</code> rows in Quality OS prod history.</li>
-        <li><strong>Source MD:</strong> <code>items/13-cl-installation-quality-signal-outbox-failed.md</code> <em>(to be added)</em></li>
+        <li><strong>OS (canonical contract):</strong> <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §7.2 Signal Schema (Outbound) base, §7.4 Outbound Signal Types catalogue (L512), Appendix A S-10 schema (L1305-1326), idempotency rule (L1325), emit rule on T2 (L1504).</li>
+        <li><strong>OS (ESR registration):</strong> <code>os/esr/ESR_v2_27_LOCKED.md</code> EVENT: CL_INSTALLATION_QUALITY_SIGNAL (L448).</li>
+        <li><strong>Code (producer — drifted):</strong> <code>services/csp-connection-lifecycle-service/.../domain/event/outbound/ClInstallationQualitySignal.java</code> — uses <code>String eventId</code> and inherits <code>getEventType()</code> from <code>DomainEvent</code> base instead of declaring <code>signalId</code> + <code>signalType</code> per S-10.</li>
+        <li><strong>Code (receiver — OS-aligned):</strong> <code>services/csp-quality-service/.../domain/event/inbound/ClInstallationQualitySignal.java</code> — declares <code>@NotBlank signalId</code>, <code>@NotNull signalType</code>, <code>@NotNull previousState</code>, matching S-10 exactly.</li>
+        <li><strong>Prod evidence (the exact validation error, captured by the dispatcher into <code>outbox_record.failure_reason</code>):</strong>
+<pre style="font-size: 0.78rem; margin: 0.3rem 0;"><code>SELECT failure_reason FROM csp_connection_lifecycle_service.outbox_record
+WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClInstallationQualitySignal'
+  AND status = 'FAILED';
+-- 53 rows, every one with the same 3 field_errors:
+--   signalId      "must not be blank"
+--   signalType    "must not be null"
+--   previousState "must not be null"</code></pre></li>
+        <li><strong>Source MD:</strong> <code>items/13-cl-installation-quality-signal-producer-contract-drift.md</code> <em>(to be added)</em></li>
       </ul>
     </div>
   </details>
