@@ -280,7 +280,7 @@
 <section class="item" id="bug-01">
   <div class="head">
     <span class="id">BUG-01</span>
-    <h2>CLOS timeout scheduler unwired (P75 / P76 / P77 / P78 inert)</h2>
+    <h2>CLOS timeout scheduler unwired (P75 / P76 / P77 inert)</h2>
     <span class="pill bug">BUG</span>
   </div>
   <p class="muted">CL OS defines four system-driven timeouts that must fire on background sweeps. The batch methods, endpoints, and scheduler hooks all exist in code — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>. Zero system-driven CL transitions in 90 days. <strong>P74 is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
@@ -289,7 +289,7 @@
     <strong>Original spec:</strong>
     <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
     <strong>§5 State Machine</strong> (transitions T9, T12 + timeout edges) &middot;
-    <strong>SPR params:</strong> P75 (7d REQUESTED expiry), P76 (90d PAUSE limit), P77 (45d PENDING_DEACTIVATION), P78 (3 retry cap).
+    <strong>SPR params:</strong> P75 (7d REQUESTED expiry), P76 (90d PAUSE limit), P77 (45d PENDING_DEACTIVATION).
     <br>
     <strong>PRD:</strong> <code>yaml-prd/connection-lifecycle-prd-v1.6.yaml</code> — state machine + system-source transitions all defined.
   </div>
@@ -314,25 +314,20 @@
         <td class="observed">No such transitions. Stale <code>PENDING_DEACTIVATION</code> rows accumulate.</td>
       </tr>
       <tr>
-        <td><strong>TC-4.</strong> When P78 retry-cap is hit on a connection (3 install-failure cycles), then the next failure transitions to <code>PENDING_DEACTIVATION</code> via T12 (<code>RETRY_EXHAUSTION_DEACTIVATION</code>).</td>
-        <td class="expected">CL emits T12 transition; DAS stops re-routing the connection.</td>
-        <td class="observed">P78 logic is event-driven (not scheduler-driven), so this works in isolation. <strong>Listed for completeness — no fix needed for P78 within this item.</strong></td>
-      </tr>
-      <tr>
-        <td><strong>TC-5.</strong> When the sweep cadence runs (15-minute granularity is acceptable; finer is fine), then sweep methods are invoked from a recurring schedule.</td>
+        <td><strong>TC-4.</strong> When the sweep cadence runs (15-minute granularity is acceptable; finer is fine), then sweep methods are invoked from a recurring schedule.</td>
         <td class="expected"><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> is called at service-startup with the four sweep batches registered. <code>AWS_SCHEDULER_ENABLED: true</code> in <code>application-prod.yml</code>.</td>
         <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> at <code>application-prod.yml:18</code>. <code>scheduleRecurring(...)</code> never called. Sweep methods reachable only via internal endpoints, which nothing calls.</td>
       </tr>
     </tbody>
   </table>
 
-  <h3>TAS co-fix required for P78 retry-exhaustion path</h3>
-  <p>P78's T12 transition (PENDING_INSTALL → PENDING_DEACTIVATION on retry exhaustion) requires TAS to also handle <code>CL_STATE_CHANGED transitionType=T12</code>. Today TAS's <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains T11; T12 is missing. Without this, retried-and-exhausted connections orphan TAS install candidates.</p>
+  <h3>TAS co-fix — handle the <code>T12</code> retry-exhaustion transition</h3>
+  <p>When CL emits <code>CL_STATE_CHANGED</code> with <code>transitionType=T12</code> (the retry-exhaustion transition, <code>PENDING_INSTALL → PENDING_DEACTIVATION</code>), TAS today doesn't handle it. The <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains <code>T11</code>; <code>T12</code> is missing. Without this co-fix, retried-and-exhausted connections orphan TAS install candidates. Independent of the scheduler wiring above, but engineering should ship them together so the orphan symptom doesn't surface when the sweeps start firing.</p>
   <table class="tc-table">
     <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
     <tbody>
       <tr>
-        <td><strong>TC-6.</strong> When CL emits <code>T12</code>, then TAS closes any open install candidate for that connection.</td>
+        <td><strong>TC-5.</strong> When CL emits <code>T12</code>, then TAS closes any open install candidate for that connection.</td>
         <td class="expected">TAS marks candidate <code>CANCELLED_BY_UPSTREAM</code> reason <code>RETRY_EXHAUSTED</code>.</td>
         <td class="observed">Handler logs "no action required"; candidate stays OPEN. Tech must add T12 to the trigger set.</td>
       </tr>
