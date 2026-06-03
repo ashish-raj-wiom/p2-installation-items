@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GAP-02 — Change team member workflow (Install) · Change Spec</title>
+<title>GAP-02 — Change technician at any active state (Install) · Change Spec</title>
 <style>
   :root {
     --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
@@ -144,14 +144,14 @@
 
 <header class="doc">
   <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-02</div>
-  <h1>Change technician at <code>TECHNICIAN_ASSIGNED</code> (Install only)</h1>
-  <p class="lede">The install state machine already has a <code>(TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code> self-loop wired (with the comment "<em>// reassign</em>"). But <code>TasCandidateQueryServiceImpl.resolveAllowedActions(TECHNICIAN_ASSIGNED)</code> only returns <code>[MARK_ARRIVED]</code>, hiding the swap action. The CSP App therefore has no "Change technician" CTA. Surface the existing capability — Install only, this state only.</p>
+  <h1>Change technician at any active state (Install only)</h1>
+  <p class="lede">The CSP can swap the assigned technician any time after initial assignment, until the install candidate reaches a terminal state. That is the seven in-flight states from <code>TECHNICIAN_ASSIGNED</code> through <code>RATING_PENDING</code>. Today the install state machine wires the self-loop only at <code>TECHNICIAN_ASSIGNED</code>; this spec extends it to all seven, exposes <code>ASSIGN_TECHNICIAN</code> in the allowed-actions API, populates the gateway flag, and surfaces the CTA in the CSP App.</p>
   <div class="meta-row">
     <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
   </div>
   <div class="convention">
     <strong>Tier:</strong>
-    <span class="badge light">Light</span> — A1, A2, A5, A6, A8, B5. Allowed-actions list extension + UI surfacing.
+    <span class="badge light">Light</span> — A1, A2, A5, A6, A8, B5. State-machine extension on an existing action, allowed-actions surface, UI exposure.
     <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
   </div>
 </header>
@@ -160,12 +160,12 @@
   <h2>Quick Check</h2>
   <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
   <dl>
-    <dt>What is changing?</dt>     <dd>Expose the existing <code>ASSIGN_TECHNICIAN</code> self-loop at <code>TECHNICIAN_ASSIGNED</code> in the install allowed-actions API, and add a "Change technician" CTA on the CSP App install drilldown.</dd>
-    <dt>What triggered it?</dt>    <dd>Partner feedback — multi-tech CSPs need to swap before the assigned tech arrives at site. State machine supports it; gateway hides it.</dd>
-    <dt>Blast radius</dt>          <dd>TAS install <code>resolveAllowedActions</code> · Gateway <code>TaskDrilldown.can_reassign</code> (currently always null) · CSP App install drilldown.</dd>
-    <dt>Reversible?</dt>           <dd>Yes — the allowed-actions entry can be removed; the state-machine self-loop already existed before this change.</dd>
+    <dt>What is changing?</dt>     <dd>Allow technician swap (<code>ASSIGN_TECHNICIAN</code>) at all 7 in-flight install states where a technician is already assigned: <code>TECHNICIAN_ASSIGNED</code>, <code>ARRIVED_AT_SITE</code>, <code>INSTALLATION_IN_PROGRESS_PRE_FEE</code>, <code>FEE_COLLECTION_PENDING</code>, <code>INSTALLATION_IN_PROGRESS_POST_FEE</code>, <code>AWAITING_CUSTOMER_OTP</code>, <code>RATING_PENDING</code>.</dd>
+    <dt>What triggered it?</dt>    <dd>Partner feedback — CSPs need to swap technicians not just before arrival but also during on-site work (sick mid-install, swap to a senior tech for a tricky fee collection, etc.). State machine has the self-loop only at <code>TECHNICIAN_ASSIGNED</code> today.</dd>
+    <dt>Blast radius</dt>          <dd>Install state machine (6 new self-loops) · TAS allowed-actions resolver (7 case branches) · Gateway <code>TaskDrilldown.can_reassign</code> (currently null) · CSP App install drilldown.</dd>
+    <dt>Reversible?</dt>           <dd>Yes — the new self-loops + allowed-actions entries can be removed; only the existing <code>TECHNICIAN_ASSIGNED</code> self-loop predates this change.</dd>
     <dt>Money / PII / migration?</dt><dd>No / No / No.</dd>
-    <dt>OS impact / sign-off?</dt> <dd>None — state machine already covers the self-loop; the change is in the allowed-actions surface + UI.</dd>
+    <dt>OS impact / sign-off?</dt> <dd>None — candidate state machine lives in the install ES, not in a higher-level OS. Adding self-loops on an existing action is a behaviour-change in the ES, documented in ES PRD.</dd>
     <dt>Tier</dt>                  <dd>Light</dd>
   </dl>
 </aside>
@@ -173,7 +173,7 @@
 <div class="part-divider what">
   <div class="label">Part A</div>
   <h2>WHAT — The Change</h2>
-  <p>The PM's decisions: what state allows swap, how it's surfaced, and what is explicitly out of scope.</p>
+  <p>The PM's decisions: which states allow swap, how it's surfaced, what is explicitly out of scope.</p>
   <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
 </div>
 
@@ -183,11 +183,11 @@
   <span class="row-mode req">All rows required</span>
   <table>
     <tr><th style="width:28%">Field</th><th>Value</th></tr>
-    <tr><td>Change title</td><td>Change technician at <code>TECHNICIAN_ASSIGNED</code> (Install only)</td></tr>
+    <tr><td>Change title</td><td>Change technician at any active state (Install only)</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
     <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
-    <tr><td>Baseline (original PRD / OS)</td><td>Install candidate state machine in <code>services/csp-tas-service/.../install/domain/service/InstallationStateMachine.java</code> (the <code>TECHNICIAN_ASSIGNED</code> self-loop already wired). ES installation PRD allowed-actions table.</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>Install candidate state machine in <code>services/csp-tas-service/.../install/domain/service/InstallationStateMachine.java</code> (existing <code>TECHNICIAN_ASSIGNED</code> self-loop, the only one wired today). ES installation PRD §3 (the 14 in-flight + 6 terminal state set, per <code>CandidateState.java</code>).</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -198,9 +198,9 @@
   <span class="row-mode req">All rows required</span>
   <table>
     <tr><th style="width:30%">Question</th><th>Answer</th></tr>
-    <tr><td>What's wrong with the current behaviour?</td><td>The install state machine already wires <code>(TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code> as a swap self-loop (verified — see the line annotated <em>"// reassign"</em> in <code>InstallationStateMachine.java</code>). But <code>TasCandidateQueryServiceImpl.resolveAllowedActions(TECHNICIAN_ASSIGNED)</code> returns only <code>[MARK_ARRIVED]</code> — so the API never tells the CSP App that <code>ASSIGN_TECHNICIAN</code> is a valid next action. The gateway's <code>TaskDrilldown.can_reassign</code> field exists but is hard-coded to <code>null</code> on every install drilldown (verified at <code>HomeFacadeService</code> — the 6th of 6 INSTALL-specific nulls in the constructor block). The CSP App's <code>TaskDetail.canReassign</code> defaults to <code>false</code>.</td></tr>
-    <tr><td>Who experiences it?</td><td>CSPs running multi-technician operations whose initial pick becomes unavailable before the tech arrives at site (sick, route conflict, last-minute reassign to a senior tech).</td></tr>
-    <tr><td>Cost of leaving it as-is?</td><td>The CSP has to mark the install failed and let DAS reroute — which is destructive for the customer (install gets reassigned to a different CSP entirely, instead of staying with the original CSP under a different tech).</td></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>The install state machine wires <code>(TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code> only (line annotated "<em>// reassign</em>"). The CSP can't swap after the tech has arrived at site, during the install steps, during fee collection, during the OTP step, or during rating — even though a technician is assigned and the candidate is still active. Compounding this, even at <code>TECHNICIAN_ASSIGNED</code> the swap is hidden: <code>TasCandidateQueryServiceImpl.resolveAllowedActions(TECHNICIAN_ASSIGNED)</code> returns only <code>[MARK_ARRIVED]</code>, so the API doesn't tell the CSP App the action is available. Gateway's <code>TaskDrilldown.can_reassign</code> field is hard-coded <code>null</code>; CSP App's <code>TaskDetail.canReassign</code> defaults <code>false</code>.</td></tr>
+    <tr><td>Who experiences it?</td><td>CSPs running multi-technician operations — initial pick falls sick mid-install, senior tech needed for a tricky fee-collection conversation, route shuffle requires moving the booking to a closer tech who's now free.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>The CSP has no in-app path to swap mid-flow — either marks the install failed (destructive: customer gets re-allocated to a different CSP entirely) or completes the install with the wrong tech (operational pain, possible quality issue).</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -209,42 +209,64 @@
   <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
   <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes → before → after → why</em>.</div>
   <span class="row-mode req">All rows required</span>
+
+  <h3>The 7 active states where swap is allowed</h3>
+  <table>
+    <thead><tr><th style="width: 28%;">State</th><th style="width: 18%;">Self-loop today?</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td><code>TECHNICIAN_ASSIGNED</code></td><td>✓ Wired (the only one)</td><td>Already in the state-machine map with the comment <em>"// reassign"</em>.</td></tr>
+      <tr><td><code>ARRIVED_AT_SITE</code></td><td>✗ Add</td><td>Post-arrival, pre-install. Common need: tech swap after assessing the site.</td></tr>
+      <tr><td><code>INSTALLATION_IN_PROGRESS_PRE_FEE</code></td><td>✗ Add</td><td>Selfie / setup steps. Swap possible if first tech can't complete.</td></tr>
+      <tr><td><code>FEE_COLLECTION_PENDING</code></td><td>✗ Add</td><td>Customer is paying. Swap still allowed (PM-confirmed) — e.g. swap to a senior tech for the conversation.</td></tr>
+      <tr><td><code>INSTALLATION_IN_PROGRESS_POST_FEE</code></td><td>✗ Add</td><td>Post-fee install steps.</td></tr>
+      <tr><td><code>AWAITING_CUSTOMER_OTP</code></td><td>✗ Add</td><td>Waiting on customer OTP; swap still allowed if tech needs to leave.</td></tr>
+      <tr><td><code>RATING_PENDING</code></td><td>✗ Add</td><td>Rating is the last step; swap allowed up to (but not including) the terminal transition.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Atomic deltas</h3>
   <table class="delta">
     <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
     <tbody>
       <tr>
-        <td>TAS allowed-actions at <code>TECHNICIAN_ASSIGNED</code></td>
-        <td><code>[ MARK_ARRIVED ]</code></td>
-        <td><code>[ MARK_ARRIVED, ASSIGN_TECHNICIAN ]</code></td>
-        <td>The state-machine self-loop on <code>ASSIGN_TECHNICIAN</code> at this state already exists; just surface it on the API.</td>
+        <td>Install state machine — <code>ASSIGN_TECHNICIAN</code> self-loops</td>
+        <td>Only one self-loop wired: <code>(TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code>.</td>
+        <td>Six additional self-loops added — one for each of the other 6 active states in the table above. Each: <code>(state, ASSIGN_TECHNICIAN) → state</code>.</td>
+        <td>Lets the workflow accept the swap action at any active state where a technician is assigned.</td>
+      </tr>
+      <tr>
+        <td>TAS allowed-actions resolver — <code>resolveAllowedActions(state)</code></td>
+        <td><code>TECHNICIAN_ASSIGNED</code> returns <code>[MARK_ARRIVED]</code>; the six other active states return <code>List.of()</code> (empty).</td>
+        <td>Each of the 7 states returns its existing action list PLUS <code>ASSIGN_TECHNICIAN</code>. For the empty-list states, the result is <code>[ASSIGN_TECHNICIAN]</code>. For <code>TECHNICIAN_ASSIGNED</code>, the result is <code>[MARK_ARRIVED, ASSIGN_TECHNICIAN]</code>.</td>
+        <td>Exposes the swap action on the API surface so the CSP App can render the CTA.</td>
       </tr>
       <tr>
         <td>Gateway <code>TaskDrilldown.can_reassign</code> for install</td>
-        <td>Always <code>null</code> (the 6th null in the install-specific block of <code>HomeFacadeService</code>'s <code>new TaskDrilldown(...)</code> call)</td>
-        <td>Either populated from the install card's <code>allowed_actions</code> (true iff list contains <code>ASSIGN_TECHNICIAN</code>) <strong>OR</strong> the field is dropped entirely and the CSP App reads <code>allowed_actions</code> directly. Engineering's call — the latter is cleaner.</td>
-        <td>Either fix the dedicated flag or rely on <code>allowed_actions</code> carrying the action. Both work; pick one.</td>
+        <td>Always <code>null</code> (the 6th null in the install-specific block of <code>HomeFacadeService</code>'s <code>new TaskDrilldown(...)</code> call).</td>
+        <td>Either populated from the install card's <code>allowed_actions</code> (<code>true</code> iff the list contains <code>ASSIGN_TECHNICIAN</code>) <strong>OR</strong> the field is dropped entirely and the CSP App reads <code>allowed_actions</code> directly. Engineering's call — latter is cleaner.</td>
+        <td>Either fix the dedicated flag or rely on <code>allowed_actions</code>. Both work; pick one.</td>
       </tr>
       <tr>
         <td>CSP App install drilldown UI</td>
-        <td>No "Change technician" CTA</td>
-        <td>CTA visible at <code>TECHNICIAN_ASSIGNED</code> when <code>allowed_actions</code> contains <code>ASSIGN_TECHNICIAN</code> (or <code>can_reassign == true</code> if the dedicated flag is kept). CTA reuses the same technician picker as the initial-assignment flow.</td>
+        <td>No "Change technician" CTA at any state.</td>
+        <td>CTA visible at each of the 7 active states when <code>allowed_actions</code> contains <code>ASSIGN_TECHNICIAN</code>. CTA reuses the same technician picker as the initial-assignment flow.</td>
         <td>Surface the action; reuse the existing picker.</td>
       </tr>
       <tr>
         <td>Notification to the newly-assigned technician</td>
-        <td>No swap path exists today</td>
+        <td>No swap path exists today.</td>
         <td>New tech receives whatever standard install-assignment notification path the initial-assignment flow uses. Same path, same payload shape.</td>
-        <td>Re-use existing notification mechanism; don't invent a new one.</td>
+        <td>Re-use existing mechanism; don't invent a new one.</td>
       </tr>
       <tr>
         <td>ES PRD allowed-actions table</td>
-        <td>Lists <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code></td>
-        <td>Lists <code>MARK_ARRIVED, ASSIGN_TECHNICIAN</code> at <code>TECHNICIAN_ASSIGNED</code>.</td>
+        <td>Documents the current per-state allowed-actions (only <code>MARK_ARRIVED</code> at <code>TECHNICIAN_ASSIGNED</code>, empty at the 6 post-arrival states).</td>
+        <td>Documents the expanded allowed-actions: <code>ASSIGN_TECHNICIAN</code> available at all 7 active states from <code>TECHNICIAN_ASSIGNED</code> through <code>RATING_PENDING</code>.</td>
         <td>PM-side spec matches API behaviour.</td>
       </tr>
     </tbody>
   </table>
-  <div class="hint"><strong>Out of scope — explicitly:</strong> swap is NOT being added at <code>ARRIVED_AT_SITE</code> or any later state. The install state machine doesn't have <code>ASSIGN_TECHNICIAN</code> self-loops at those states; extending swap there would require state-machine additions and is a separate item. If PM wants mid-install swap, file a new spec. Also out of scope: Restore + NBREC families, system-initiated reassignment, CSP-to-CSP reassignment, customer notification about the swap, swap-to-self / un-assign (Install has no SELF assignee concept today).</div>
+  <div class="hint"><strong>Out of scope — explicitly:</strong> pre-tech-assignment states (<code>ACCEPTED</code>, <code>AWAITING_SLOT_PROPOSAL</code>, <code>SLOT_SELECTED</code>, <code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code>, <code>SLOT_CONFIRMED_BY_CUSTOMER</code>, <code>SLOT_AUTO_CONFIRMED</code>, <code>AWAITING_TECHNICIAN_ASSIGNMENT</code>) — no technician is assigned yet, so swap is logically n/a. The existing <code>(AWAITING_TECHNICIAN_ASSIGNMENT, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code> initial-assign transition is unchanged. Also out of scope: Restore + NBREC families, system-initiated reassignment, CSP-to-CSP reassignment, customer notification about the swap, swap-to-self / un-assign (Install has no SELF assignee concept today).</div>
   <hr class="sect-end">
 </section>
 
@@ -254,11 +276,12 @@
   <span class="row-mode req">All rows required</span>
   <table>
     <tr><th style="width:6%">#</th><th style="width:38%">Behaviour to protect</th><th>Why it's at risk</th></tr>
-    <tr><td>1</td><td>Initial-assignment flow at <code>AWAITING_TECHNICIAN_ASSIGNMENT</code></td><td>Allowed-actions there already includes <code>ASSIGN_TECHNICIAN</code> (verified). Adding the same action at <code>TECHNICIAN_ASSIGNED</code> must not affect this path.</td></tr>
-    <tr><td>2</td><td>State machine transitions at later states (<code>ARRIVED_AT_SITE</code> and beyond)</td><td>No <code>ASSIGN_TECHNICIAN</code> self-loops exist at those states. The CSP App must NOT show the swap CTA there.</td></tr>
-    <tr><td>3</td><td>Terminal-state guards (<code>INSTALLATION_REPORTED_FAILED</code>, <code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>, etc.)</td><td>Swap must be blocked at terminal states. The existing terminal-state checks in <code>InstallationStateMachine</code> must continue to reject.</td></tr>
-    <tr><td>4</td><td>Restore + NBREC families</td><td>Restore has its own <code>AllowedActionsResolver</code>; NBREC has its own <code>assignTask</code> endpoint. This change is in install-only code (<code>TasCandidateQueryServiceImpl</code>). Restore + NBREC must not change.</td></tr>
-    <tr><td>5</td><td>Existing <code>cancel_onsite</code> / <code>report_installation_failed</code> paths at <code>TECHNICIAN_ASSIGNED</code></td><td>Adding <code>ASSIGN_TECHNICIAN</code> to the allowed-actions list must not change the other transitions from this state.</td></tr>
+    <tr><td>1</td><td>Initial-assignment transition <code>(AWAITING_TECHNICIAN_ASSIGNMENT, ASSIGN_TECHNICIAN) → TECHNICIAN_ASSIGNED</code></td><td>This existing transition is the initial-assign path. Adding self-loops at other states must not affect this.</td></tr>
+    <tr><td>2</td><td>Terminal-state guards (<code>CONNECTION_ACTIVE</code>, <code>INSTALLATION_CANCELLED_ONSITE</code>, <code>INSTALLATION_REPORTED_FAILED</code>, <code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>, <code>INSTALLATION_EXPIRED</code>)</td><td>Swap must be blocked at all 6 terminal states. No self-loops added to any terminal.</td></tr>
+    <tr><td>3</td><td>Pre-tech-assignment states (<code>ACCEPTED</code>, <code>AWAITING_SLOT_PROPOSAL</code>, <code>SLOT_SELECTED</code>, <code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code>, <code>SLOT_CONFIRMED_BY_CUSTOMER</code>, <code>SLOT_AUTO_CONFIRMED</code>)</td><td>No technician assigned yet, so swap is logically n/a. No self-loops added; the swap CTA must not appear at these states.</td></tr>
+    <tr><td>4</td><td>Other transitions out of the 7 active states</td><td>Adding the swap self-loop must not affect <code>MARK_ARRIVED</code>, <code>BEGIN_INSTALLATION</code>, <code>SUBMIT_STEP_PRE_FEE</code>, <code>FEE_COLLECT</code>, <code>SUBMIT_STEP_POST_FEE</code>, <code>VERIFY_OTP</code>, <code>SUBMIT_RATING</code>, <code>REPORT_INSTALLATION_FAILED</code>, <code>CANCEL_ONSITE</code>, or any <code>CANCELLED_BY_*</code> transitions from these states.</td></tr>
+    <tr><td>5</td><td><code>DECLINE_BLOCKED_STATES</code> contract (decline blocked after fee collection)</td><td>The existing rule that decline is blocked at <code>FEE_COLLECTION_PENDING</code>, <code>INSTALLATION_IN_PROGRESS_POST_FEE</code>, <code>AWAITING_CUSTOMER_OTP</code>, <code>RATING_PENDING</code> stays in force. Swap is allowed at these states; decline is still blocked.</td></tr>
+    <tr><td>6</td><td>Restore + NBREC families</td><td>Restore has its own <code>AllowedActionsResolver</code>; NBREC has its own <code>assignTask</code> endpoint. This change is in install-only code paths.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -270,7 +293,7 @@
   <table>
     <thead><tr><th>OS</th><th>Impacted?</th><th>Amendment</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
     <tbody>
-      <tr><td>All OS</td><td>No</td><td>State machine already covers the self-loop. Change lives below the OS layer (ES PRD documentation + service code + gateway + app UI).</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>All OS (CL / D&amp;A / Quality / Capacity / Enforcement)</td><td>No</td><td>The install candidate state machine lives in the install ES, not in a higher-level OS. Adding self-loops on an existing action is a behaviour-change in the ES, documented in ES PRD.</td><td>None</td><td>—</td><td>—</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -288,107 +311,136 @@
   <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, use / edge cases, plus a REGRESSION block per A6 guard. Plus a coverage matrix.</div>
 
   <h3>Business logic</h3>
-  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Swap allowed at TECHNICIAN_ASSIGNED
-  <span class="kw">Given</span> an install candidate in state TECHNICIAN_ASSIGNED with technician X assigned
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Swap allowed at each of the 7 active states
+  <span class="kw">Given</span> an install candidate in any of these 7 states:
+        TECHNICIAN_ASSIGNED, ARRIVED_AT_SITE, INSTALLATION_IN_PROGRESS_PRE_FEE,
+        FEE_COLLECTION_PENDING, INSTALLATION_IN_PROGRESS_POST_FEE,
+        AWAITING_CUSTOMER_OTP, RATING_PENDING
   <span class="kw">When</span>  the CSP taps "Change technician" and picks technician Y
   <span class="kw">Then</span>  the candidate's assigned_technician becomes Y
-  <span class="kw">And</span>   the candidate state stays at TECHNICIAN_ASSIGNED (self-loop)
+  <span class="kw">And</span>   the candidate state is unchanged (self-loop)
   <span class="kw">And</span>   technician Y receives the standard install-assignment notification
         (same path as initial assignment)</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Allowed-actions surface
-  <span class="kw">Given</span> a candidate in TECHNICIAN_ASSIGNED
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Allowed-actions surface at each of the 7 states
+  <span class="kw">Given</span> a candidate in any of the 7 active states
   <span class="kw">When</span>  the CSP App fetches the drilldown
-  <span class="kw">Then</span>  allowed_actions contains both MARK_ARRIVED and ASSIGN_TECHNICIAN
-  <span class="kw">And</span>   can_reassign is true (or the dedicated flag has been dropped per A5 row 2)</pre></div>
+  <span class="kw">Then</span>  allowed_actions includes ASSIGN_TECHNICIAN
+  <span class="kw">And</span>   the existing per-state actions are also still present
+        (e.g. MARK_ARRIVED at TECHNICIAN_ASSIGNED is unchanged)
+  <span class="kw">And</span>   can_reassign reflects this (true) — or the dedicated flag has been dropped per A5 row 3</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-3 (negative):</span> Swap blocked at later states
-  <span class="kw">Given</span> a candidate in ARRIVED_AT_SITE or any later in-flight state
-        (INSTALLATION_IN_PROGRESS_PRE_FEE, FEE_COLLECTION_PENDING,
-         INSTALLATION_IN_PROGRESS_POST_FEE, AWAITING_CUSTOMER_OTP, RATING_PENDING)
+  <div class="gherkin"><pre><span class="kw">LOGIC-3 (negative):</span> Swap blocked at pre-tech states
+  <span class="kw">Given</span> a candidate in any pre-tech-assignment state
+        (ACCEPTED, AWAITING_SLOT_PROPOSAL, SLOT_SELECTED,
+         AWAITING_CUSTOMER_SLOT_CONFIRMATION, SLOT_CONFIRMED_BY_CUSTOMER,
+         SLOT_AUTO_CONFIRMED, AWAITING_TECHNICIAN_ASSIGNMENT)
   <span class="kw">When</span>  the CSP App fetches the drilldown
-  <span class="kw">Then</span>  allowed_actions does NOT contain ASSIGN_TECHNICIAN
-  <span class="kw">And</span>   the swap CTA is suppressed in the UI
-  <span class="kw">And</span>   if a swap is attempted via direct API call, the state machine rejects it
-        (no self-loop wired at these states)</pre></div>
+  <span class="kw">Then</span>  allowed_actions does NOT contain a swap-style ASSIGN_TECHNICIAN
+        (initial-assign at AWAITING_TECHNICIAN_ASSIGNMENT is the existing assign-flow, not a swap)
+  <span class="kw">And</span>   the swap CTA is suppressed in the UI</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-4 (negative):</span> Swap blocked at terminal states
+  <div class="gherkin"><pre><span class="kw">LOGIC-4 (negative):</span> Swap blocked at all 6 terminal states
   <span class="kw">Given</span> a candidate in any terminal state
-        (INSTALLATION_REPORTED_FAILED, CANCELLED_BY_CUSTOMER, CANCELLED_BY_UPSTREAM,
-         INSTALLATION_CANCELLED_ONSITE, INSTALLATION_COMPLETED)
+        (CONNECTION_ACTIVE, INSTALLATION_CANCELLED_ONSITE, INSTALLATION_REPORTED_FAILED,
+         CANCELLED_BY_CUSTOMER, CANCELLED_BY_UPSTREAM, INSTALLATION_EXPIRED)
   <span class="kw">When</span>  the CSP attempts to swap (via API or UI)
-  <span class="kw">Then</span>  backend rejects with the existing terminal-state guard error
+  <span class="kw">Then</span>  the state machine rejects the transition
+        (no self-loop added at any terminal)
   <span class="kw">And</span>   the UI does not show the CTA</pre></div>
 
   <h3>Use &amp; edge cases</h3>
   <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Rapid sequential swaps (X → Y → Z in seconds)
-  <span class="kw">Given</span> a candidate at TECHNICIAN_ASSIGNED
+  <span class="kw">Given</span> a candidate at any of the 7 active states
   <span class="kw">When</span>  the CSP swaps X→Y then Y→Z within a few seconds
   <span class="kw">Then</span>  each swap fires a fresh assignment notification to the new pick
   <span class="kw">And</span>   the candidate's assigned_technician tracks the final value (Z)
-  <span class="kw">And</span>   no rate-limit is enforced (UI may debounce as an implementation choice)</pre></div>
+  <span class="kw">And</span>   the state stays at the original active state (self-loop)</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Swap-to-self
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Swap mid-fee-collection
+  <span class="kw">Given</span> a candidate in FEE_COLLECTION_PENDING with technician X handling the conversation
+  <span class="kw">When</span>  the CSP swaps to a senior technician Y
+  <span class="kw">Then</span>  Y is now the assigned technician
+  <span class="kw">And</span>   the candidate stays at FEE_COLLECTION_PENDING (self-loop)
+  <span class="kw">And</span>   X's app removes the candidate from the active list on next refresh
+  <span class="kw">And</span>   Y's app sees the candidate ready for fee collection
+        (any in-progress fee-collection state is reconciled per existing rules — out of scope here)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Swap during AWAITING_CUSTOMER_OTP
+  <span class="kw">Given</span> a candidate at AWAITING_CUSTOMER_OTP and the OTP has been sent to the customer
+  <span class="kw">When</span>  the CSP swaps the technician
+  <span class="kw">Then</span>  the swap succeeds (state stays at AWAITING_CUSTOMER_OTP)
+  <span class="kw">And</span>   the pending OTP is unaffected (it's tied to the customer, not the technician)
+  <span class="kw">And</span>   when the customer enters the OTP, the verification proceeds with the new technician as the actor</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Swap-to-self / un-assign
   <span class="kw">Given</span> Install has no SELF assignee concept today
   <span class="kw">When</span>  the CSP opens the swap picker and tries to submit without a tech selected
   <span class="kw">Then</span>  the picker requires a non-null technician (UI validation)
   <span class="kw">And</span>   the backend rejects null/empty technician_id with a 400</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Booking cancelled mid-picker
+  <div class="gherkin"><pre><span class="kw">EDGE-5:</span> Candidate becomes terminal mid-picker
   <span class="kw">Given</span> the CSP has the swap picker open
-  <span class="kw">When</span>  the booking is cancelled upstream (customer or system)
-  <span class="kw">Then</span>  the picker closes; the candidate disappears from the active list
-  <span class="kw">And</span>   if the swap was already submitted but not yet processed, the backend rejects with the terminal-state guard</pre></div>
+  <span class="kw">When</span>  the candidate transitions to a terminal state (e.g. customer cancels, or install completes)
+  <span class="kw">Then</span>  if the swap was already submitted, the backend rejects with the terminal-state guard
+  <span class="kw">And</span>   the UI shows a clear "candidate is no longer active" message
+  <span class="kw">And</span>   the picker closes</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> CSP App offline at submit
+  <div class="gherkin"><pre><span class="kw">EDGE-6:</span> CSP App offline at submit
   <span class="kw">Given</span> the CSP has picked the new technician but the app is offline
   <span class="kw">When</span>  connectivity returns and the request is retried
-  <span class="kw">Then</span>  the swap fires; if the candidate has moved off TECHNICIAN_ASSIGNED in the meantime,
-        backend rejects with a graceful failure (state-transition not valid)
-  <span class="kw">And</span>   the UI shows a clear "could not swap — please retry from the current state" message</pre></div>
+  <span class="kw">Then</span>  the swap fires; if the candidate has moved to terminal in the meantime,
+        backend rejects with the terminal-state guard
+  <span class="kw">And</span>   the UI shows a graceful failure</pre></div>
 
   <h3>Regression</h3>
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Initial-assignment flow unchanged
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Initial-assignment transition unchanged
   <span class="kw">Given</span> a candidate at AWAITING_TECHNICIAN_ASSIGNMENT
   <span class="kw">When</span>  the CSP assigns the initial technician
-  <span class="kw">Then</span>  the existing flow works exactly as today
-        (state transitions to TECHNICIAN_ASSIGNED via the same ASSIGN_TECHNICIAN action;
-         the allowed-actions list at AWAITING_TECHNICIAN_ASSIGNMENT is unchanged)</pre></div>
+  <span class="kw">Then</span>  the existing transition fires exactly as today (target state: TECHNICIAN_ASSIGNED)
+  <span class="kw">And</span>   allowed_actions at AWAITING_TECHNICIAN_ASSIGNMENT is unchanged</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): No swap at ARRIVED_AT_SITE and later
-  <span class="kw">Given</span> a candidate in ARRIVED_AT_SITE, INSTALLATION_IN_PROGRESS_PRE_FEE,
-        FEE_COLLECTION_PENDING, INSTALLATION_IN_PROGRESS_POST_FEE, AWAITING_CUSTOMER_OTP, or RATING_PENDING
-  <span class="kw">When</span>  the drilldown is fetched
-  <span class="kw">Then</span>  allowed_actions has the same value as today (no ASSIGN_TECHNICIAN added)
-  <span class="kw">And</span>   the swap CTA is not surfaced</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Terminal-state guards still reject
-  <span class="kw">Given</span> a candidate in any terminal state
-  <span class="kw">When</span>  swap is attempted via API
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): Terminal-state guards still reject
+  <span class="kw">Given</span> a candidate in any of the 6 terminal states
+  <span class="kw">When</span>  swap is attempted via API or UI
   <span class="kw">Then</span>  backend rejects with the existing terminal-state guard error</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): Restore + NBREC unchanged
-  <span class="kw">Given</span> a Restore or NBREC candidate at the equivalent assigned state
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): No swap CTA at pre-tech states
+  <span class="kw">Given</span> a candidate in any pre-tech-assignment state (the 7 listed in the guard)
+  <span class="kw">When</span>  the drilldown is fetched
+  <span class="kw">Then</span>  allowed_actions doesn't surface a swap-style ASSIGN_TECHNICIAN
+  <span class="kw">And</span>   the CTA is suppressed in the UI</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): Other transitions from the 7 active states unchanged
+  <span class="kw">Given</span> a candidate in any of the 7 active states
+  <span class="kw">When</span>  any non-swap transition is attempted (MARK_ARRIVED, BEGIN_INSTALLATION,
+        SUBMIT_STEP_PRE_FEE, FEE_COLLECT, SUBMIT_STEP_POST_FEE, VERIFY_OTP,
+        SUBMIT_RATING, REPORT_INSTALLATION_FAILED, CANCEL_ONSITE, CANCELLED_BY_*)
+  <span class="kw">Then</span>  the transition fires exactly as today
+        (adding ASSIGN_TECHNICIAN doesn't change any other transition behaviour)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): DECLINE_BLOCKED_STATES still enforced for decline
+  <span class="kw">Given</span> a candidate in FEE_COLLECTION_PENDING, INSTALLATION_IN_PROGRESS_POST_FEE,
+        AWAITING_CUSTOMER_OTP, or RATING_PENDING
+  <span class="kw">When</span>  the CSP attempts a decline-style action (REPORT_INSTALLATION_FAILED with decline intent)
+  <span class="kw">Then</span>  the existing decline-blocked guard fires exactly as today
+  <span class="kw">And</span>   swap remains allowed (this item) — only decline is blocked</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): Restore + NBREC unchanged
+  <span class="kw">Given</span> a Restore or NBREC candidate
   <span class="kw">When</span>  the drilldown is fetched
   <span class="kw">Then</span>  allowed_actions for those families is identical to today
         (this change is in install-only code paths)</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Other actions at TECHNICIAN_ASSIGNED unchanged
-  <span class="kw">Given</span> a candidate in TECHNICIAN_ASSIGNED
-  <span class="kw">When</span>  the CSP fires REPORT_INSTALLATION_FAILED (or any other existing transition from this state)
-  <span class="kw">Then</span>  the transition fires exactly as today
-        (adding ASSIGN_TECHNICIAN to allowed-actions doesn't change MARK_ARRIVED, REPORT_INSTALLATION_FAILED,
-         CANCELLED_BY_UPSTREAM, or CANCELLED_BY_CUSTOMER behaviour)</pre></div>
 
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
     <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
     <tbody>
-      <tr><td class="cls">Business logic</td><td>A5 rows 1–5</td><td>5 deltas</td><td>LOGIC-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1–6</td><td>6 deltas</td><td>LOGIC-1..4</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>—</td><td>N/A</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
-      <tr><td class="cls">Use / edge</td><td>EDGE-1..4</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
-      <tr><td class="cls">Regression</td><td>A6 rows 1–5</td><td>5 guards</td><td>REGRESSION-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..6</td><td>6 edges</td><td>EDGE-1..6</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 rows 1–6</td><td>6 guards</td><td>REGRESSION-1..6</td><td>All covered</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -408,13 +460,13 @@
   </table>
   <div class="note"><strong>Code evidence (verified 2026-06-03):</strong>
     <ul>
-      <li><strong>Install state machine — self-loop on TECHNICIAN_ASSIGNED + ASSIGN_TECHNICIAN:</strong> <code>services/csp-tas-service/.../install/domain/service/InstallationStateMachine.java</code> — the line <code>m.put(k(CandidateState.TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN), CandidateState.TECHNICIAN_ASSIGNED); // reassign</code></li>
-      <li><strong>Install allowed-actions resolver (the surfacing gap):</strong> <code>TasCandidateQueryServiceImpl.resolveAllowedActions(CandidateState)</code> — <code>case TECHNICIAN_ASSIGNED → List.of(action("MARK_ARRIVED", ...))</code> only.</li>
-      <li><strong>Verified that initial-assign already works:</strong> <code>case AWAITING_TECHNICIAN_ASSIGNMENT → List.of(action("ASSIGN_TECHNICIAN", "action.install.assign_tech", "ACTION_SHEET"))</code>.</li>
+      <li><strong>Install state set (14 in-flight + 6 terminal):</strong> <code>services/csp-tas-service/.../install/domain/model/CandidateState.java</code> — enum + <code>TERMINAL_STATES</code> set + <code>DECLINE_BLOCKED_STATES</code> set.</li>
+      <li><strong>Existing self-loop on TECHNICIAN_ASSIGNED:</strong> <code>InstallationStateMachine.java</code> — the line <code>m.put(k(CandidateState.TECHNICIAN_ASSIGNED, ASSIGN_TECHNICIAN), CandidateState.TECHNICIAN_ASSIGNED); // reassign</code>.</li>
+      <li><strong>Allowed-actions resolver to extend:</strong> <code>TasCandidateQueryServiceImpl.resolveAllowedActions(CandidateState)</code> — currently <code>TECHNICIAN_ASSIGNED → [MARK_ARRIVED]</code>; the 6 post-arrival states (ARRIVED_AT_SITE, INSTALLATION_IN_PROGRESS_PRE_FEE, FEE_COLLECTION_PENDING, INSTALLATION_IN_PROGRESS_POST_FEE, AWAITING_CUSTOMER_OTP, RATING_PENDING) return <code>List.of()</code>.</li>
+      <li><strong>Initial-assign path (out of scope, must not change):</strong> <code>AWAITING_TECHNICIAN_ASSIGNMENT → [action("ASSIGN_TECHNICIAN", "action.install.assign_tech", "ACTION_SHEET")]</code>.</li>
       <li><strong>Gateway TaskDrilldown record:</strong> <code>services/csp-gateway-service/.../home/dto/response/TaskDrilldown.java:26</code> — <code>@JsonProperty("can_reassign") Boolean canReassign</code>.</li>
-      <li><strong>Gateway HomeFacadeService (the null site):</strong> <code>services/csp-gateway-service/.../home/service/HomeFacadeService.java</code> — in the <code>new TaskDrilldown(...)</code> call, the 6th INSTALL-specific positional argument is <code>null</code> (corresponds to <code>canReassign</code>).</li>
+      <li><strong>Gateway HomeFacadeService (the null site):</strong> <code>services/csp-gateway-service/.../home/service/HomeFacadeService.java</code> — in <code>new TaskDrilldown(...)</code>, the 6th INSTALL-specific positional argument is <code>null</code>.</li>
       <li><strong>CSP App default:</strong> <code>core/model/.../TaskDetail.kt:49</code> — <code>val canReassign: Boolean = false</code>.</li>
-      <li><strong>Confirmed no self-loop on ASSIGN_TECHNICIAN at ARRIVED_AT_SITE or beyond</strong> — checked the state-machine transition map.</li>
     </ul>
   </div>
 </footer>
@@ -424,7 +476,7 @@
   <table>
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
-      <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope corrected from earlier iteration: swap is only at <code>TECHNICIAN_ASSIGNED</code>, not at <code>ARRIVED_AT_SITE</code> or later (verified against state-machine map).</td><td>Pending</td></tr>
+      <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope per PM direction: swap allowed at all 7 active states from <code>TECHNICIAN_ASSIGNED</code> through <code>RATING_PENDING</code> (any active state where a technician is currently assigned). Requires 6 new state-machine self-loops + allowed-actions exposure + UI surfacing.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>
