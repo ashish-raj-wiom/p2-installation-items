@@ -2212,15 +2212,15 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <div class="classify-head">
       <div class="classify-type bug">BUG<span class="classify-subtype">Implementation miss</span></div>
       <div class="classify-headline">
-        <strong>CAEO writes the CSP-ID into its <code>customer_id</code> column on T2.</strong> Root cause: <code>CL_CONNECTION_ACTIVATED</code> doesn't carry <code>customer_id</code> at all, and the dev plugged <code>cspId</code> in as a placeholder. <strong>Cosmetic, no functional impact</strong> — no downstream consumer queries CAEO entitlement by <code>customer_id</code> (<code>findByCustomerId</code> is defined but never called); Visibility / Support Resolution discard the field when reading CAEO rows. Filed as a low-priority cleanup so the column means what it says.
+        <strong>CAEO writes the CSP-ID into its <code>customer_id</code> column on T2.</strong> Root cause: <code>CL_CONNECTION_ACTIVATED</code> doesn't carry <code>customer_id</code> in its payload, so the CAEO consumer plugs <code>cspId</code> in as a placeholder. <strong>Want:</strong> <code>customer_id</code> gets populated in the event so that the CAEO table's <code>customer_id</code> column carries the actual customer.
       </div>
     </div>
     <table class="define-table">
       <tr><th>Layer</th><th class="define-yn">Defined?</th><th>Notes</th></tr>
-      <tr><td>OS</td><td class="define-yn yes">✓ Yes</td><td class="define-note">CL OS outbound contract for <code>CL_CONNECTION_ACTIVATED</code> does not include <code>customer_id</code>. That is the upstream root cause — CAEO has no customer-id to write at this transition.</td></tr>
-      <tr><td>Code (CAEO consumer)</td><td class="define-yn no">✗ Wrong</td><td class="define-note"><code>InboundEventProcessingServiceImpl:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> instead of leaving the field <code>null</code> until a proper customer-id source is wired. Author: Aryan Gaurav, Apr 10 2026, commit "using string".</td></tr>
-      <tr><td>Downstream consumers</td><td class="define-yn yes">✓ Unaffected</td><td class="define-note">No service queries CAEO by <code>customer_id</code>. <code>findByCustomerId</code> method exists; never called from anywhere in the monorepo. Visibility OS / Support Resolution OS read CAEO rows by <code>connection_id</code>; <code>customer_id</code> column is discarded on the way out.</td></tr>
-      <tr><td>Prod scope</td><td class="define-yn partial">⚠ Limited</td><td class="define-note">50 of 19,573 CAEO rows have CSP-IDs in <code>customer_id</code> — only install-context writes are affected.</td></tr>
+      <tr><td>OS (CL outbound contract)</td><td class="define-yn no">✗ Missing field</td><td class="define-note">CL OS outbound contract for <code>CL_CONNECTION_ACTIVATED</code> does not include <code>customer_id</code>. CAEO has no customer-id to write at this transition — this is the upstream cause.</td></tr>
+      <tr><td>Code (CL emit)</td><td class="define-yn no">✗ No <code>customer_id</code></td><td class="define-note">CL service emits the event without a <code>customer_id</code> field, even though the customer is known on the connection row.</td></tr>
+      <tr><td>Code (CAEO consumer)</td><td class="define-yn no">✗ Wrong write</td><td class="define-note"><code>InboundEventProcessingServiceImpl:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> — the CSP-ID is plugged into the customer-id column.</td></tr>
+      <tr><td>Prod</td><td class="define-yn no">✗ Wrong value</td><td class="define-note">CAEO rows for install-context T2 events carry the CSP-ID in the <code>customer_id</code> column instead of the actual customer.</td></tr>
     </table>
   </div>
 
@@ -2231,12 +2231,12 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       <div class="flow">
         <div class="node">T2 fires</div>
         <div class="arrow">↓</div>
-        <div class="node">CL emits <code>CL_CONNECTION_ACTIVATED</code><br><small>(no customer_id in payload)</small></div>
+        <div class="node error">CL emits <code>CL_CONNECTION_ACTIVATED</code><br><small>payload has no customer_id field</small></div>
         <div class="arrow">↓</div>
         <div class="node warn">CAEO consumer handler</div>
-        <div class="arrow-label">line 82: .customerId(event.cspId())</div>
+        <div class="arrow-label">line 82: .customerId(event.cspId()) — placeholder</div>
         <div class="arrow">↓</div>
-        <div class="node error">CAEO row: customer_id = &lt;cspId&gt;<br><small>field semantically wrong</small></div>
+        <div class="node error">CAEO row: customer_id = &lt;cspId&gt;<br><small>wrong value in the column</small></div>
       </div>
     </div>
     <div>
@@ -2244,27 +2244,29 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
       <div class="flow">
         <div class="node">T2 fires</div>
         <div class="arrow">↓</div>
-        <div class="node">CL emits <code>CL_CONNECTION_ACTIVATED</code></div>
+        <div class="node new">CL emits <code>CL_CONNECTION_ACTIVATED</code><br><small>payload includes customer_id from the connection row</small></div>
         <div class="arrow">↓</div>
         <div class="node">CAEO consumer handler</div>
-        <div class="arrow-label">line 82: .customerId(null)</div>
+        <div class="arrow-label">line 82: .customerId(event.customerId())</div>
         <div class="arrow">↓</div>
-        <div class="node success">CAEO row: customer_id = NULL<br><small>field correctly absent until a real customer-id source exists</small></div>
+        <div class="node success">CAEO row: customer_id = &lt;actual customer&gt;<br><small>column means what it says</small></div>
       </div>
     </div>
   </div>
 
   <h3>The fix</h3>
   <ol class="fix-plan">
-    <li><span class="svc-tag code">Code</span><span class="step-text">In <code>csp-customer-access-service / InboundEventProcessingServiceImpl.java:82</code>, replace <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> with <code>.customerId(null)</code> for the install-context handler. Leave the column <code>null</code> until a real customer-id flows in.</span></li>
-    <li><span class="svc-tag code">Code</span><span class="step-text">One-time data backfill: <code>UPDATE customer_access_entitlement SET customer_id = NULL WHERE customer_id IN (SELECT csp_id FROM &lt;csp_directory&gt;)</code>. 50 rows.</span></li>
-    <li><span class="svc-tag code">Code</span><span class="step-text">Remove the dead <code>findByCustomerId</code> repository method (or leave a TODO if a future use case is anticipated — PM call).</span></li>
+    <li><span class="svc-tag os">OS</span><span class="step-text">Add <code>customer_id</code> to the CL OS outbound contract for <code>CL_CONNECTION_ACTIVATED</code> (and any sibling <code>CL_CONNECTION_*</code> events where the same downstream need exists).</span></li>
+    <li><span class="svc-tag code">Code (CL)</span><span class="step-text">In <code>csp-connection-lifecycle-service</code>, populate <code>customer_id</code> on the emitted <code>CL_CONNECTION_ACTIVATED</code> event from the connection row.</span></li>
+    <li><span class="svc-tag code">Code (CAEO)</span><span class="step-text">In <code>csp-customer-access-service / InboundEventProcessingServiceImpl.java:82</code>, replace the placeholder <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> with <code>.customerId(event.customerId())</code> — write the real value coming in on the event.</span></li>
+    <li><span class="svc-tag code">Code</span><span class="step-text">One-time data backfill of historical CAEO rows where <code>customer_id</code> currently holds a CSP-ID: replace with the correct customer-id by joining back to the connection's source-of-truth (CL connection row → booking → customer).</span></li>
   </ol>
 
   <h3>Notes for tech</h3>
   <ul>
-    <li><strong>Don't expand scope.</strong> Sourcing a real <code>customer_id</code> for CAEO on T2 is a different and bigger discussion (touches CL outbound contract). This item is just "stop putting the wrong value in".</li>
-    <li><strong>No customer-impact risk from the backfill.</strong> Nothing reads the column today.</li>
+    <li><strong>Source of truth is already in place.</strong> The CL <code>connections</code> table holds the <code>connection_id → customer_id</code> mapping on every row. CL has the value sitting right there at T2 emit time — adding it to the event payload is a column read on the same row, no new upstream lookup needed.</li>
+    <li><strong>Backfill is straightforward.</strong> Since the mapping has always existed in CL, historical CAEO rows can be corrected by joining <code>customer_access_entitlement.connection_id</code> back to <code>csp_connection_lifecycle_service.connections.customer_id</code>.</li>
+    <li><strong>Sibling events to check:</strong> if other <code>CL_CONNECTION_*</code> events (PAUSED, RESCUED, DEACTIVATED) feed CAEO or any other consumer that needs <code>customer_id</code>, fold them into the same OS amendment so the contract stays uniform.</li>
   </ul>
 
   <details>
@@ -2272,7 +2274,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
     <div>
       <ul>
         <li><strong>Code (bug site):</strong> <code>services/csp-customer-access-service/.../InboundEventProcessingServiceImpl.java:82</code>.</li>
-        <li><strong>Code (proof no consumer reads the column):</strong> <code>findByCustomerId</code> defined but zero call-sites repo-wide.</li>
+        <li><strong>Code (CL emit site to update):</strong> <code>services/csp-connection-lifecycle-service/...</code> — <code>CL_CONNECTION_ACTIVATED</code> producer.</li>
         <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — CAEO row created, <code>customer_id = a0a7b6</code> (the CSP-ID).</li>
         <li><strong>Source MD:</strong> <code>items/14-caeo-customer-id-wrong-write.md</code> <em>(to be added)</em></li>
       </ul>
@@ -2452,7 +2454,7 @@ Customer-initiated cancellation (CL T13) routes to CANCELLED_BY_CUSTOMER instead
 </section>
 
 <footer>
-  P2 Installation Items &middot; 2026-06-02 &middot; <code>C:\Users\ashis\p2-installation-items\</code>
+  P2 Installation Items &middot; 2026-06-03 &middot; <code>C:\Users\ashis\p2-installation-items\</code>
 </footer>
 
 </div>

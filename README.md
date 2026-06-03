@@ -65,7 +65,7 @@ Every BUG item's classification card carries this sub-type. GAP items don't need
 | 11 | [IVR 2.0 integration for Cx ↔ Px interaction](https://ashish-raj-wiom.github.io/IVR-Routing-Solutioning/ivr-routing-design.html) | Gap | 2 · Working-hour dep | IVR routing-table refactor — external spec on `ashish-raj-wiom/IVR-Routing-Solutioning` | Open |
 | 12 | Capacity OS code skips connection increment after installation | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-capacity-coverage-service (remove RESUME-only guard) + one-time backfill | Open |
 | 13 | `CL_INSTALLATION_QUALITY_SIGNAL` outbox FAILED — CL never delivers to Quality OS | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-connection-lifecycle-service (fix outbox dispatcher) | Open |
-| 14 | CAEO `customer_id` column has CSP-ID for installation task | Bug · Impl-miss | 1 · Vaibhav go-ahead | csp-customer-access-service (single line fix) — cosmetic; no consumer reads the column | Open |
+| 14 | CAEO `customer_id` column has CSP-ID for installation task | Bug · Impl-miss | 1 · Vaibhav go-ahead | CL OS (add `customer_id` to outbound contract), csp-connection-lifecycle-service (populate field in `CL_CONNECTION_ACTIVATED`), csp-customer-access-service (read & write) | Open |
 | 15 | `failure_subreason_code` blank on `INSTALLATION_FAILED` | Gap | 1 · Vaibhav go-ahead | Partner App (sub-reason picker), csp-tas-service (handler enforcement), ES PRD | Open |
 | 16 | DAS doesn't publish supply-side events when a zone has only one CSP | Gap | 1 · Vaibhav go-ahead | csp-demand-allocation-service (continuity-mode detection + 3 publisher call sites — Capacity OS receivers already built) | Open |
 
@@ -83,7 +83,7 @@ Items 12–16 surfaced from the end-to-end audit of connection `f285e07f-85d1-40
 
 - **Item 12** — CSP-app's active-connection count is NOT affected by this bug; the partner-app reads CL directly, bypassing Capacity OS. The skip only affects Capacity OS's internal counter and the routing / cap-calibration decisions that read from it. Fleet-wide magnitude needs a separate audit.
 - **Item 13** — CL outbox is FAILED, Quality OS never receives the signal. Fix the dispatcher so delivery resumes.
-- **Item 14** — single-line cosmetic fix. No downstream consumer queries CAEO by `customer_id`; `findByCustomerId` exists but is never called. Filed as low-priority cleanup.
+- **Item 14** — `CL_CONNECTION_ACTIVATED` doesn't carry `customer_id` in its payload, so CAEO consumer line 82 plugs in the CSP-ID as a placeholder. Want: CL adds `customer_id` to the event payload (it's already on the CL `connections` row — trivial addition), CAEO writes the actual customer.
 - **Item 15** — the *actual* installation-failure diagnostic gap. Without sub-reason, Quality OS cannot differentiate "CSP didn't bother" from "address infeasible" from "customer refused".
 - **Item 16** — supply-side escalation loop dead end-to-end. Capacity OS receivers are production-quality; DAS trigger call sites just need to be added.
 
