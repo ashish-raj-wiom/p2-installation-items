@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-04 — DAS supply-side events for single-CSP zones · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Back to bugs</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-04</div>
+  <h1>DAS supply-side events for single-CSP zones</h1>
+  <p class="lede">DAS already detects single-provider continuity mode (<code>RoutingEngineServiceImpl.detectMode</code> returns <code>RoutingMode.CONTINUITY</code> when <code>eligibleCount &le; 1</code>). It also has the listener-side outbox plumbing wired for <code>SingleProviderContinuityActive</code> and <code>ZoneSupplyDeficitSignal</code>. What's missing: the <code>eventPublisher.publishEvent(...)</code> calls that bridge detection to emission, and the <code>P46BreachByContinuity</code> event isn't wired in DAS at all (its event record + listener don't exist on the DAS side, even though Capacity OS has the receiver). End result: Capacity OS waits for signals that never arrive; supply-deficit resolution loop is dark.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Light</span> — A1, A2, A5, A6, A8, B5. Add 3 emit-site calls + 1 missing event class + 1 missing listener method.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>DAS emits the 3 OS-prescribed supply-side events when continuity mode is entered / breached: <code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code>, <code>ZONE_SUPPLY_DEFICIT_SIGNAL</code>, <code>P46_BREACH_BY_CONTINUITY</code>.</dd>
+    <dt>What triggered it?</dt>    <dd>DAS OS §3.14 (BDN-DA-02 + BDN-CA-02) prescribes these signals; DAS detects the mode and Capacity OS has the receivers, but no events flow. Supply-deficit resolution loop never closes.</dd>
+    <dt>Blast radius</dt>          <dd>DAS <code>RoutingEngineServiceImpl</code> (continuity-mode entry path + P46 breach path) · DAS <code>EventSender</code> (1 new listener method) · DAS shared-libs / outbound event package (1 new <code>P46BreachByContinuity</code> record) · No Capacity OS change (receivers already built).</dd>
+    <dt>Reversible?</dt>           <dd>Yes — emissions can be wrapped in a feature flag if needed; rollback = stop emitting.</dd>
+    <dt>Money / PII / migration?</dt><dd>No / No / No.</dd>
+    <dt>OS impact / sign-off?</dt> <dd>No D&amp;A OS amendment — implementing what §3.14 already prescribes. ESR doc update for confirming the event-schema registration (events may already be registered there from earlier work).</dd>
+    <dt>Tier</dt>                  <dd>Light</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: the 3 events, when they fire, who consumes them, and the regression guards on the existing routing pipeline.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and baseline link.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>DAS supply-side events for single-CSP zones</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft → For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td><code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> §3.14 L317-318 (continuity-mode entry events), L382 + L445 (P46 breach emission), outbound catalogue L626-627 + L708-710, v1.4 changelog L1118 (BDN-DA-02 + BDN-CA-02).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short problem statement.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>DAS OS §3.14 prescribes 3 supply-side events for continuity mode. DAS has the detection wired (<code>RoutingEngineServiceImpl.detectMode()</code> at line 233 returns <code>RoutingMode.CONTINUITY</code> when there's exactly 1 eligible CSP). DAS also has the listener-side outbox plumbing for 2 of the 3 events (<code>EventSender.onSingleProviderContinuityActive</code> line 55 and <code>onZoneSupplyDeficitSignal</code> line 62 — both <code>@TransactionalEventListener</code>s that schedule to outbox). <strong>What's missing on the DAS side</strong>: (a) no <code>eventPublisher.publishEvent(...)</code> calls anywhere in DAS for these 2 events — the bridge between detection and emission is absent; (b) the <code>P46BreachByContinuity</code> event record doesn't exist in DAS outbound and there's no listener for it. Capacity OS already has the inbound endpoints (<code>POST /p46-breach-by-continuity</code> at line 145 and <code>POST /zone-supply-deficit-signal</code> at line 168 of its <code>InboundEventController</code>), but they receive zero events in prod.</td></tr>
+    <tr><td>Who experiences it?</td><td>Customers in single-CSP zones — supply deficit goes unresolved; Capacity OS never receives the signal to onboard new CSPs. Ops trying to find under-served zones — no programmatic signal, must mine DB state. Auditors looking for the legal P46 breach trail — no audit signal when DAS allows enforcement-triggered over-cap reassignments.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>The OS-prescribed supply-deficit-response loop doesn't close. Customers in deficit zones stay un-served indefinitely. P46 breaches during continuity (the only legal way to exceed P46 per INV-DAO-17) have no audit trail.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The 3 events + the atomic code deltas.</div>
+  <span class="row-mode req">All rows required</span>
+
+  <h3>The 3 events</h3>
+  <table>
+    <thead><tr><th>Event</th><th>Fires when</th><th>Payload (per OS)</th><th>Consumer</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code></td>
+        <td>Zone enters continuity mode (transitions to <code>RoutingMode.CONTINUITY</code>)</td>
+        <td>(zone_id, csp_id, cap_ratio, reason, started_at)</td>
+        <td>Data Access &amp; Dashboard OS (continuity-zone view)</td>
+      </tr>
+      <tr>
+        <td><code>ZONE_SUPPLY_DEFICIT_SIGNAL</code></td>
+        <td>Zone enters continuity mode (paired with above) AND on continuity-safety-floor-kill (line 56-65 of <code>RoutingEngineServiceImpl</code>: when single-CSP is SUSPENDED/FPV_FLAGGED)</td>
+        <td>(zone_id, csp_id, severity)</td>
+        <td>Capacity OS — explicitly a state-transition trigger per OS, "not a notification". Capacity OS owns onboarding new CSPs in response.</td>
+      </tr>
+      <tr>
+        <td><code>P46_BREACH_BY_CONTINUITY</code></td>
+        <td>DAS allows an enforcement-triggered over-P46 reassignment (per OS L380-382 / Stage 3e' P46 continuity exception)</td>
+        <td>(csp_id, zone_id, breach_amount, breach_reason=<code>ENFORCEMENT_REALLOCATION</code>, source_csp_id, timestamp)</td>
+        <td>Capacity OS (tracking the over-cap state) + Visibility (zone alert)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Atomic deltas</h3>
+  <table class="delta">
+    <thead><tr><th style="width:24%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>DAS continuity-mode entry emit site</td>
+        <td><code>RoutingEngineServiceImpl.detectMode()</code> returns <code>RoutingMode.CONTINUITY</code> but no events are published. The caller (route handler at line 56) acts on the mode without firing the signal.</td>
+        <td>At the continuity-mode entry transition (mode flips from NORMAL to CONTINUITY for a zone), publish both <code>SingleProviderContinuityActive</code> and <code>ZoneSupplyDeficitSignal</code> via <code>eventPublisher.publishEvent(...)</code>. The existing listener-side wiring at <code>EventSender</code> picks them up and schedules to outbox.</td>
+        <td>The bridge between detection and emission. Listeners already exist; just need the publish calls.</td>
+      </tr>
+      <tr>
+        <td>DAS continuity-safety-floor-kill emit site</td>
+        <td>At line 56-65 of <code>RoutingEngineServiceImpl</code>, when continuity mode + CSP is SUSPENDED/FPV_FLAGGED, allocation is killed and the path returns. No supply-deficit signal is emitted.</td>
+        <td>Publish <code>ZoneSupplyDeficitSignal</code> at this site too (the OS explicitly mentions emit on safety-floor kill, L307: "<em>KILL continuity → allocation = ZERO; emit ZONE_SUPPLY_DEFICIT_SIGNAL</em>").</td>
+        <td>Capacity OS needs the signal regardless of whether continuity was entered cleanly or killed for safety.</td>
+      </tr>
+      <tr>
+        <td>New event record — <code>P46BreachByContinuity</code> in DAS outbound</td>
+        <td>Doesn't exist in DAS outbound package. Capacity OS has the inbound version (<code>services/csp-capacity-coverage-service/.../P46BreachByContinuity.java</code>) and shared-libs has the contract record (<code>services/shared-libs/csp-event-contracts/.../P46BreachByContinuity.java</code>) — but DAS has no outbound class.</td>
+        <td>Add the outbound record in DAS at <code>services/csp-demand-allocation-service/.../domain/event/outbound/P46BreachByContinuity.java</code> mirroring the shared-libs contract. Fields: (eventId, csp_id, zone_id, breach_amount, breach_reason, source_csp_id, timestamp).</td>
+        <td>DAS needs its own outbound record to publish via the existing listener pattern.</td>
+      </tr>
+      <tr>
+        <td>New <code>EventSender</code> listener method — <code>onP46BreachByContinuity</code></td>
+        <td>Doesn't exist. <code>EventSender</code> only listens for <code>SingleProviderContinuityActive</code> and <code>ZoneSupplyDeficitSignal</code>.</td>
+        <td>Add a <code>@TransactionalEventListener</code> method <code>onP46BreachByContinuity</code> that schedules to outbox (same pattern as the other two — partition key = zone_id).</td>
+        <td>Outbox plumbing for the 3rd event.</td>
+      </tr>
+      <tr>
+        <td>DAS P46 enforcement-breach emit site</td>
+        <td>At the P46 continuity exception in <code>RoutingEngineServiceImpl</code> (the path that allows over-cap when enforcement-triggered — per OS L380-382), no audit signal is emitted.</td>
+        <td>Publish <code>P46BreachByContinuity</code> at this site via <code>eventPublisher.publishEvent(...)</code> with breach_amount + source_csp_id from the enforcement context. The new listener at <code>EventSender</code> picks it up and schedules to outbox.</td>
+        <td>Audit trail for the legal P46 breach (only legal mechanism to exceed P46 per INV-DAO-17).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="hint"><strong>Out of scope:</strong> Capacity OS's response logic when it receives these signals (it owns onboarding new CSPs — that's its own change spec if needed); modifications to the existing continuity-mode detection logic at <code>RoutingEngineServiceImpl.detectMode()</code> (detection is correct, just doesn't emit); multi-CSP-zone routing behaviour (unchanged); Visibility OS dashboard wiring for <code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code> (Visibility OS owns its own consumer).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Adjacent behaviours that must survive untouched.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:38%">Behaviour to protect</th><th>Why it's at risk</th></tr>
+    <tr><td>1</td><td>Existing routing pipeline for multi-CSP zones (NORMAL mode)</td><td>Continuity-mode detection only fires when <code>eligibleCount &le; 1</code>. Multi-CSP-zone routing logic must be unaffected.</td></tr>
+    <tr><td>2</td><td>P46 enforcement for non-continuity allocations</td><td>The existing P46 cap rejection for normal (non-enforcement-triggered) over-cap allocations stays in force. Only the continuity-mode P46 breach gets signalled.</td></tr>
+    <tr><td>3</td><td>Capacity OS receivers (already production-quality)</td><td>The 2 existing receivers at Capacity OS <code>InboundEventController</code> lines 145 + 168 must not change. They already handle idempotency / mark-processed / state-update. Receivers idle today; they start receiving events after this change.</td></tr>
+    <tr><td>4</td><td>Continuity-mode detection logic at <code>RoutingEngineServiceImpl.detectMode()</code></td><td>The detection rule (<code>eligibleCount &le; 1</code> → CONTINUITY) is unchanged. We only add emit calls at the points where mode transitions are observed.</td></tr>
+    <tr><td>5</td><td>Single-CSP cooldown bypass at line 129 (<code>cooldownBypassReason = "SINGLE_CSP_ZONE_CONTINUITY"</code>)</td><td>This is a known separate item (cooldown bypass). The new emissions must not affect whether or how the cooldown bypass fires.</td></tr>
+    <tr><td>6</td><td>Continuity-mode exit handling</td><td>If a zone leaves continuity (a second CSP becomes eligible), the OS doesn't currently prescribe an explicit "continuity exit" event — so this item doesn't add one. Exit is observable as "no more SINGLE_PROVIDER_CONTINUITY_ACTIVE renewals". Out of scope; can be a follow-up if Capacity OS or Dashboard OS need it.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Amendment</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>D&amp;A OS</td><td>No</td><td>Implementing what §3.14 (v1.4 amendment BDN-DA-02 + BDN-CA-02) already prescribes.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>Capacity OS</td><td>No</td><td>Receivers already built (<code>POST /p46-breach-by-continuity</code>, <code>POST /zone-supply-deficit-signal</code>). Starts receiving events it was always supposed to receive.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>Data Access &amp; Dashboard OS</td><td>No</td><td>Subscribes to <code>SINGLE_PROVIDER_CONTINUITY_ACTIVE</code> for its continuity-zone view; no contract change.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>ESR (Event Schema Registry)</td><td>Verify</td><td>Confirm the 3 event schemas are registered. (<code>P46BreachByContinuity</code> contract exists in shared-libs, so it's likely registered.)</td><td>Cross-OS contract</td><td>ESR owner</td><td>Pending — verification only</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Verification layer for engineering build and test.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then per event-emit case + REGRESSION block per A6 guard.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Continuity-mode entry — both signals fire
+  <span class="kw">Given</span> a zone where the eligible-CSP count drops from 2 to 1
+  <span class="kw">When</span>  DAS routing runs and detectMode() transitions to RoutingMode.CONTINUITY
+  <span class="kw">Then</span>  DAS publishes SingleProviderContinuityActive
+        (payload: zone_id, csp_id, cap_ratio, reason, started_at)
+  <span class="kw">And</span>   DAS publishes ZoneSupplyDeficitSignal
+        (payload: zone_id, csp_id, severity)
+  <span class="kw">And</span>   both land in the DAS outbox via the existing @TransactionalEventListener wiring
+  <span class="kw">And</span>   Capacity OS receives ZoneSupplyDeficitSignal at POST /zone-supply-deficit-signal</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Continuity-safety-floor kill — supply-deficit signal fires
+  <span class="kw">Given</span> a zone in continuity mode where the lone CSP is SUSPENDED or FPV_FLAGGED
+  <span class="kw">When</span>  DAS routing runs and hits the safety-floor branch
+        (line 56-65 of RoutingEngineServiceImpl)
+  <span class="kw">Then</span>  allocation = ZERO (existing behaviour, unchanged)
+  <span class="kw">And</span>   ZoneSupplyDeficitSignal is published
+        (the OS explicitly mentions emit here at L307)
+  <span class="kw">And</span>   Capacity OS receives the signal</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> P46 breach during enforcement-triggered reassignment
+  <span class="kw">Given</span> a zone in continuity mode where the source CSP is SUSPENDED / exited
+        AND an enforcement-triggered reassignment would push the lone CSP over P46
+  <span class="kw">When</span>  DAS routing allows the over-cap allocation (per OS L380-382)
+  <span class="kw">Then</span>  the allocation succeeds (existing behaviour, unchanged — only the legal mechanism)
+  <span class="kw">And</span>   DAS publishes P46BreachByContinuity
+        (payload: csp_id, zone_id, breach_amount, breach_reason=ENFORCEMENT_REALLOCATION,
+         source_csp_id, timestamp)
+  <span class="kw">And</span>   Capacity OS receives the event at POST /p46-breach-by-continuity</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4 (negative):</span> No emission for multi-CSP zones
+  <span class="kw">Given</span> a zone with 2+ eligible CSPs
+  <span class="kw">When</span>  DAS routing runs
+  <span class="kw">Then</span>  detectMode() returns NORMAL (existing behaviour, unchanged)
+  <span class="kw">And</span>   NO SingleProviderContinuityActive is published
+  <span class="kw">And</span>   NO ZoneSupplyDeficitSignal is published
+  <span class="kw">And</span>   NO P46BreachByContinuity is published</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-5 (negative):</span> No P46 breach signal for non-enforcement over-cap attempts
+  <span class="kw">Given</span> a non-continuity zone with a CSP at P46
+  <span class="kw">When</span>  an ordinary allocation would push them over P46
+  <span class="kw">Then</span>  DAS rejects the allocation (existing behaviour)
+  <span class="kw">And</span>   NO P46BreachByContinuity is published
+        (the event fires only on the OS-sanctioned breach path)</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Continuity mode entered, exited, re-entered within minutes
+  <span class="kw">Given</span> a zone that toggles between 1 and 2 eligible CSPs as exposures change
+  <span class="kw">When</span>  the mode flips multiple times in a short window
+  <span class="kw">Then</span>  each NORMAL → CONTINUITY transition publishes the pair
+  <span class="kw">And</span>   each CONTINUITY → NORMAL transition does NOT publish anything in this item
+        (exit signal is out of scope per A6 row 6)
+  <span class="kw">And</span>   no debouncing is applied at PM level
+        (engineering may add debouncing as an implementation choice)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Zone enters continuity AND the CSP is already at P46
+  <span class="kw">Given</span> a zone entering continuity where the lone CSP is already at P46 cap
+  <span class="kw">When</span>  the next allocation would breach P46 via the enforcement path
+  <span class="kw">Then</span>  continuity-entry signals fire first
+        (SingleProviderContinuityActive + ZoneSupplyDeficitSignal)
+  <span class="kw">And</span>   P46BreachByContinuity fires when the over-cap allocation is allowed
+  <span class="kw">And</span>   Capacity OS receives all 3 events (ordering: entry signals before breach)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Outbox delivery fails (Capacity OS down briefly)
+  <span class="kw">Given</span> any of the 3 events scheduled to the DAS outbox
+  <span class="kw">When</span>  initial delivery fails (HTTP 5xx from Capacity OS)
+  <span class="kw">Then</span>  the existing outbox retry logic handles redelivery
+        (existing behaviour for all DAS outbound events — no new retry logic in this item)
+  <span class="kw">And</span>   eventual successful delivery still reaches Capacity OS</pre></div>
+
+  <h3>Regression</h3>
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Multi-CSP zones unchanged
+  <span class="kw">Given</span> a multi-CSP zone
+  <span class="kw">When</span>  routing executes (allocations, retries, sweeps)
+  <span class="kw">Then</span>  no continuity-mode signals fire
+  <span class="kw">And</span>   routing behaviour is byte-identical to today</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): P46 rejection for non-continuity over-cap allocations
+  <span class="kw">Given</span> a non-continuity zone with a CSP at or above P46
+  <span class="kw">When</span>  a non-enforcement allocation would push them over P46
+  <span class="kw">Then</span>  DAS rejects (existing behaviour)
+  <span class="kw">And</span>   no P46BreachByContinuity is emitted</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Capacity OS receivers idempotent on duplicate events
+  <span class="kw">Given</span> any of the 3 events delivered twice (replay or retry)
+  <span class="kw">When</span>  Capacity OS receives the duplicate
+  <span class="kw">Then</span>  Capacity OS processes once (existing receiver behaviour, unchanged)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): detectMode() logic unchanged
+  <span class="kw">Given</span> the existing detectMode() rule (eligibleCount &le; 1 → CONTINUITY)
+  <span class="kw">When</span>  the rule is exercised
+  <span class="kw">Then</span>  the rule fires exactly as today; the change only adds emit calls at the transition points</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Single-CSP cooldown bypass behaviour unchanged
+  <span class="kw">Given</span> the existing cooldown bypass at line 129 with reason SINGLE_CSP_ZONE_CONTINUITY
+  <span class="kw">When</span>  the bypass fires
+  <span class="kw">Then</span>  bypass behaviour is unchanged
+        (the bypass is a separate item; this change does not touch it)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): No continuity-exit event added
+  <span class="kw">Given</span> a zone in continuity mode transitions back to NORMAL (gains a 2nd CSP)
+  <span class="kw">When</span>  detectMode() returns NORMAL on the next routing pass
+  <span class="kw">Then</span>  no exit event is published
+        (out of scope; existing OS doesn't prescribe one)</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 deltas (5 rows)</td><td>5 rules</td><td>LOGIC-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td><code>P_DA_CONTINUITY_CAP_RATIO</code> threshold</td><td>1 boundary</td><td>LOGIC-1 (normal entry) + LOGIC-4 (boundary at 2 CSPs)</td><td>All covered</td></tr>
+      <tr><td class="cls">Invariants</td><td>INV-DAO-17 — only legal P46 breach is continuity-enforcement</td><td>1 invariant</td><td>LOGIC-3 (positive case) + LOGIC-5 / REGRESSION-2 (negative cases)</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..3</td><td>3 edges</td><td>EDGE-1..3</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 rows 1–6</td><td>6 guards</td><td>REGRESSION-1..6</td><td>All covered</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A6, A8, B5) filled</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" on every class</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A6 guard has a matching B5 REGRESSION block</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes" has sign-off Received</td><td class="check">Pending (ESR registration verification)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code evidence (verified 2026-06-03):</strong>
+    <ul>
+      <li><strong>OS source §3.14:</strong> <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> — L317-318 (entry signals), L307 (safety-floor kill emits ZONE_SUPPLY_DEFICIT_SIGNAL), L382 + L445 (P46 breach emit), outbound catalogue L626-627 + L708-710.</li>
+      <li><strong>DAS detection is wired:</strong> <code>RoutingEngineServiceImpl.detectMode()</code> at line 233 returns <code>RoutingMode.CONTINUITY</code> when <code>eligibleCount &le; 1</code>.</li>
+      <li><strong>DAS handles CONTINUITY mode downstream:</strong> line 56-65 (safety-floor kill) and line 129 (cooldown bypass reason <code>SINGLE_CSP_ZONE_CONTINUITY</code>).</li>
+      <li><strong>DAS event records exist for 2 of 3:</strong> <code>SingleProviderContinuityActive.java</code> and <code>ZoneSupplyDeficitSignal.java</code> in <code>services/csp-demand-allocation-service/.../domain/event/outbound/</code>. <strong><code>P46BreachByContinuity</code> is missing on DAS outbound.</strong></li>
+      <li><strong>DAS EventSender listeners exist for 2 of 3:</strong> <code>onSingleProviderContinuityActive</code> (line 55) and <code>onZoneSupplyDeficitSignal</code> (line 62) in <code>EventSender.java</code> — both <code>@TransactionalEventListener</code>s that schedule to outbox. <strong>No <code>onP46BreachByContinuity</code> listener.</strong></li>
+      <li><strong>No <code>eventPublisher.publishEvent(...)</code> calls anywhere in DAS for these events</strong> — the bridge is missing.</li>
+      <li><strong>Shared event contract for P46:</strong> <code>services/shared-libs/csp-event-contracts/.../allocation/P46BreachByContinuity.java</code> already exists.</li>
+      <li><strong>Capacity OS receivers exist:</strong> <code>POST /p46-breach-by-continuity</code> (line 145) and <code>POST /zone-supply-deficit-signal</code> (line 168) in <code>services/csp-capacity-coverage-service/.../api/InboundEventController.java</code>.</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope refined via code trace: DAS continuity-mode <strong>detection</strong> is wired; listener-side <strong>outbox plumbing</strong> exists for 2 of 3 events; only the publish-event calls are missing + <code>P46BreachByContinuity</code> record + listener need to be added on the DAS side.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+</body>
+</html>

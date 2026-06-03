@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-03 — OS-aligned failure sub-reason picker · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Back to bugs</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-03</div>
+  <h1>OS-aligned 6-option failure sub-reason picker + 4-field auto-populate</h1>
+  <p class="lede">The Partner App's failure picker exposes 4 reasons today that don't match the OS's <code>failure_subreason_code</code> enum. The picker code reaches the TAS install handler, gets buried in <code>extra_data</code> JSON, then dropped twice more on the way to CL — first because <code>EsInstallReportedFailed</code> doesn't carry the OS sub-reason fields, then because CL's translation handler hard-codes all 4 OS fields to <code>null</code>. Result: every CSP-reported install failure in prod lands at CL with <code>failure_reason = "CSP_REPORTED_FAILURE"</code> and the 4 OS sub-reason fields blank. Replace the picker with the OS-aligned 6 options and propagate the mapping end-to-end.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Light</span> — A1, A2, A5, A6, A8, B5. Enum + handler + event-record + handler-translation change; no state-machine change.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>Replace the 4-option failure picker with the OS-aligned 6-option enum; populate the 4 OS sub-reason fields (<code>failure_subreason_code</code>, <code>failure_subreason_source</code>, <code>failure_subreason_confidence</code>, <code>failure_detail</code>) end-to-end via a deterministic mapping.</dd>
+    <dt>What triggered it?</dt>    <dd>Verified prod payload: every install-failure event at CL has <code>failure_reason = "CSP_REPORTED_FAILURE"</code> and all 4 sub-reason fields <code>null</code>. Quality OS / Enforcement OS can't do per-CSP pattern detection (BDN-CL-02) when the diagnostic data is blank.</dd>
+    <dt>Blast radius</dt>          <dd>TAS <code>CancellationReason.java</code> · TAS <code>reportInstallationFailed</code> handler · <code>EsInstallReportedFailed</code> event record (both TAS-outbound and CL-inbound) · CL <code>handleEsInstallReportedFailed</code> translation step · ES PRD wording. Partner App auto-picks up the new picker list from <code>GET /install/cancellation-reasons</code> — no app release needed.</dd>
+    <dt>Reversible?</dt>           <dd>Yes — additive event-record fields; rollback = ignore them.</dd>
+    <dt>Money / PII / migration?</dt><dd>No / No / No (no retroactive enrichment of historical install-failure rows).</dd>
+    <dt>OS impact / sign-off?</dt> <dd>No CL OS amendment needed — implementing what CL OS §7.2 / S-02 (v1.2 amendment) already prescribes for the <code>failure_subreason_*</code> fields. ESR doc update for the new <code>EsInstallReportedFailed</code> fields.</dd>
+    <dt>Tier</dt>                  <dd>Light</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: the 6 picker options, the deterministic 4-field mapping per OS, and the regression guards on what must stay the same.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and a link to the feature's original PRD / OS.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>OS-aligned 6-option failure sub-reason picker + 4-field auto-populate</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft → For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td><code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> — S-02 <code>CL_STATE_CHANGED</code> payload (the 4 sub-reason fields, L919-924); §7.2 sub-reason consumption rule BDN-CL-02 (L632-637); current TAS enum at <code>services/csp-tas-service/.../install/domain/model/CancellationReason.java</code>.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short problem statement.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>The TAS picker enum (<code>CancellationReason.java</code>) has 4 options that don't match the OS sub-reason enum: <code>LOCATION_UNREACHABLE</code>, <code>CAPACITY_FULL</code>, <code>CUSTOMER_CANCELLED</code>, <code>TECHNICIAN_UNAVAILABLE</code>. The TAS handler (<code>CandidateWorkflowServiceImpl.reportInstallationFailed</code>) saves the English text in <code>failure_reason</code> and buries the picker code as <code>"report_installation_failed_reason_code"</code> in the candidate's <code>extra_data</code> JSON — it doesn't populate any of the 4 OS-mandated fields. The picker code is then dropped twice more downstream: <code>EsInstallReportedFailed</code> (the event TAS emits to CL) doesn't carry the 4 OS fields; CL's <code>handleEsInstallReportedFailed</code> translation step hard-codes them to <code>null</code> when constructing the internal <code>InstallationFailed</code> event (the field is there in the inbound record, just zero-filled).</td></tr>
+    <tr><td>Who experiences it?</td><td>Quality OS pattern detection per BDN-CL-02 collapses (can't differentiate CSP_NO_SHOW from COVERAGE_NOT_FEASIBLE from CUSTOMER_CANCELLED). Enforcement OS per-CSP attribution is similarly blind. Ops doing RCA on install-failure spikes can't filter by cause.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Every CSP-reported install failure in prod lands at CL with the same generic <code>failure_reason = "CSP_REPORTED_FAILURE"</code> and 4 sub-reason fields blank. Per-CSP install-quality attribution is silently corrupted; bonus / penalty signals based on these fields are dark.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The 6 picker options, the deterministic 4-field mapping per OS, and the atomic code deltas.</div>
+  <span class="row-mode req">All rows required</span>
+
+  <h3>The 6 picker options (OS-aligned)</h3>
+  <p>The OS prescribes 7 sub-reason codes per CL OS L578 / L922; <code>CSP_NO_SHOW</code> is excluded from the picker because it's system-detected via P74 timeout (not CSP-picked). The 6 CSP-pickable codes:</p>
+  <table>
+    <thead><tr><th>Picker code (= OS <code>failure_subreason_code</code>)</th><th>English text</th><th>Hindi text (placeholder — copy team to finalise)</th></tr></thead>
+    <tbody>
+      <tr><td><code>COVERAGE_NOT_FEASIBLE</code></td><td>Location can't be served</td><td>जगह पर सेवा नहीं दे सकते</td></tr>
+      <tr><td><code>CUSTOMER_CANCELLED</code></td><td>Customer cancelled</td><td>ग्राहक ने रद्द किया</td></tr>
+      <tr><td><code>PRICE_CONFUSION</code></td><td>Customer didn't agree on price</td><td>ग्राहक ने कीमत पर सहमति नहीं दी</td></tr>
+      <tr><td><code>SCHEDULE_CONFLICT</code></td><td>Schedule didn't work</td><td>समय में टकराव</td></tr>
+      <tr><td><code>DEVICE_UNAVAILABLE</code></td><td>No device available</td><td>डिवाइस उपलब्ध नहीं</td></tr>
+      <tr><td><code>BACKHAUL_ISSUE</code></td><td>Backhaul / connectivity issue</td><td>बैकहॉल / कनेक्शन समस्या</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The 4-field auto-populate (deterministic mapping)</h3>
+  <p>The CSP's picker selection deterministically drives the 4 OS-mandated fields on every emitted event. Per OS §7.2: <code>failure_subreason_source</code> ∈ {<code>CUSTOMER</code>, <code>CSP</code>, <code>SYSTEM</code>}; <code>failure_subreason_confidence</code> ∈ {<code>HIGH</code>, <code>MEDIUM</code>, <code>LOW</code>}. Picker-driven submissions always carry <code>HIGH</code> confidence (CSP is making a direct, deliberate selection from a finite menu; no inference / no NLP).</p>
+  <table>
+    <thead><tr><th>Picker = <code>failure_subreason_code</code></th><th>→ <code>failure_reason</code></th><th>→ <code>failure_subreason_source</code></th><th>→ <code>failure_subreason_confidence</code></th><th>→ <code>failure_detail</code></th></tr></thead>
+    <tbody>
+      <tr><td><code>COVERAGE_NOT_FEASIBLE</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>null (optional free text)</td></tr>
+      <tr><td><code>CUSTOMER_CANCELLED</code></td><td><code>CUSTOMER_REFUSED</code></td><td><code>CUSTOMER</code></td><td><code>HIGH</code></td><td>null</td></tr>
+      <tr><td><code>PRICE_CONFUSION</code></td><td><code>CUSTOMER_REFUSED</code></td><td><code>CUSTOMER</code></td><td><code>HIGH</code></td><td>null</td></tr>
+      <tr><td><code>SCHEDULE_CONFLICT</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>null</td></tr>
+      <tr><td><code>DEVICE_UNAVAILABLE</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>null</td></tr>
+      <tr><td><code>BACKHAUL_ISSUE</code></td><td><code>CSP_REPORTED_FAILURE</code></td><td><code>CSP</code></td><td><code>HIGH</code></td><td>null</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Atomic deltas</h3>
+  <table class="delta">
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>TAS picker enum — <code>CancellationReason.java</code></td>
+        <td>4 entries: <code>LOCATION_UNREACHABLE</code>, <code>CAPACITY_FULL</code>, <code>CUSTOMER_CANCELLED</code>, <code>TECHNICIAN_UNAVAILABLE</code></td>
+        <td>6 entries: the OS-aligned enum above</td>
+        <td>Picker codes match OS field values 1:1; no mapping layer.</td>
+      </tr>
+      <tr>
+        <td>TAS handler — <code>CandidateWorkflowServiceImpl.reportInstallationFailed</code></td>
+        <td>Saves text in <code>failure_reason</code>; buries picker code in <code>extra_data["report_installation_failed_reason_code"]</code>; does NOT set the 4 OS fields on the entity or downstream events</td>
+        <td>Apply the deterministic mapping to derive (<code>failure_reason</code>, <code>failure_subreason_code</code>, <code>failure_subreason_source</code>, <code>failure_subreason_confidence</code>); set all 4 on the candidate entity AND propagate on every emitted event. Drop the <code>extra_data</code> placeholder write.</td>
+        <td>Picker information becomes first-class structured data instead of unstructured JSON.</td>
+      </tr>
+      <tr>
+        <td><code>EsInstallReportedFailed</code> event record (TAS-outbound, CL-inbound)</td>
+        <td>Has <code>eventId, executionCandidateId, allocationId, cspId, connectionId, zoneId, preWithdrawalState, failureReason, failureReportedAt, correlationId</code> — no sub-reason fields</td>
+        <td>Add 4 fields: <code>failureSubreasonCode</code>, <code>failureSubreasonSource</code>, <code>failureSubreasonConfidence</code>, <code>failureDetail</code>. Backward-compatible additive change.</td>
+        <td>The wire contract between TAS and CL must carry the OS-mandated fields end-to-end.</td>
+      </tr>
+      <tr>
+        <td>CL translation step — <code>handleEsInstallReportedFailed</code></td>
+        <td>Builds the internal <code>InstallationFailed</code> with all 4 sub-reason fields hard-coded <code>null</code> (verified at lines 1213-1215 of <code>InboundEventProcessingServiceImpl</code>)</td>
+        <td>Read the 4 fields from the inbound <code>EsInstallReportedFailed</code>; pass them through to the translated <code>InstallationFailed</code>.</td>
+        <td>The CL <code>InstallationFailed</code> record already has the 4 fields; just stop zero-filling them.</td>
+      </tr>
+      <tr>
+        <td>CL persistence — <code>handleInstallationFailed</code> + <code>connection_event_history</code></td>
+        <td>Writes <code>failure_reason</code> only; the 4 sub-reason fields end up null in the persisted payload</td>
+        <td>Persist all 4 OS fields to <code>connection_event_history.payload</code> when present on the inbound event.</td>
+        <td>Quality OS / Enforcement OS read from <code>connection_event_history</code>; the fields must be there.</td>
+      </tr>
+      <tr>
+        <td>Partner App</td>
+        <td>Fetches picker list from backend (<code>GET /install/cancellation-reasons</code>); fires <code>POST /actions/report-installation-failed</code> with the picker code as <code>reason_code</code></td>
+        <td>Same. The backend serves the 6 OS-aligned options after the TAS enum change. No app code change. No release needed.</td>
+        <td>The picker list is server-driven; clients auto-pick up.</td>
+      </tr>
+      <tr>
+        <td>ES PRD documentation</td>
+        <td>Picker contract not explicitly enumerated</td>
+        <td>Document the 6 picker options + the deterministic 4-field mapping table. ESR registers the 4 new fields on <code>EsInstallReportedFailed</code>.</td>
+        <td>PM-side documentation matches the wire contract.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="hint"><strong>Out of scope:</strong> backfilling historical install-failure rows (the buried <code>extra_data</code> picker codes don't 1:1 map to the new OS-aligned codes — <code>CAPACITY_FULL</code> and <code>TECHNICIAN_UNAVAILABLE</code> have no clean OS-enum equivalent); changing the optional <code>failure_detail</code> free-text UX (default null); system-driven failure paths (TIMEOUT_P74 etc.) which already set their own <code>failure_subreason_code = CSP_NO_SHOW</code> + <code>failure_subreason_source = SYSTEM</code> upstream.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Adjacent behaviours that must survive untouched.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:38%">Behaviour to protect</th><th>Why it's at risk</th></tr>
+    <tr><td>1</td><td>The <code>INSTALLATION_FAILED</code> state transition itself (candidate moves from in-flight to <code>INSTALLATION_REPORTED_FAILED</code>)</td><td>This change is in the payload only; the candidate transition stays identical.</td></tr>
+    <tr><td>2</td><td>CL T3 / T12 internal flow on <code>INSTALLATION_FAILED</code></td><td>CL's <code>handleInstallationFailed</code> is downstream of the translation step; its existing T3 retry logic, P78 retry-cap enforcement, and event-history writes must continue to fire exactly as today.</td></tr>
+    <tr><td>3</td><td>System-driven failures (P74 timeout etc.)</td><td>The system-emitted path (e.g. P74 sweep) sets <code>failure_subreason_code = CSP_NO_SHOW</code>, <code>failure_subreason_source = SYSTEM</code>, <code>failure_reason = TIMEOUT_P74</code> — unchanged by this item. (Implemented by GAP / item that wires the CLOS scheduler — see BUG-01 in the bugs handover.)</td></tr>
+    <tr><td>4</td><td>Old partner-app versions</td><td>Picker list comes from the backend (<code>GET /install/cancellation-reasons</code>). Old apps see the 6 new options on next launch. No app-version gate.</td></tr>
+    <tr><td>5</td><td>Aggregate install-failure count per CSP / zone</td><td>Adding sub-reason structure to existing events doesn't add or remove events. Total counts stay accurate.</td></tr>
+    <tr><td>6</td><td>The <code>EsInstallReportedFailed</code> path semantics (TAS → CL via <code>/es-install-reported-failed</code>)</td><td>Adding 4 fields is additive; the existing 10 fields stay validated as <code>@NotBlank</code> / <code>@NotNull</code> exactly as today. CL's downstream T3/T12 flow must not change.</td></tr>
+    <tr><td>7</td><td><code>TasInstallTerminal</code> event (TAS → Quality OS)</td><td>If Quality OS also needs the 4 sub-reason fields, this would be a separate extension. For this item, scope is limited to the CL path (CSP-quality scoring reads <code>connection_event_history</code>). Quality OS extension can be a follow-up if needed.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Amendment</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>CL OS</td><td>No</td><td>Implementing what §7.2 / S-02 (v1.2 amendment) already prescribes for the <code>failure_subreason_*</code> fields. CL OS prescribes the fields and the enums; the gap is implementation-side.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>Quality OS / Enforcement OS</td><td>No</td><td>Consumers per BDN-CL-02. They start receiving data the OS already specified they consume.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>ESR (Event Schema Registry)</td><td>Yes</td><td>Register the 4 new fields on <code>EsInstallReportedFailed</code> schema. Optionally extend <code>TasInstallTerminal</code> too (out of scope here).</td><td>Cross-OS contract</td><td>ESR owner</td><td>Pending</td></tr>
+      <tr><td>Installation Flow / ES PRD</td><td>Yes</td><td>Document the 6 picker options + 4-field mapping table.</td><td>Behaviour-change documentation</td><td>Installation Flow OS owner</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Verification layer for engineering build and test.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then per mapping row, plus edges and a REGRESSION block per A6 guard.</div>
+
+  <h3>Business logic (one per mapping row)</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> COVERAGE_NOT_FEASIBLE mapping
+  <span class="kw">Given</span> a CSP picks "Location can't be served" (picker code COVERAGE_NOT_FEASIBLE)
+  <span class="kw">When</span>  the candidate transitions to INSTALLATION_REPORTED_FAILED
+        and the chain TAS → CL completes
+  <span class="kw">Then</span>  the persisted CL event payload has:
+        failure_reason             = CSP_REPORTED_FAILURE
+        failure_subreason_code     = COVERAGE_NOT_FEASIBLE
+        failure_subreason_source   = CSP
+        failure_subreason_confidence = HIGH</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> CUSTOMER_CANCELLED maps to CUSTOMER_REFUSED primary
+  <span class="kw">Given</span> a CSP picks "Customer cancelled" (picker code CUSTOMER_CANCELLED)
+  <span class="kw">When</span>  the chain TAS → CL completes
+  <span class="kw">Then</span>  failure_reason             = CUSTOMER_REFUSED   (note: NOT CSP_REPORTED_FAILURE)
+        failure_subreason_code     = CUSTOMER_CANCELLED
+        failure_subreason_source   = CUSTOMER
+        failure_subreason_confidence = HIGH</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> PRICE_CONFUSION maps to CUSTOMER_REFUSED primary
+  <span class="kw">Given</span> a CSP picks "Customer didn't agree on price"
+  <span class="kw">When</span>  the chain TAS → CL completes
+  <span class="kw">Then</span>  failure_reason             = CUSTOMER_REFUSED
+        failure_subreason_code     = PRICE_CONFUSION
+        failure_subreason_source   = CUSTOMER
+        failure_subreason_confidence = HIGH</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> CSP-attributable codes (SCHEDULE_CONFLICT, DEVICE_UNAVAILABLE, BACKHAUL_ISSUE)
+  <span class="kw">Given</span> a CSP picks any of these three
+  <span class="kw">When</span>  the chain TAS → CL completes
+  <span class="kw">Then</span>  failure_reason             = CSP_REPORTED_FAILURE
+        failure_subreason_code     = the picker value
+        failure_subreason_source   = CSP
+        failure_subreason_confidence = HIGH</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-5 (negative):</span> No null sub-reason on picker-driven submissions
+  <span class="kw">Given</span> the CSP submits the failure picker with one of the 6 options
+  <span class="kw">When</span>  the event reaches CL connection_event_history
+  <span class="kw">Then</span>  failure_subreason_code is NEVER null
+  <span class="kw">And</span>   failure_subreason_source is NEVER null
+  <span class="kw">And</span>   failure_subreason_confidence is NEVER null</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-6:</span> Picker code reaches the persisted CL payload
+  <span class="kw">Given</span> the Partner App fires POST /install/.../actions/report-installation-failed
+        with {reason: "Customer cancelled", reason_code: "CUSTOMER_CANCELLED"}
+  <span class="kw">When</span>  TAS handler runs → emits EsInstallReportedFailed → CL translates and persists
+  <span class="kw">Then</span>  connection_event_history.payload for the INSTALLATION_FAILED row
+        carries the 4 OS fields populated per the mapping</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> System-driven failure (P74 timeout) — different code path
+  <span class="kw">Given</span> a connection times out on P74 (no picker involved)
+  <span class="kw">When</span>  the CLOS scheduler sweep fires (BUG-01 in the bugs handover; not this item)
+  <span class="kw">Then</span>  the system path sets:
+        failure_subreason_code     = CSP_NO_SHOW
+        failure_subreason_source   = SYSTEM
+        failure_reason             = TIMEOUT_P74
+  <span class="kw">And</span>   no picker is shown to anyone (system origin, not CSP-initiated)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Picker code arrives at TAS as null (defensive)
+  <span class="kw">Given</span> the Partner App for some reason sends reason_code = null
+  <span class="kw">When</span>  TAS handler runs
+  <span class="kw">Then</span>  the handler rejects with HTTP 400 + a clear validation error
+        (the picker is REQUIRED; null is not a valid submission)
+  <span class="kw">And</span>   no candidate transition fires
+  <span class="kw">And</span>   no downstream event is emitted</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Old app version (pre-rollout)
+  <span class="kw">Given</span> a CSP runs an app version that fetched the old 4-option picker list
+  <span class="kw">When</span>  they open the failure picker
+  <span class="kw">Then</span>  the next GET /install/cancellation-reasons returns the new 6 options
+        (server-side change, no client release)
+  <span class="kw">And</span>   the CSP sees the new list</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> EsInstallReportedFailed received from a source that doesn't set the 4 fields
+  <span class="kw">Given</span> some upstream service emits EsInstallReportedFailed without the new fields
+        (e.g. a legacy bridge during rollout)
+  <span class="kw">When</span>  CL's handleEsInstallReportedFailed runs
+  <span class="kw">Then</span>  the 4 fields pass through as null (backward-compatible)
+  <span class="kw">And</span>   the existing T3/T12 flow continues unchanged
+        (matches today's behaviour — no regression for legacy senders)</pre></div>
+
+  <h3>Regression</h3>
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): INSTALLATION_REPORTED_FAILED state transition unchanged
+  <span class="kw">Given</span> any path that fires INSTALLATION_FAILED today (CSP-reported via TAS, or
+        system-driven via CLOS scheduler)
+  <span class="kw">When</span>  the candidate transitions
+  <span class="kw">Then</span>  the install candidate moves to INSTALLATION_REPORTED_FAILED
+        and the downstream T3/T12 logic fires identically to today</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): CL T3 retry + P78 cap unchanged
+  <span class="kw">Given</span> a translated INSTALLATION_FAILED reaching CL
+  <span class="kw">When</span>  CL processes
+  <span class="kw">Then</span>  T3 retry-counter increments per existing rules
+  <span class="kw">And</span>   P78 retry-cap (3 attempts) enforced per existing rules
+  <span class="kw">And</span>   the new sub-reason fields don't affect the retry-counter logic</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): System-driven failures unchanged
+  <span class="kw">Given</span> a system path (P74 timeout etc.)
+  <span class="kw">When</span>  INSTALLATION_FAILED fires from the system code path
+  <span class="kw">Then</span>  failure_reason behaves exactly as today (TIMEOUT_P74 etc.)
+  <span class="kw">And</span>   no picker is involved at any point</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): Old app versions still function
+  <span class="kw">Given</span> a stale app cache (4-option picker list still locally cached)
+  <span class="kw">When</span>  the CSP submits via the stale picker
+  <span class="kw">Then</span>  the picker codes sent are the OLD 4 names
+  <span class="kw">And</span>   TAS handler maps them to the closest new code (transitional fallback)
+        OR rejects with a clear error pointing the CSP at app refresh
+        — (engineering picks one; both are acceptable during rollout)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Aggregate counts preserved
+  <span class="kw">Given</span> a 30-day window of install failures
+  <span class="kw">When</span>  we count INSTALLATION_FAILED events per CSP / zone
+  <span class="kw">Then</span>  the count is unchanged
+        (enriching categorisation; not adding or removing events)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): EsInstallReportedFailed legacy fields stay validated
+  <span class="kw">Given</span> the 10 existing fields on EsInstallReportedFailed
+  <span class="kw">When</span>  CL receives the event
+  <span class="kw">Then</span>  the existing @NotBlank / @NotNull validations fire exactly as today
+  <span class="kw">And</span>   the 4 new fields are validated as Optional (per OS §7.2)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-7</span> (A6 row 7): TasInstallTerminal path unchanged
+  <span class="kw">Given</span> Quality OS subscribes to TasInstallTerminal
+  <span class="kw">When</span>  TAS emits it (alongside EsInstallReportedFailed)
+  <span class="kw">Then</span>  the TasInstallTerminal payload is unchanged
+        (extending it to carry the 4 fields is a follow-up item if Quality OS needs it)</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 mapping table (6 rows)</td><td>6 mappings</td><td>LOGIC-1..6</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>—</td><td>N/A (no computation; only enum mapping)</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..4</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 rows 1–7</td><td>7 guards</td><td>REGRESSION-1..7</td><td>All covered</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A6, A8, B5) filled</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" on every class</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A6 guard has a matching B5 REGRESSION block</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes" has sign-off Received</td><td class="check">Pending (ESR + ES PRD)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code evidence (verified 2026-06-03):</strong>
+    <ul>
+      <li><strong>Current picker (4 options):</strong> <code>services/csp-tas-service/.../install/domain/model/CancellationReason.java</code></li>
+      <li><strong>OS sub-reason enums:</strong> <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> L578-580 (S-02 sub-reason fields), L922-924 (same fields on T3/T12 payload), §7.2 BDN-CL-02 (L632-637).</li>
+      <li><strong>OS failure_reason enum:</strong> <code>Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> L919 — <code>CSP_REPORTED_FAILURE, TIMEOUT_P74, VERIFICATION_FAILED, CUSTOMER_REFUSED, ACCESS_DENIED, BINDING_MISSING</code>.</li>
+      <li><strong>TAS handler (buries picker code):</strong> <code>services/csp-tas-service/.../install/application/impl/CandidateWorkflowServiceImpl.java</code> — <code>reportInstallationFailed</code>: <code>mergeIntoExtraData(entity, "report_installation_failed_reason_code", reasonCode.name())</code>.</li>
+      <li><strong>TAS-emitted event (lacks sub-reason fields):</strong> <code>services/csp-connection-lifecycle-service/.../domain/event/inbound/EsInstallReportedFailed.java</code> — 10 fields, none of the 4 sub-reason.</li>
+      <li><strong>CL translation step (hard-codes nulls):</strong> <code>InboundEventProcessingServiceImpl.handleEsInstallReportedFailed</code> — the <code>new InstallationFailed(...)</code> call hard-codes <code>failureSubreasonCode = null</code>, <code>failureSubreasonSource = null</code>, <code>failureSubreasonConfidence = null</code>, <code>failureDetail = null</code> (lines 1213-1215).</li>
+      <li><strong>CL InstallationFailed inbound record (already has fields):</strong> <code>services/csp-connection-lifecycle-service/.../domain/event/inbound/InstallationFailed.java</code> — all 4 fields present as Optional.</li>
+      <li><strong>Partner App picker endpoint:</strong> <code>GET /api/install/cancellation-reasons</code> in <code>CancellationReasonController.java</code>.</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope confirmed via code trace: picker code is dropped at <strong>three</strong> sites (TAS handler buries in extra_data; <code>EsInstallReportedFailed</code> lacks the fields; CL translation hard-codes nulls). All three need the fix.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+</body>
+</html>
