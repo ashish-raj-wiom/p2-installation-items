@@ -189,7 +189,7 @@
     <tr><td>Change title</td><td>Bifurcate booking cancellations by source (customer vs system)</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
-    <tr><td>Version</td><td>v1.2 (2026-06-04)</td></tr>
+    <tr><td>Version</td><td>v1.3 (2026-06-04)</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td><code>installation-flow-execution-spec-yaml/.../es-connection-installation-service-preinst-prd.yaml</code> v2.5 — both terminal states (<code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>) and both workflow methods (<code>cancelByCustomer</code>, <code>cancelByUpstream</code>) already in spec + code.</td></tr>
   </table>
   <hr class="sect-end">
@@ -334,17 +334,23 @@
   <span class="kw">And</span>   the unrecognised value is logged at WARN for ops follow-up
   <span class="kw">And</span>   the candidate does NOT silently route to CANCELLED_BY_CUSTOMER</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> System-cancel → CleverTap event fires → CSP app removes the booking
-  <em>Real-world:</em> when a system-side cancel reaches CANCELLED_BY_UPSTREAM, the CSP
-  must see the booking disappear from their app. CleverTap is the notification channel
-  the partner app subscribes to — it's what wakes the app and tells it to remove the task.
+  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> System-cancel → two parallel outcomes — booking removed from apps + CleverTap event fires
+  <em>Real-world:</em> when a system-side cancel reaches CANCELLED_BY_UPSTREAM, two things
+  must happen in parallel:
+    1. The booking is removed from the CSP app (and the Technician app,
+       if a technician was already assigned).
+    2. An event is fired asynchronously to CleverTap.
+  These are independent — the CleverTap event is NOT the cause of the app removal,
+  and the app removal is NOT triggered by CleverTap.
 
   <span class="kw">Given</span> the install candidate has landed in CANCELLED_BY_UPSTREAM
   <span class="kw">When</span>  the terminal transition completes
-  <span class="kw">Then</span>  a CleverTap event fires carrying the cancelled bookingId / connectionId
-  <span class="kw">And</span>   the CSP App consumes the CT event and removes the booking
-        from its active-assignments list
-  <span class="kw">And</span>   if the task was already open on the CSP's screen, it shows as cancelled</pre></div>
+  <span class="kw">Then</span>  the booking is removed from the CSP app's active-assignments list
+  <span class="kw">And</span>   if a technician was already assigned, the booking is also removed
+        from the Technician app
+  <span class="kw">And</span>   if the task was already open on either app, it shows as cancelled
+  <span class="kw">And</span>   a CleverTap event fires asynchronously carrying the cancelled
+        bookingId / connectionId (no ordering guarantee vs the app-removal step)</pre></div>
 
   <h3>Use &amp; edge cases</h3>
   <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Cancellation arrives but no install task exists for that connection
@@ -401,8 +407,11 @@
         (the findActiveByConnectionId query excludes terminal states by definition)
   <span class="kw">And</span>   only CSP-2's candidate is cancelled — per the LOGIC-1 or LOGIC-2 branch
         (depending on whether the cancellation source is USER_INITIATED or SYSTEM_INITIATED)
-  <span class="kw">And</span>   CSP-2's CleverTap event fires and the CSP App removes CSP-2's task
-        (CSP-1 is not on the booking any more, so no app surface change for them)</pre></div>
+  <span class="kw">And</span>   the booking is removed from CSP-2's CSP app (and Technician app,
+        if a technician was already assigned to CSP-2)
+  <span class="kw">And</span>   a CleverTap event fires asynchronously for CSP-2's cancellation
+        (no app surface change or CT event for CSP-1 — they had already
+         terminated their attempt)</pre></div>
 
   <h3>Regression</h3>
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): CL state-machine transitions for cancellation are untouched
@@ -457,17 +466,22 @@
   <span class="kw">When</span>  the recharge handler processes
   <span class="kw">Then</span>  behaviour is identical to today (the recharge DTO is not changed)</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-7</span> (new): Customer-cancel → CleverTap event + CSP app removal still works
-  <em>Real-world:</em> today the customer-cancel → CSP-app-removal chain works because every
-  cancel routes through CANCELLED_BY_UPSTREAM. After this fix, customer-cancels route through
-  CANCELLED_BY_CUSTOMER instead. The CT event and app removal must continue to fire from
-  the new branch — no UX regression for the partner.
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-7</span> (new): Customer-cancel — same two parallel outcomes as LOGIC-5 must fire from the new branch
+  <em>Real-world:</em> the two outcomes from LOGIC-5 (app removal + CleverTap event) apply
+  equally to customer-cancel. Today, customer-cancels route through CANCELLED_BY_UPSTREAM
+  and the CSP-app removal is known-working. After this fix, customer-cancels route through
+  CANCELLED_BY_CUSTOMER instead. Both outcomes must continue to fire from the new branch —
+  no UX regression for the partner, and CT emission must extend to the customer branch
+  if it's only wired to the upstream branch today.
 
   <span class="kw">Given</span> a customer cancels (LOGIC-1 path) and the candidate lands in CANCELLED_BY_CUSTOMER
   <span class="kw">When</span>  the terminal transition completes
-  <span class="kw">Then</span>  a CleverTap event fires for this candidate
-  <span class="kw">And</span>   the CSP App removes the booking from its active-assignments list
-        (unchanged user-facing behaviour from today)</pre></div>
+  <span class="kw">Then</span>  the booking is removed from the CSP app's active-assignments list
+        (the existing user-facing behaviour from today must continue)
+  <span class="kw">And</span>   if a technician was already assigned, the booking is also removed
+        from the Technician app
+  <span class="kw">And</span>   a CleverTap event fires asynchronously
+        (independent of the app removal — both happen; neither causes the other)</pre></div>
 
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
@@ -516,6 +530,7 @@
       <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Verified against csp-os-yaml main: CL emits <code>deactivationSource</code> + <code>deactivationReason</code> on outbound; install TAS DTO drops them.</td><td>Pending</td></tr>
       <tr><td>v1.1</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5</td><td>Expanded acceptance criteria. Each LOGIC / EDGE / REGRESSION now opens with a one-line plain-language "Real-world" framing so PMs, ops, QA and engineering can read the same doc. Added <strong>LOGIC-5</strong> (system-cancel → CleverTap event → CSP app removes the booking) and <strong>REGRESSION-7</strong> (customer-cancel CT + app removal must continue to work post-fix — today this fires via the upstream branch; after the fix it must fire via the customer branch). CleverTap re-scoped as a notification channel to the CSP app (not marketing analytics). No A1/A2/A5/A6/A8 changes.</td><td>Pending</td></tr>
       <tr><td>v1.2</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (LOGIC-2, EDGE-5)</td><td>LOGIC-2 Real-world line reframed — system-cancel is overwhelmingly delay-driven (Wiom timeout, support cancellation), not Exit / Enforcement (which are CSP-relationship events, not booking events). Added <strong>EDGE-5</strong>: when a previous CSP marked install-failed on the same connection and the connection was re-routed to a new CSP, an incoming cancellation only affects the new CSP's active candidate — the previous CSP's terminal record stays intact. Verified in code: <code>findActiveByConnectionId(connectionId, TERMINAL_STATES)</code> excludes terminal-state candidates by query definition.</td><td>Pending</td></tr>
+      <tr><td>v1.3</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (LOGIC-5, EDGE-5, REGRESSION-7)</td><td>Corrected the CleverTap framing across all three blocks. CleverTap is <strong>NOT</strong> the channel the apps subscribe to — app removal and CT event are two parallel, independent outcomes (neither causes the other). Added Technician app to scope wherever a technician would be assigned. Both outcomes (app removal + CT event) now explicitly apply to <strong>both</strong> the customer-cancel branch (REGRESSION-7) and the system-cancel branch (LOGIC-5).</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>
