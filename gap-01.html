@@ -189,7 +189,7 @@
     <tr><td>Change title</td><td>Bifurcate booking cancellations by source (customer vs system)</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
-    <tr><td>Version</td><td>v1.1 (2026-06-04)</td></tr>
+    <tr><td>Version</td><td>v1.2 (2026-06-04)</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td><code>installation-flow-execution-spec-yaml/.../es-connection-installation-service-preinst-prd.yaml</code> v2.5 — both terminal states (<code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>) and both workflow methods (<code>cancelByCustomer</code>, <code>cancelByUpstream</code>) already in spec + code.</td></tr>
   </table>
   <hr class="sect-end">
@@ -298,8 +298,8 @@
   <span class="kw">And</span>   the candidate lands in CANCELLED_BY_CUSTOMER (the OS-defined terminal for this case)</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> System cancels the booking → task marked "cancelled upstream" with the real reason
-  <em>Real-world:</em> any non-customer cancel — support agent in CRM, Wiom timeout,
-  Exit OS, Enforcement OS, etc.
+  <em>Real-world:</em> the booking is cancelled by the system — typically because it has
+  been delayed too long (e.g. Wiom timeout, customer support cancellation).
 
   <span class="kw">Given</span> a cancellation arrives at TAS install with source = "SYSTEM_INITIATED"
         and deactivationReason = "&lt;the actual upstream cause&gt;"
@@ -385,6 +385,25 @@
   <span class="kw">And</span>   the CANCELLED_BY_UPSTREAM count drops correspondingly
   <span class="kw">And</span>   ops should be told the swing is NOT a customer-behaviour change</pre></div>
 
+  <div class="gherkin"><pre><span class="kw">EDGE-5:</span> A previous CSP already terminated their candidate (install failure) before the cancel arrives
+  <em>Real-world:</em> CSP-1 took the booking and marked it install-failed. The connection
+  re-entered routing and was re-assigned to CSP-2. Now a cancellation arrives. Only
+  CSP-2's active task should be affected — CSP-1's historical install-failure record
+  must stay intact (it's their truth, the quality / payout signal must not be retroactively
+  overwritten).
+
+  <span class="kw">Given</span> a connection has two candidates in the database:
+        • CSP-1's candidate in INSTALLATION_REPORTED_FAILED (terminal)
+        • CSP-2's candidate active (any in-flight state)
+  <span class="kw">And</span>   a cancellation arrives
+  <span class="kw">When</span>  the handler processes
+  <span class="kw">Then</span>  CSP-1's candidate is UNTOUCHED — it stays in INSTALLATION_REPORTED_FAILED
+        (the findActiveByConnectionId query excludes terminal states by definition)
+  <span class="kw">And</span>   only CSP-2's candidate is cancelled — per the LOGIC-1 or LOGIC-2 branch
+        (depending on whether the cancellation source is USER_INITIATED or SYSTEM_INITIATED)
+  <span class="kw">And</span>   CSP-2's CleverTap event fires and the CSP App removes CSP-2's task
+        (CSP-1 is not on the booking any more, so no app surface change for them)</pre></div>
+
   <h3>Regression</h3>
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): CL state-machine transitions for cancellation are untouched
   <em>Real-world:</em> the fix is on the receiving side (TAS). CL's own state changes
@@ -457,7 +476,7 @@
       <tr><td class="cls">Business logic</td><td>A5 rows 1–4 + CT notification path</td><td>5 deltas</td><td>LOGIC-1..5</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>—</td><td>N/A (no computation)</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
-      <tr><td class="cls">Use / edge</td><td>EDGE-1..4</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..5</td><td>5 edges</td><td>EDGE-1..5</td><td>All covered</td></tr>
       <tr><td class="cls">Regression</td><td>A6 rows 1–6 + CT preservation</td><td>7 guards</td><td>REGRESSION-1..7</td><td>All covered</td></tr>
     </tbody>
   </table>
@@ -496,6 +515,7 @@
     <tbody>
       <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Verified against csp-os-yaml main: CL emits <code>deactivationSource</code> + <code>deactivationReason</code> on outbound; install TAS DTO drops them.</td><td>Pending</td></tr>
       <tr><td>v1.1</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5</td><td>Expanded acceptance criteria. Each LOGIC / EDGE / REGRESSION now opens with a one-line plain-language "Real-world" framing so PMs, ops, QA and engineering can read the same doc. Added <strong>LOGIC-5</strong> (system-cancel → CleverTap event → CSP app removes the booking) and <strong>REGRESSION-7</strong> (customer-cancel CT + app removal must continue to work post-fix — today this fires via the upstream branch; after the fix it must fire via the customer branch). CleverTap re-scoped as a notification channel to the CSP app (not marketing analytics). No A1/A2/A5/A6/A8 changes.</td><td>Pending</td></tr>
+      <tr><td>v1.2</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (LOGIC-2, EDGE-5)</td><td>LOGIC-2 Real-world line reframed — system-cancel is overwhelmingly delay-driven (Wiom timeout, support cancellation), not Exit / Enforcement (which are CSP-relationship events, not booking events). Added <strong>EDGE-5</strong>: when a previous CSP marked install-failed on the same connection and the connection was re-routed to a new CSP, an incoming cancellation only affects the new CSP's active candidate — the previous CSP's terminal record stays intact. Verified in code: <code>findActiveByConnectionId(connectionId, TERMINAL_STATES)</code> excludes terminal-state candidates by query definition.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>
