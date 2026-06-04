@@ -78,6 +78,7 @@
   }
   .pill.bug { background: var(--bug-bg); color: var(--bug); }
   .pill.gap { background: var(--gap-bg); color: var(--gap); }
+  .pill.ok  { background: var(--ok-bg);  color: var(--ok);  }
 
   .spec-ref {
     background: var(--what-bg); border-left: 4px solid var(--what); padding: 10px 14px;
@@ -146,6 +147,8 @@
   <ol>
     <li><a href="#spec">Original spec</a></li>
     <li><a href="#cases">Test cases</a></li>
+    <li><a href="#workflow">Workflow per parameter</a></li>
+    <li><a href="#wired">What's wired / what's not</a></li>
     <li><a href="#tas-cofix">TAS co-fix (T12)</a></li>
     <li><a href="#evidence">Code evidence</a></li>
   </ol>
@@ -215,6 +218,62 @@
   </tbody>
 </table>
 
+<h2 id="workflow">Workflow — state flow per parameter</h2>
+<p>The three sweeps each drive a single CL state-machine transition. The diagram below is the full CL state machine; the three transitions BUG-01 wires up are labelled <code>P75 / T9</code>, <code>P76 / T7</code>, <code>P77 / T8</code>.</p>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> REQUESTED: CONNECTION_REQUEST
+    REQUESTED --> PENDING_INSTALL: ALLOCATION_ACCEPTED (T1)
+    REQUESTED --> DEACTIVATED: P75 sweep 7d (T9)
+    PENDING_INSTALL --> ACTIVE: install complete (T2)
+    PENDING_INSTALL --> REQUESTED: install failed retry (T3)
+    PENDING_INSTALL --> PENDING_DEACTIVATION: P78 retry exhausted (T12)
+    ACTIVE --> PAUSED: recharge expired (T4)
+    PAUSED --> ACTIVE: recharge confirmed
+    PAUSED --> PENDING_DEACTIVATION: P76 sweep 90d (T7)
+    ACTIVE --> PENDING_DEACTIVATION: user cancel / exit (T5/T6)
+    PENDING_DEACTIVATION --> DEACTIVATED: P77 sweep 45d (T8)
+    DEACTIVATED --> [*]
+</div>
+
+<h3>P75 — <code>REQUESTED → DEACTIVATED</code> (T9, 7d)</h3>
+<p>Connection sits in REQUESTED for 7+ days without an <code>ALLOCATION_ACCEPTED</code> arriving (DAS couldn't route, or downstream wiring broke). Sweep fires T9 → emits <code>CL_CONNECTION_DEACTIVATED</code> with <code>reason = REQUEST_EXPIRED</code> (terminal, no PENDING_DEACTIVATION middle step).</p>
+<p><strong>Downstream:</strong> D&amp;A OS releases pending allocation holds and resets retry counters for this <code>connection_id</code>; customer must submit a fresh request (FM-CLO-01 — new <code>connection_id</code>, no retry-counter bleed). No router recovery (no device was bound). No compensation reversal (no CSP was paid).</p>
+
+<h3>P76 — <code>PAUSED → PENDING_DEACTIVATION</code> (T7, 90d)</h3>
+<p>Connection sits in PAUSED for 90+ days (no recharge restored ACTIVE). Sweep fires T7 → emits <code>CL_DEACTIVATION_INITIATED</code> with <code>reason = PAUSE_DURATION_EXCEEDED</code>. This is the heavy fanout:</p>
+<ul>
+  <li><strong>Asset Custody OS</strong>: device <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> (T_REC_1, ACO L189). Triggers PUT flow / R15 / R17 framework; Support creates router-recovery task; security-deposit refund pipeline arms.</li>
+  <li><strong>D&amp;A OS</strong>: allocation released for this <code>connection_id</code>.</li>
+  <li><strong>Capacity OS</strong>: <code>active_connection_count -= 1</code> in the zone.</li>
+  <li><strong>Compensation OS</strong>: per-event entitlement ledger closure.</li>
+</ul>
+<p>The 45-day P77 timer now starts on this <code>PENDING_DEACTIVATION</code> row — finalisation requires the third sweep.</p>
+
+<h3>P77 — <code>PENDING_DEACTIVATION → DEACTIVATED</code> (T8, 45d)</h3>
+<p>Catches <strong>all</strong> paths into <code>PENDING_DEACTIVATION</code>, not just P76. Entries also include T5 (user cancellation), T6 (Exit OS / Enforcement OS), T11 (system kill from REQUESTED / PENDING_INSTALL) and T12 (P78 retry exhaustion). Per <strong>TRD-CLO-05 (v1.3)</strong>: P77 timeout is the SOLE completion trigger — even if Custody and Compensation finish in 5 days, CL waits 45 days. Sweep fires T8 → emits <code>CL_CONNECTION_DEACTIVATED</code> with <code>reason = DEACTIVATION_COMPLETE</code>. All OSes archive. <strong>INV-CLO-05</strong>: terminal, immutable, <code>connection_id</code> never reused.</p>
+<p><em>Implication: P77 isn't a niche cron. It's the finaliser for every deactivation that goes through <code>PENDING_DEACTIVATION</code>, which is most of them. Without it, every deactivation hangs indefinitely.</em></p>
+
+<h2 id="wired">What's wired, what's not (8 layers)</h2>
+<p>Audited against <code>services/csp-connection-lifecycle-service</code> source. Layers 1–6 are in place and reachable; the bug sits in layers 7–8.</p>
+<table>
+  <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:24%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><span class="pill ok">Wired</span></td><td>State machine (T7, T8, T9 transitions)</td><td><code>domain/service/ConnectionStateMachine.java</code>, <code>ConnectionGuards.java</code></td></tr>
+    <tr><td>2</td><td><span class="pill ok">Wired</span></td><td>Sweep batch methods</td><td><code>application/impl/SchedulingServiceImpl.java</code>: <code>processRequestExpiryBatch</code> (P75, L30), <code>processPauseExpiryBatch</code> (P76, L72), <code>processDeactivationTimeoutBatch</code> (P77, L94). Each queries <code>findByStateOlderThan(state, cutoff)</code> + invokes the right handler.</td></tr>
+    <tr><td>3</td><td><span class="pill ok">Wired</span></td><td>Internal HTTP wrappers</td><td><code>api/InternalTaskController.java</code>: <code>POST /process-request-expiry</code> · <code>/process-pause-expiry</code> · <code>/process-deactivation-timeout</code>. <strong><code>curl</code> against these works today.</strong></td></tr>
+    <tr><td>4</td><td><span class="pill ok">Wired</span></td><td>Transition handlers</td><td><code>InboundEventProcessingServiceImpl.handleRequestExpired</code> / <code>handlePauseDurationExceeded</code> / <code>handleDeactivationComplete</code> — write state, write transition log, emit outbound event.</td></tr>
+    <tr><td>5</td><td><span class="pill ok">Wired</span></td><td>Outbound event emission</td><td>Producer records for <code>CL_DEACTIVATION_INITIATED</code> and <code>CL_CONNECTION_DEACTIVATED</code> + outbox dispatch — identical path to any manually-driven CL transition today.</td></tr>
+    <tr><td>6</td><td><span class="pill ok">Wired</span></td><td>Downstream consumers</td><td>Custody OS: <code>handleClDeactivationInitiated</code> (<code>InboundEventController.java:19</code>, processor <code>InboundEventProcessingServiceImpl.java:40-87</code> does the <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> write). D&amp;A OS: <code>InboundEventController.java:168, 207</code>. Capacity OS: <code>InboundEventController.java:270</code>. <strong>All three sit idle waiting for events that never come.</strong></td></tr>
+    <tr><td>7</td><td><span class="pill bug">Missing</span></td><td>Service-side scheduler wiring</td><td><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> exists as a class but is <strong>never called</strong>. Grep across the whole service returns ONE match — the method definition itself. No <code>@PostConstruct</code> / <code>CommandLineRunner</code> / <code>ApplicationRunner</code> in <code>ConnectionLifecycleApplication.java</code> registers the five sweep batches. The scheduler abstraction also defensively short-circuits when the flag is off (<code>EventBridgeTaskScheduler.java:65</code> — <code>log.info("Scheduler disabled, skipping scheduleRecurring: {}"); return;</code>).</td></tr>
+    <tr><td>8</td><td><span class="pill bug">Missing</span></td><td>Environment + AWS infrastructure</td><td><code>AWS_SCHEDULER_ENABLED: false</code> in <code>application-prod.yml:18</code> and <code>application-qa.yml:21</code>. <code>application.yml:175-184</code> reads <code>schedule-group</code>, <code>role-arn</code>, <code>api-destination-arn</code> from env vars that default to placeholders (<code>arn:aws:iam::000000000000:role/connection-lifecycle-scheduler-role</code>). No IaC (CDK / Terraform) in this repo provisions those AWS resources. <strong>This is the "no proper workflow exists" gap tech raised — shared by every microservice that needs crons.</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="hint">
+  <strong>Interim path that ships value before AWS infra lands:</strong> the <code>InternalTaskController</code> POST endpoints already work (layer 3). An external Lambda / GitHub Actions cron / k8s CronJob can <code>curl</code> the four endpoints every 15 min and drive the full downstream chain (Custody router recovery, Capacity reclaim, D&amp;A allocation release) without waiting for the AWS EventBridge workflow to be built. Same business outcome, different transport. Worth proposing to tech as a stop-gap.
+</div>
+
 <h2 id="tas-cofix">TAS co-fix — handle the <code>T12</code> retry-exhaustion transition</h2>
 <p>When CL emits <code>CL_STATE_CHANGED</code> with <code>transitionType=T12</code> (the retry-exhaustion transition, <code>PENDING_INSTALL → PENDING_DEACTIVATION</code>), TAS today doesn't handle it. The <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains <code>T11</code>; <code>T12</code> is missing. Without this co-fix, retried-and-exhausted connections orphan TAS install candidates. Independent of the scheduler wiring above, but engineering should ship them together so the orphan symptom doesn't surface when the sweeps start firing.</p>
 <table class="tc-table">
@@ -242,5 +301,11 @@
   </div>
 </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
 </body>
 </html>

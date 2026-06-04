@@ -25,9 +25,12 @@ const BUGS = [
     sections: [
       { id: 'spec', label: 'Original spec' },
       { id: 'cases', label: 'Test cases' },
+      { id: 'workflow', label: 'Workflow per parameter' },
+      { id: 'wired', label: "What's wired / what's not" },
       { id: 'tas-cofix', label: 'TAS co-fix (T12)' },
       { id: 'evidence', label: 'Code evidence' },
     ],
+    hasMermaid: true,
   },
   {
     id: 'bug-02',
@@ -38,8 +41,11 @@ const BUGS = [
     sections: [
       { id: 'spec', label: 'Original spec' },
       { id: 'cases', label: 'Test cases' },
+      { id: 'workflow', label: 'Workflow — P191 reroute' },
+      { id: 'wired', label: "What's wired / what's not" },
       { id: 'evidence', label: 'Code evidence' },
     ],
+    hasMermaid: true,
   },
   {
     id: 'bug-03',
@@ -181,6 +187,7 @@ const CSS = `
   }
   .pill.bug { background: var(--bug-bg); color: var(--bug); }
   .pill.gap { background: var(--gap-bg); color: var(--gap); }
+  .pill.ok  { background: var(--ok-bg);  color: var(--ok);  }
 
   .spec-ref {
     background: var(--what-bg); border-left: 4px solid var(--what); padding: 10px 14px;
@@ -319,6 +326,62 @@ const BUG_BODY = {
   </tbody>
 </table>
 
+<h2 id="workflow">Workflow — state flow per parameter</h2>
+<p>The three sweeps each drive a single CL state-machine transition. The diagram below is the full CL state machine; the three transitions BUG-01 wires up are labelled <code>P75 / T9</code>, <code>P76 / T7</code>, <code>P77 / T8</code>.</p>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> REQUESTED: CONNECTION_REQUEST
+    REQUESTED --> PENDING_INSTALL: ALLOCATION_ACCEPTED (T1)
+    REQUESTED --> DEACTIVATED: P75 sweep 7d (T9)
+    PENDING_INSTALL --> ACTIVE: install complete (T2)
+    PENDING_INSTALL --> REQUESTED: install failed retry (T3)
+    PENDING_INSTALL --> PENDING_DEACTIVATION: P78 retry exhausted (T12)
+    ACTIVE --> PAUSED: recharge expired (T4)
+    PAUSED --> ACTIVE: recharge confirmed
+    PAUSED --> PENDING_DEACTIVATION: P76 sweep 90d (T7)
+    ACTIVE --> PENDING_DEACTIVATION: user cancel / exit (T5/T6)
+    PENDING_DEACTIVATION --> DEACTIVATED: P77 sweep 45d (T8)
+    DEACTIVATED --> [*]
+</div>
+
+<h3>P75 — <code>REQUESTED → DEACTIVATED</code> (T9, 7d)</h3>
+<p>Connection sits in REQUESTED for 7+ days without an <code>ALLOCATION_ACCEPTED</code> arriving (DAS couldn't route, or downstream wiring broke). Sweep fires T9 → emits <code>CL_CONNECTION_DEACTIVATED</code> with <code>reason = REQUEST_EXPIRED</code> (terminal, no PENDING_DEACTIVATION middle step).</p>
+<p><strong>Downstream:</strong> D&amp;A OS releases pending allocation holds and resets retry counters for this <code>connection_id</code>; customer must submit a fresh request (FM-CLO-01 — new <code>connection_id</code>, no retry-counter bleed). No router recovery (no device was bound). No compensation reversal (no CSP was paid).</p>
+
+<h3>P76 — <code>PAUSED → PENDING_DEACTIVATION</code> (T7, 90d)</h3>
+<p>Connection sits in PAUSED for 90+ days (no recharge restored ACTIVE). Sweep fires T7 → emits <code>CL_DEACTIVATION_INITIATED</code> with <code>reason = PAUSE_DURATION_EXCEEDED</code>. This is the heavy fanout:</p>
+<ul>
+  <li><strong>Asset Custody OS</strong>: device <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> (T_REC_1, ACO L189). Triggers PUT flow / R15 / R17 framework; Support creates router-recovery task; security-deposit refund pipeline arms.</li>
+  <li><strong>D&amp;A OS</strong>: allocation released for this <code>connection_id</code>.</li>
+  <li><strong>Capacity OS</strong>: <code>active_connection_count -= 1</code> in the zone.</li>
+  <li><strong>Compensation OS</strong>: per-event entitlement ledger closure.</li>
+</ul>
+<p>The 45-day P77 timer now starts on this <code>PENDING_DEACTIVATION</code> row — finalisation requires the third sweep.</p>
+
+<h3>P77 — <code>PENDING_DEACTIVATION → DEACTIVATED</code> (T8, 45d)</h3>
+<p>Catches <strong>all</strong> paths into <code>PENDING_DEACTIVATION</code>, not just P76. Entries also include T5 (user cancellation), T6 (Exit OS / Enforcement OS), T11 (system kill from REQUESTED / PENDING_INSTALL) and T12 (P78 retry exhaustion). Per <strong>TRD-CLO-05 (v1.3)</strong>: P77 timeout is the SOLE completion trigger — even if Custody and Compensation finish in 5 days, CL waits 45 days. Sweep fires T8 → emits <code>CL_CONNECTION_DEACTIVATED</code> with <code>reason = DEACTIVATION_COMPLETE</code>. All OSes archive. <strong>INV-CLO-05</strong>: terminal, immutable, <code>connection_id</code> never reused.</p>
+<p><em>Implication: P77 isn't a niche cron. It's the finaliser for every deactivation that goes through <code>PENDING_DEACTIVATION</code>, which is most of them. Without it, every deactivation hangs indefinitely.</em></p>
+
+<h2 id="wired">What's wired, what's not (8 layers)</h2>
+<p>Audited against <code>services/csp-connection-lifecycle-service</code> source. Layers 1–6 are in place and reachable; the bug sits in layers 7–8.</p>
+<table>
+  <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:24%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><span class="pill ok">Wired</span></td><td>State machine (T7, T8, T9 transitions)</td><td><code>domain/service/ConnectionStateMachine.java</code>, <code>ConnectionGuards.java</code></td></tr>
+    <tr><td>2</td><td><span class="pill ok">Wired</span></td><td>Sweep batch methods</td><td><code>application/impl/SchedulingServiceImpl.java</code>: <code>processRequestExpiryBatch</code> (P75, L30), <code>processPauseExpiryBatch</code> (P76, L72), <code>processDeactivationTimeoutBatch</code> (P77, L94). Each queries <code>findByStateOlderThan(state, cutoff)</code> + invokes the right handler.</td></tr>
+    <tr><td>3</td><td><span class="pill ok">Wired</span></td><td>Internal HTTP wrappers</td><td><code>api/InternalTaskController.java</code>: <code>POST /process-request-expiry</code> · <code>/process-pause-expiry</code> · <code>/process-deactivation-timeout</code>. <strong><code>curl</code> against these works today.</strong></td></tr>
+    <tr><td>4</td><td><span class="pill ok">Wired</span></td><td>Transition handlers</td><td><code>InboundEventProcessingServiceImpl.handleRequestExpired</code> / <code>handlePauseDurationExceeded</code> / <code>handleDeactivationComplete</code> — write state, write transition log, emit outbound event.</td></tr>
+    <tr><td>5</td><td><span class="pill ok">Wired</span></td><td>Outbound event emission</td><td>Producer records for <code>CL_DEACTIVATION_INITIATED</code> and <code>CL_CONNECTION_DEACTIVATED</code> + outbox dispatch — identical path to any manually-driven CL transition today.</td></tr>
+    <tr><td>6</td><td><span class="pill ok">Wired</span></td><td>Downstream consumers</td><td>Custody OS: <code>handleClDeactivationInitiated</code> (<code>InboundEventController.java:19</code>, processor <code>InboundEventProcessingServiceImpl.java:40-87</code> does the <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> write). D&amp;A OS: <code>InboundEventController.java:168, 207</code>. Capacity OS: <code>InboundEventController.java:270</code>. <strong>All three sit idle waiting for events that never come.</strong></td></tr>
+    <tr><td>7</td><td><span class="pill bug">Missing</span></td><td>Service-side scheduler wiring</td><td><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> exists as a class but is <strong>never called</strong>. Grep across the whole service returns ONE match — the method definition itself. No <code>@PostConstruct</code> / <code>CommandLineRunner</code> / <code>ApplicationRunner</code> in <code>ConnectionLifecycleApplication.java</code> registers the five sweep batches. The scheduler abstraction also defensively short-circuits when the flag is off (<code>EventBridgeTaskScheduler.java:65</code> — <code>log.info("Scheduler disabled, skipping scheduleRecurring: {}"); return;</code>).</td></tr>
+    <tr><td>8</td><td><span class="pill bug">Missing</span></td><td>Environment + AWS infrastructure</td><td><code>AWS_SCHEDULER_ENABLED: false</code> in <code>application-prod.yml:18</code> and <code>application-qa.yml:21</code>. <code>application.yml:175-184</code> reads <code>schedule-group</code>, <code>role-arn</code>, <code>api-destination-arn</code> from env vars that default to placeholders (<code>arn:aws:iam::000000000000:role/connection-lifecycle-scheduler-role</code>). No IaC (CDK / Terraform) in this repo provisions those AWS resources. <strong>This is the "no proper workflow exists" gap tech raised — shared by every microservice that needs crons.</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="hint">
+  <strong>Interim path that ships value before AWS infra lands:</strong> the <code>InternalTaskController</code> POST endpoints already work (layer 3). An external Lambda / GitHub Actions cron / k8s CronJob can <code>curl</code> the four endpoints every 15 min and drive the full downstream chain (Custody router recovery, Capacity reclaim, D&amp;A allocation release) without waiting for the AWS EventBridge workflow to be built. Same business outcome, different transport. Worth proposing to tech as a stop-gap.
+</div>
+
 <h2 id="tas-cofix">TAS co-fix — handle the <code>T12</code> retry-exhaustion transition</h2>
 <p>When CL emits <code>CL_STATE_CHANGED</code> with <code>transitionType=T12</code> (the retry-exhaustion transition, <code>PENDING_INSTALL → PENDING_DEACTIVATION</code>), TAS today doesn't handle it. The <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains <code>T11</code>; <code>T12</code> is missing. Without this co-fix, retried-and-exhausted connections orphan TAS install candidates. Independent of the scheduler wiring above, but engineering should ship them together so the orphan symptom doesn't surface when the sweeps start firing.</p>
 <table class="tc-table">
@@ -378,6 +441,55 @@ const BUG_BODY = {
     </tr>
   </tbody>
 </table>
+
+<h2 id="workflow">Workflow — P191 held-allocation reroute</h2>
+<p>P191 is the periodic sweep that retries routing for allocations stuck in <code>UNASSIGNED</code> (CSP not yet found, P50 retry cap not yet exhausted). Diagram below is the DAS allocation state machine; the dead-cron edge is the self-loop on UNASSIGNED.</p>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> UNASSIGNED: ALLOCATION_REQUESTED
+    UNASSIGNED --> ASSIGNED: routing picks a CSP
+    UNASSIGNED --> UNASSIGNED: P191 sweep — re-attempt routing
+    ASSIGNED --> ACCEPTED: auto-accept (AMENDMENT-02)
+    ASSIGNED --> UNASSIGNED: P41 timeout (anchor TBD)
+    ACCEPTED --> ACTIVE: install complete (downstream)
+    ACCEPTED --> REALLOCATION_PENDING: system-structural trigger
+    REALLOCATION_PENDING --> REASSIGNED: new CSP found
+    REASSIGNED --> ACTIVE: install complete
+</div>
+
+<h3>P191 sweep behaviour</h3>
+<p>For each <code>UNASSIGNED</code> allocation row, every 15 minutes:</p>
+<ul>
+  <li>If <code>retry_count &gt;= P50</code> (5 attempts) → skip (held permanently, OS-sanctioned service-vacuum).</li>
+  <li>Else → call <code>allocationServiceImpl.rerouteAllocation(allocation, RETRY)</code> — routing engine re-attempts CSP pick.</li>
+</ul>
+<ul>
+  <li><strong>Success:</strong> state → <code>ASSIGNED</code> → auto-accept → <code>ACCEPTED</code> → emits <code>ALLOCATION_ACCEPTED</code> → CL T1 fires (<code>REQUESTED → PENDING_INSTALL</code>) → TAS creates the install candidate.</li>
+  <li><strong>Failure:</strong> stays <code>UNASSIGNED</code>, <code>retry_count++</code>. Next sweep retries until <code>retry_count == P50</code>, then held permanently.</li>
+</ul>
+<p><strong>Today:</strong> 230 UNASSIGNED rows in prod, oldest &gt; 24h, never re-routed. Every row is a customer whose request didn't find a CSP on the first attempt and is now invisible to the routing pipeline.</p>
+
+<p><strong>Five sibling sweeps</strong> share the same root cause and co-ship (out of PM scope individually): <code>runAllocationTimeoutSweep</code> (P41 — anchor decision pending), <code>runConversionEval</code>, <code>runExposureRecalculation</code>, <code>runOverrideWatchdog</code>, <code>runReallocationDwellSweep</code>.</p>
+
+<h2 id="wired">What's wired, what's not (8 layers)</h2>
+<p>Audited against <code>services/csp-demand-allocation-service</code> source. The DAS layer-7 gap is actually <em>deeper</em> than CL's: CL has an <code>EventBridgeTaskScheduler</code> scaffold class. DAS has no scheduler abstraction at all.</p>
+<table>
+  <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:24%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><span class="pill ok">Wired</span></td><td>Allocation state machine</td><td><code>AllocationServiceImpl</code> + <code>AllocationState</code> enum + transition validation</td></tr>
+    <tr><td>2</td><td><span class="pill ok">Wired</span></td><td>Sweep batch methods (6)</td><td><code>application/impl/BatchTriggerServiceImpl.java</code>: <code>runHeldAllocationSweep</code> (P191, L83) · <code>runAllocationTimeoutSweep</code> (P41, L31) · <code>runConversionEval</code> (L66) · <code>runExposureRecalculation</code> (L76) · <code>runOverrideWatchdog</code> (L101) · <code>runReallocationDwellSweep</code> (L121). Each is <code>@Transactional</code> with correct query logic.</td></tr>
+    <tr><td>3</td><td><span class="pill ok">Wired</span></td><td>Internal HTTP wrappers (6)</td><td><code>api/BatchTriggerController.java</code>: <code>POST /held-allocation-sweep</code> · <code>/allocation-timeout-sweep</code> · <code>/conversion-eval</code> · <code>/exposure-recalculation</code> · <code>/override-watchdog</code> · <code>/reallocation-dwell-sweep</code>. <strong><code>curl</code> against these works today.</strong></td></tr>
+    <tr><td>4</td><td><span class="pill ok">Wired</span></td><td>Re-routing logic invoked by sweep</td><td><code>allocationServiceImpl.rerouteAllocation(allocation, RETRY)</code> — full routing engine including CSP candidate enumeration, eligibility filters, etc.</td></tr>
+    <tr><td>5</td><td><span class="pill ok">Wired</span></td><td>Outbound event emission</td><td>Standard allocation event producers + outbox dispatch (<code>ALLOCATION_ACCEPTED</code>, allocation state changes).</td></tr>
+    <tr><td>6</td><td><span class="pill ok">Wired</span></td><td>Downstream consumers</td><td>CL OS receives <code>ALLOCATION_ACCEPTED</code> → T1 fires. TAS creates install candidate on the same signal. <strong>Both wait idle for routing successes that never happen for the 230 stuck rows.</strong></td></tr>
+    <tr><td>7</td><td><span class="pill bug">Missing</span></td><td>Service-side scheduler wiring</td><td><strong>No <code>EventBridgeTaskScheduler</code> class in DAS source at all</strong> (CL has one — see <a href="./bug-01.html#wired">BUG-01 layer 7</a>). DAS is one layer barer than CL. Grep for <code>scheduleRecurring</code> in DAS returns ZERO results. Even if the scheduler class were added, no startup hook would call it. The 6 sweep batches remain unregistered.</td></tr>
+    <tr><td>8</td><td><span class="pill bug">Missing</span></td><td>Environment + AWS infrastructure</td><td><code>AWS_SCHEDULER_ENABLED: false</code> in <code>application-prod.yml:15</code> and <code>application-qa.yml:19</code> (and <code>application.yml:210</code> default also <code>false</code>). Placeholder <code>role-arn: arn:aws:iam::000000000000:role/demand-allocation-scheduler-role</code> in <code>application.yml:212</code>. No IaC in repo. <strong>Same cross-service gap as <a href="./bug-01.html#wired">BUG-01 layer 8</a>.</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="hint">
+  <strong>Interim path that ships value before AWS infra lands:</strong> identical pattern to <a href="./bug-01.html">BUG-01</a> — the <code>BatchTriggerController</code> POST endpoints already work. External Lambda / GitHub Actions cron / k8s CronJob can <code>curl</code> the 6 endpoints on appropriate cadences (P191 every 15 min, others per spec) and unblock the 230 UNASSIGNED rows immediately.
+</div>
 
 <h2 id="evidence">Code evidence</h2>
 <ul>

@@ -78,6 +78,7 @@
   }
   .pill.bug { background: var(--bug-bg); color: var(--bug); }
   .pill.gap { background: var(--gap-bg); color: var(--gap); }
+  .pill.ok  { background: var(--ok-bg);  color: var(--ok);  }
 
   .spec-ref {
     background: var(--what-bg); border-left: 4px solid var(--what); padding: 10px 14px;
@@ -146,6 +147,8 @@
   <ol>
     <li><a href="#spec">Original spec</a></li>
     <li><a href="#cases">Test cases</a></li>
+    <li><a href="#workflow">Workflow — P191 reroute</a></li>
+    <li><a href="#wired">What's wired / what's not</a></li>
     <li><a href="#evidence">Code evidence</a></li>
   </ol>
   <h2 class="other">Other bugs</h2>
@@ -213,6 +216,55 @@
   </tbody>
 </table>
 
+<h2 id="workflow">Workflow — P191 held-allocation reroute</h2>
+<p>P191 is the periodic sweep that retries routing for allocations stuck in <code>UNASSIGNED</code> (CSP not yet found, P50 retry cap not yet exhausted). Diagram below is the DAS allocation state machine; the dead-cron edge is the self-loop on UNASSIGNED.</p>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> UNASSIGNED: ALLOCATION_REQUESTED
+    UNASSIGNED --> ASSIGNED: routing picks a CSP
+    UNASSIGNED --> UNASSIGNED: P191 sweep — re-attempt routing
+    ASSIGNED --> ACCEPTED: auto-accept (AMENDMENT-02)
+    ASSIGNED --> UNASSIGNED: P41 timeout (anchor TBD)
+    ACCEPTED --> ACTIVE: install complete (downstream)
+    ACCEPTED --> REALLOCATION_PENDING: system-structural trigger
+    REALLOCATION_PENDING --> REASSIGNED: new CSP found
+    REASSIGNED --> ACTIVE: install complete
+</div>
+
+<h3>P191 sweep behaviour</h3>
+<p>For each <code>UNASSIGNED</code> allocation row, every 15 minutes:</p>
+<ul>
+  <li>If <code>retry_count &gt;= P50</code> (5 attempts) → skip (held permanently, OS-sanctioned service-vacuum).</li>
+  <li>Else → call <code>allocationServiceImpl.rerouteAllocation(allocation, RETRY)</code> — routing engine re-attempts CSP pick.</li>
+</ul>
+<ul>
+  <li><strong>Success:</strong> state → <code>ASSIGNED</code> → auto-accept → <code>ACCEPTED</code> → emits <code>ALLOCATION_ACCEPTED</code> → CL T1 fires (<code>REQUESTED → PENDING_INSTALL</code>) → TAS creates the install candidate.</li>
+  <li><strong>Failure:</strong> stays <code>UNASSIGNED</code>, <code>retry_count++</code>. Next sweep retries until <code>retry_count == P50</code>, then held permanently.</li>
+</ul>
+<p><strong>Today:</strong> 230 UNASSIGNED rows in prod, oldest &gt; 24h, never re-routed. Every row is a customer whose request didn't find a CSP on the first attempt and is now invisible to the routing pipeline.</p>
+
+<p><strong>Five sibling sweeps</strong> share the same root cause and co-ship (out of PM scope individually): <code>runAllocationTimeoutSweep</code> (P41 — anchor decision pending), <code>runConversionEval</code>, <code>runExposureRecalculation</code>, <code>runOverrideWatchdog</code>, <code>runReallocationDwellSweep</code>.</p>
+
+<h2 id="wired">What's wired, what's not (8 layers)</h2>
+<p>Audited against <code>services/csp-demand-allocation-service</code> source. The DAS layer-7 gap is actually <em>deeper</em> than CL's: CL has an <code>EventBridgeTaskScheduler</code> scaffold class. DAS has no scheduler abstraction at all.</p>
+<table>
+  <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:24%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><span class="pill ok">Wired</span></td><td>Allocation state machine</td><td><code>AllocationServiceImpl</code> + <code>AllocationState</code> enum + transition validation</td></tr>
+    <tr><td>2</td><td><span class="pill ok">Wired</span></td><td>Sweep batch methods (6)</td><td><code>application/impl/BatchTriggerServiceImpl.java</code>: <code>runHeldAllocationSweep</code> (P191, L83) · <code>runAllocationTimeoutSweep</code> (P41, L31) · <code>runConversionEval</code> (L66) · <code>runExposureRecalculation</code> (L76) · <code>runOverrideWatchdog</code> (L101) · <code>runReallocationDwellSweep</code> (L121). Each is <code>@Transactional</code> with correct query logic.</td></tr>
+    <tr><td>3</td><td><span class="pill ok">Wired</span></td><td>Internal HTTP wrappers (6)</td><td><code>api/BatchTriggerController.java</code>: <code>POST /held-allocation-sweep</code> · <code>/allocation-timeout-sweep</code> · <code>/conversion-eval</code> · <code>/exposure-recalculation</code> · <code>/override-watchdog</code> · <code>/reallocation-dwell-sweep</code>. <strong><code>curl</code> against these works today.</strong></td></tr>
+    <tr><td>4</td><td><span class="pill ok">Wired</span></td><td>Re-routing logic invoked by sweep</td><td><code>allocationServiceImpl.rerouteAllocation(allocation, RETRY)</code> — full routing engine including CSP candidate enumeration, eligibility filters, etc.</td></tr>
+    <tr><td>5</td><td><span class="pill ok">Wired</span></td><td>Outbound event emission</td><td>Standard allocation event producers + outbox dispatch (<code>ALLOCATION_ACCEPTED</code>, allocation state changes).</td></tr>
+    <tr><td>6</td><td><span class="pill ok">Wired</span></td><td>Downstream consumers</td><td>CL OS receives <code>ALLOCATION_ACCEPTED</code> → T1 fires. TAS creates install candidate on the same signal. <strong>Both wait idle for routing successes that never happen for the 230 stuck rows.</strong></td></tr>
+    <tr><td>7</td><td><span class="pill bug">Missing</span></td><td>Service-side scheduler wiring</td><td><strong>No <code>EventBridgeTaskScheduler</code> class in DAS source at all</strong> (CL has one — see <a href="./bug-01.html#wired">BUG-01 layer 7</a>). DAS is one layer barer than CL. Grep for <code>scheduleRecurring</code> in DAS returns ZERO results. Even if the scheduler class were added, no startup hook would call it. The 6 sweep batches remain unregistered.</td></tr>
+    <tr><td>8</td><td><span class="pill bug">Missing</span></td><td>Environment + AWS infrastructure</td><td><code>AWS_SCHEDULER_ENABLED: false</code> in <code>application-prod.yml:15</code> and <code>application-qa.yml:19</code> (and <code>application.yml:210</code> default also <code>false</code>). Placeholder <code>role-arn: arn:aws:iam::000000000000:role/demand-allocation-scheduler-role</code> in <code>application.yml:212</code>. No IaC in repo. <strong>Same cross-service gap as <a href="./bug-01.html#wired">BUG-01 layer 8</a>.</strong></td></tr>
+  </tbody>
+</table>
+
+<div class="hint">
+  <strong>Interim path that ships value before AWS infra lands:</strong> identical pattern to <a href="./bug-01.html">BUG-01</a> — the <code>BatchTriggerController</code> POST endpoints already work. External Lambda / GitHub Actions cron / k8s CronJob can <code>curl</code> the 6 endpoints on appropriate cadences (P191 every 15 min, others per spec) and unblock the 230 UNASSIGNED rows immediately.
+</div>
+
 <h2 id="evidence">Code evidence</h2>
 <ul>
   <li><strong>Scheduler config:</strong> DAS <code>application-prod.yml</code> — <code>AWS_SCHEDULER_ENABLED: false</code>.</li>
@@ -226,5 +278,11 @@
   </div>
 </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
 </body>
 </html>
