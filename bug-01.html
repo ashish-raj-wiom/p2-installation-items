@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Installation Flow — Bugs &amp; Gaps · Tech Handover</title>
+<title>BUG-01 — CLOS scheduler unwired · Installation Flow</title>
 <style>
   :root {
     --bg: #fafaf9; --surface: #ffffff;
@@ -137,94 +137,110 @@
     nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
     main { padding: 24px; }
   }
-
-  main.index { max-width: 1100px; padding: 40px 56px 80px; margin: 0 auto; }
-  main.index header.doc { margin-bottom: 32px; }
-  main.index h2 { margin: 36px 0 12px; font-size: 18px; text-transform: uppercase; letter-spacing: 0.08em; }
-  main.index h2.bugs { color: var(--bug); }
-  main.index h2.gaps { color: var(--gap); }
 </style>
 </head>
 <body>
-<main class="index">
+<div class="layout">
+<nav class="toc">
+  <h2 class="this">On this page</h2>
+  <ol>
+    <li><a href="#spec">Original spec</a></li>
+    <li><a href="#cases">Test cases</a></li>
+    <li><a href="#tas-cofix">TAS co-fix (T12)</a></li>
+    <li><a href="#evidence">Code evidence</a></li>
+  </ol>
+  <h2 class="other">Other bugs</h2>
+  <ol>
+    <li><a href="./bug-02.html"><span class="ix">BUG-02</span>DAS scheduler unwired</a></li>
+    <li><a href="./bug-03.html"><span class="ix">BUG-03</span>DAS never reaches ACCEPTED</a></li>
+    <li><a href="./bug-04.html"><span class="ix">BUG-04</span>Capacity OS skips T2</a></li>
+    <li><a href="./bug-05.html"><span class="ix">BUG-05</span>Quality signal contract drift</a></li>
+    <li><a href="./bug-06.html"><span class="ix">BUG-06</span>CAEO customer_id wrong</a></li>
+  </ol>
+  <h2 class="gap">Related gap specs</h2>
+  <ol>
+    <li><a href="./gap-01.html"><span class="ix">GAP-01</span>Cancel bifurcation</a></li>
+    <li><a href="./gap-02.html"><span class="ix">GAP-02</span>Change team member (install)</a></li>
+    <li><a href="./gap-03.html"><span class="ix">GAP-03</span>Failure sub-reason (OS-aligned)</a></li>
+    <li><a href="./gap-04.html"><span class="ix">GAP-04</span>DAS single-CSP zone events</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
+</nav>
+<main>
   <header class="doc">
-    <div class="eyebrow">Installation Flow — Tech Handover</div>
-    <h1>Installation P2 items — bugs &amp; gap specs</h1>
-    <p class="lede">Each item below is a standalone document, hosted as its own page. Bugs follow the test-case format (original spec + expected-vs-observed + code evidence). Gap specs follow the Wiom Change Spec Template v1.0 at Light tier.</p>
+    <div class="eyebrow">Installation Flow — Tech Handover · BUG-01</div>
+    <h1>CLOS timeout scheduler unwired (P75 / P76 / P77 inert)</h1>
+    <p class="lede">CL OS defines four system-driven timeouts that must fire on background sweeps. The batch methods, endpoints, and scheduler hooks all exist in code — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>. Zero system-driven CL transitions in 90 days. <strong>P74 is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
     <div class="meta-row">
       <div><strong>Owner:</strong> Ashish Raj</div>
       <div><strong>Date:</strong> 2026-06-04</div>
-      <div><strong>Items:</strong> 6 bugs · 4 gaps</div>
+      <div><span class="pill bug">Bug</span></div>
     </div>
   </header>
 
-  <h2 class="bugs">Bugs (6)</h2>
-  <div class="card-grid">
-      <div class="card bug">
-        <span class="id">BUG-01</span>
-        <h3>CLOS timeout scheduler unwired (P75 / P76 / P77 inert)</h3>
-        <p>CL OS defines four system-driven timeouts that must fire on background sweeps. The batch methods, endpoints, and scheduler hooks all exist in code — but the AWS EventBridge scheduler is disabled in prod (<code>AWS_SCHEDULER_ENABLED: false</code>) and nothing calls <code>scheduleRecurring(...)</code>. Zero system-driven CL transitions in 90 days. <strong>P74 is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
-        <a class="open" href="./bug-01.html">Open spec →</a>
-      </div>
-      <div class="card bug">
-        <span class="id">BUG-02</span>
-        <h3>DAS scheduler unwired (P191 held-allocation reroute inert)</h3>
-        <p>Same scheduler-wiring failure as <a href="./bug-01.html">BUG-01</a>, this time on DAS. P191's held-allocation reroute sweep is supposed to retry <code>UNASSIGNED</code> allocations periodically; instead 230 rows sit untouched. <strong>P41 (acceptance window) is out of scope for this item</strong> — its start-time anchor is a separate PM decision.</p>
-        <a class="open" href="./bug-02.html">Open spec →</a>
-      </div>
-      <div class="card bug">
-        <span class="id">BUG-03</span>
-        <h3>DAS allocation state never reaches <code>ACCEPTED</code> (DAS-internal atomic write required)</h3>
-        <p>AMENDMENT-02 (Apr 2026) deleted the explicit CSP-accept call and declared acceptance "automatic on assignment". DAS has the receiver fully wired (<code>POST /api/demand-allocation/csps/{cspId}/accept</code> + <code>AllocationServiceImpl.acceptAllocation(...)</code>); no service calls it. Result in prod: <strong>0 rows ever in <code>ACCEPTED</code>; 504 / 504 stuck at <code>ASSIGNED</code> / <code>UNASSIGNED</code>; <code>acceptance_timestamp</code> NULL on every row.</strong></p>
-        <a class="open" href="./bug-03.html">Open spec →</a>
-      </div>
-      <div class="card bug">
-        <span class="id">BUG-04</span>
-        <h3>Capacity OS skips connection-count increment after installation</h3>
-        <p>The OS prescribes "<strong>Capacity OS counts +1 on T2</strong>" in four explicit places. The code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — so the normal happy-path <code>INITIAL</code> installs silently fall into an empty <code>else</code> branch and the counter doesn't move. <strong>Not CSP-app-visible</strong> — partner app reads CL directly. Affects internal routing decisions (load-ratio + zone-retire guard) only.</p>
-        <a class="open" href="./bug-04.html">Open spec →</a>
-      </div>
-      <div class="card bug">
-        <span class="id">BUG-05</span>
-        <h3><code>CL_INSTALLATION_QUALITY_SIGNAL</code> — producer-record contract drifted from CL OS §S-10</h3>
-        <p>CL emits the signal on every T2; <strong>Quality OS rejects every single one</strong> with HTTP 400 <code>VALIDATION_FAILED</code>. 53 emissions, 0 delivered, 100 % failure rate. Root cause: payload-contract drift in the CL producer record. Three required fields don't match the CL OS S-10 + base-schema contract.</p>
-        <a class="open" href="./bug-05.html">Open spec →</a>
-      </div>
-      <div class="card bug">
-        <span class="id">BUG-06</span>
-        <h3>CAEO <code>customer_id</code> column populated with CSP-ID for installation task</h3>
-        <p><code>CL_CONNECTION_ACTIVATED</code> doesn't carry <code>customer_id</code> in its payload, so the CAEO consumer plugs <code>cspId</code> in as a placeholder. Want: <code>customer_id</code> gets populated in the CL event so that CAEO's <code>customer_id</code> column carries the actual customer.</p>
-        <a class="open" href="./bug-06.html">Open spec →</a>
-      </div>
-  </div>
+<h2 id="spec">Original spec</h2>
+<div class="spec-ref">
+  <strong>Source:</strong>
+  <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
+  <strong>§5 State Machine</strong> (transitions T9, T12 + timeout edges) &middot;
+  <strong>SPR params:</strong> P75 (7d REQUESTED expiry), P76 (90d PAUSE limit), P77 (45d PENDING_DEACTIVATION).
+  <br>
+  <strong>PRD:</strong> <code>yaml-prd/connection-lifecycle-prd-v1.6.yaml</code> — state machine + system-source transitions all defined.
+</div>
 
-  <h2 class="gaps">Gap specs (4)</h2>
-  <div class="card-grid">
-      <div class="card gap">
-        <span class="id">GAP-01</span>
-        <h3>Cancel bifurcation</h3>
-        <a class="open" href="./gap-01.html">Open spec →</a>
-      </div>
-      <div class="card gap">
-        <span class="id">GAP-02</span>
-        <h3>Change team member (install)</h3>
-        <a class="open" href="./gap-02.html">Open spec →</a>
-      </div>
-      <div class="card gap">
-        <span class="id">GAP-03</span>
-        <h3>Failure sub-reason (OS-aligned)</h3>
-        <a class="open" href="./gap-03.html">Open spec →</a>
-      </div>
-      <div class="card gap">
-        <span class="id">GAP-04</span>
-        <h3>DAS single-CSP zone events</h3>
-        <a class="open" href="./gap-04.html">Open spec →</a>
-      </div>
-  </div>
+<h2 id="cases">Test cases — expected vs observed</h2>
+<table class="tc-table">
+  <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>TC-1.</strong> When a connection sits in <code>REQUESTED</code> for &gt; P75 (7d), then the P75 sweep transitions it to <code>DEACTIVATED</code> via T9.</td>
+      <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>transition_type = T9</code>, source = SYSTEM, <code>new_state = DEACTIVATED</code>.</td>
+      <td class="observed">No T9 transitions emitted in 90d. Stale <code>REQUESTED</code> rows accumulate indefinitely.</td>
+    </tr>
+    <tr>
+      <td><strong>TC-2.</strong> When a connection sits in <code>PAUSED</code> for &gt; P76 (90d), then the P76 sweep transitions it to <code>PENDING_DEACTIVATION</code> via <code>PAUSE_DURATION_EXCEEDED</code>.</td>
+      <td class="expected">CL emits <code>CL_DEACTIVATION_INITIATED</code>; downstream Exit OS / RECHARGE_VALIDATOR receive the signal.</td>
+      <td class="observed">No such transitions. 11k+ <code>PAUSED</code> rows past 90d sit untouched.</td>
+    </tr>
+    <tr>
+      <td><strong>TC-3.</strong> When a connection sits in <code>PENDING_DEACTIVATION</code> for &gt; P77 (45d), then the P77 sweep transitions it to <code>DEACTIVATED</code> via <code>DEACTIVATION_COMPLETE</code>.</td>
+      <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>new_state = DEACTIVATED</code>, source = SYSTEM.</td>
+      <td class="observed">No such transitions. Stale <code>PENDING_DEACTIVATION</code> rows accumulate.</td>
+    </tr>
+    <tr>
+      <td><strong>TC-4.</strong> When the sweep cadence runs (15-minute granularity is acceptable; finer is fine), then sweep methods are invoked from a recurring schedule.</td>
+      <td class="expected"><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> is called at service-startup with the four sweep batches registered. <code>AWS_SCHEDULER_ENABLED: true</code> in <code>application-prod.yml</code>.</td>
+      <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> at <code>application-prod.yml:18</code>. <code>scheduleRecurring(...)</code> never called. Sweep methods reachable only via internal endpoints, which nothing calls.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="tas-cofix">TAS co-fix — handle the <code>T12</code> retry-exhaustion transition</h2>
+<p>When CL emits <code>CL_STATE_CHANGED</code> with <code>transitionType=T12</code> (the retry-exhaustion transition, <code>PENDING_INSTALL → PENDING_DEACTIVATION</code>), TAS today doesn't handle it. The <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains <code>T11</code>; <code>T12</code> is missing. Without this co-fix, retried-and-exhausted connections orphan TAS install candidates. Independent of the scheduler wiring above, but engineering should ship them together so the orphan symptom doesn't surface when the sweeps start firing.</p>
+<table class="tc-table">
+  <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>TC-5.</strong> When CL emits <code>T12</code>, then TAS closes any open install candidate for that connection.</td>
+      <td class="expected">TAS marks candidate <code>CANCELLED_BY_UPSTREAM</code> reason <code>RETRY_EXHAUSTED</code>.</td>
+      <td class="observed">Handler logs "no action required"; candidate stays OPEN. Tech must add T12 to the trigger set.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="evidence">Code evidence</h2>
+<ul>
+  <li><strong>Scheduler config:</strong> <code>services/csp-connection-lifecycle-service/.../application-prod.yml:18</code> (<code>AWS_SCHEDULER_ENABLED: false</code>).</li>
+  <li><strong>Scheduler hook (unwired):</strong> <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> — defined, never called.</li>
+  <li><strong>Sweep batches (correct, reachable):</strong> <code>SchedulingServiceImpl</code> (the four batch methods) &middot; <code>InternalTaskController</code> (their endpoints).</li>
+  <li><strong>TAS T12 co-fix site:</strong> <code>services/csp-tas-service/.../ClStateChangedHandler.java</code> — <code>UPSTREAM_RETRY_TRIGGERS</code> set.</li>
+</ul>
+
 
   <div style="margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 12px;">
-    <p>Installation Flow — Tech Handover · Owner: Ashish Raj</p>
+    <p>Installation Flow — Tech Handover · BUG-01 · Owner: Ashish Raj</p>
   </div>
 </main>
+</div>
 </body>
 </html>

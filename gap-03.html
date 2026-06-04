@@ -137,7 +137,7 @@
     <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
     <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
   </ol>
-  <a class="back" href="./installation-p2-bugs.html">← Back to bugs</a>
+  <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
 </nav>
 
 <main>
@@ -213,14 +213,14 @@
   <h3>The 6 picker options (OS-aligned)</h3>
   <p>The OS prescribes 7 sub-reason codes per CL OS L578 / L922; <code>CSP_NO_SHOW</code> is excluded from the picker because it's system-detected via P74 timeout (not CSP-picked). The 6 CSP-pickable codes:</p>
   <table>
-    <thead><tr><th>Picker code (= OS <code>failure_subreason_code</code>)</th><th>English text</th><th>Hindi text (placeholder — copy team to finalise)</th></tr></thead>
+    <thead><tr><th>Picker code (= OS <code>failure_subreason_code</code>)</th><th>English text</th><th>Hindi text</th></tr></thead>
     <tbody>
-      <tr><td><code>COVERAGE_NOT_FEASIBLE</code></td><td>Location can't be served</td><td>जगह पर सेवा नहीं दे सकते</td></tr>
-      <tr><td><code>CUSTOMER_CANCELLED</code></td><td>Customer cancelled</td><td>ग्राहक ने रद्द किया</td></tr>
-      <tr><td><code>PRICE_CONFUSION</code></td><td>Customer didn't agree on price</td><td>ग्राहक ने कीमत पर सहमति नहीं दी</td></tr>
-      <tr><td><code>SCHEDULE_CONFLICT</code></td><td>Schedule didn't work</td><td>समय में टकराव</td></tr>
-      <tr><td><code>DEVICE_UNAVAILABLE</code></td><td>No device available</td><td>डिवाइस उपलब्ध नहीं</td></tr>
-      <tr><td><code>BACKHAUL_ISSUE</code></td><td>Backhaul / connectivity issue</td><td>बैकहॉल / कनेक्शन समस्या</td></tr>
+      <tr><td><code>COVERAGE_NOT_FEASIBLE</code></td><td>Service not available at this location</td><td>इस स्थान पर सेवा उपलब्ध नहीं है</td></tr>
+      <tr><td><code>CUSTOMER_CANCELLED</code></td><td>Customer is not interested anymore</td><td>ग्राहक अब कनेक्शन नहीं लेना चाहते</td></tr>
+      <tr><td><code>PRICE_CONFUSION</code></td><td>Customer did not agree with the plan price</td><td>ग्राहक प्लान की कीमत से सहमत नहीं हैं</td></tr>
+      <tr><td><code>SCHEDULE_CONFLICT</code></td><td>Installation could not be scheduled</td><td>इंस्टॉलेशन के लिए समय तय नहीं हो पाया</td></tr>
+      <tr><td><code>DEVICE_UNAVAILABLE</code></td><td>Required device is currently unavailable</td><td>आवश्यक डिवाइस फिलहाल उपलब्ध नहीं है</td></tr>
+      <tr><td><code>BACKHAUL_ISSUE</code></td><td>Network setup is currently not possible</td><td>नेटवर्क सेटअप फिलहाल संभव नहीं है</td></tr>
     </tbody>
   </table>
 
@@ -337,7 +337,7 @@
 
   <h3>Business logic (one per mapping row)</h3>
   <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> COVERAGE_NOT_FEASIBLE mapping
-  <span class="kw">Given</span> a CSP picks "Location can't be served" (picker code COVERAGE_NOT_FEASIBLE)
+  <span class="kw">Given</span> a CSP picks "Service not available at this location" (picker code COVERAGE_NOT_FEASIBLE)
   <span class="kw">When</span>  the candidate transitions to INSTALLATION_REPORTED_FAILED
         and the chain TAS → CL completes
   <span class="kw">Then</span>  the persisted CL event payload has:
@@ -347,7 +347,7 @@
         failure_subreason_confidence = HIGH</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> CUSTOMER_CANCELLED maps to CUSTOMER_REFUSED primary
-  <span class="kw">Given</span> a CSP picks "Customer cancelled" (picker code CUSTOMER_CANCELLED)
+  <span class="kw">Given</span> a CSP picks "Customer is not interested anymore" (picker code CUSTOMER_CANCELLED)
   <span class="kw">When</span>  the chain TAS → CL completes
   <span class="kw">Then</span>  failure_reason             = CUSTOMER_REFUSED   (note: NOT CSP_REPORTED_FAILURE)
         failure_subreason_code     = CUSTOMER_CANCELLED
@@ -355,7 +355,7 @@
         failure_subreason_confidence = HIGH</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> PRICE_CONFUSION maps to CUSTOMER_REFUSED primary
-  <span class="kw">Given</span> a CSP picks "Customer didn't agree on price"
+  <span class="kw">Given</span> a CSP picks "Customer did not agree with the plan price"
   <span class="kw">When</span>  the chain TAS → CL completes
   <span class="kw">Then</span>  failure_reason             = CUSTOMER_REFUSED
         failure_subreason_code     = PRICE_CONFUSION
@@ -379,7 +379,7 @@
 
   <div class="gherkin"><pre><span class="kw">LOGIC-6:</span> Picker code reaches the persisted CL payload
   <span class="kw">Given</span> the Partner App fires POST /install/.../actions/report-installation-failed
-        with {reason: "Customer cancelled", reason_code: "CUSTOMER_CANCELLED"}
+        with {reason: "Customer is not interested anymore", reason_code: "CUSTOMER_CANCELLED"}
   <span class="kw">When</span>  TAS handler runs → emits EsInstallReportedFailed → CL translates and persists
   <span class="kw">Then</span>  connection_event_history.payload for the INSTALLATION_FAILED row
         carries the 4 OS fields populated per the mapping</pre></div>
@@ -510,6 +510,7 @@
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
       <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope confirmed via code trace: picker code is dropped at <strong>three</strong> sites (TAS handler buries in extra_data; <code>EsInstallReportedFailed</code> lacks the fields; CL translation hard-codes nulls). All three need the fix.</td><td>Pending</td></tr>
+      <tr><td>v1.1</td><td>2026-06-04</td><td>Ashish Raj</td><td>A5 (picker table), B5 (LOGIC-1/2/3/6)</td><td>Final English + Hindi copy for the 6 picker options. Replaces the placeholder strings. Picker codes and 4-field mapping unchanged.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>

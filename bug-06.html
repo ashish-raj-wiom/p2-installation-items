@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BUG-06 — CAEO customer_id wrong · Installation Flow</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff;
+    --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --bug: #b91c1c; --bug-bg: #fee2e2;
+    --gap: #b45309; --gap-bg: #fef3c7;
+    --ok:  #0b6b3a; --ok-bg:  #e9f5ee;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how:  #5b2a86; --how-bg:  #efe6f7;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --code-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14.5px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 22px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+    margin: 18px 0 6px;
+  }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.this  { color: var(--bug); border-left: 3px solid var(--bug); padding-left: 8px; }
+  nav.toc h2.other { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc h2.gap   { color: var(--gap); border-left: 3px solid var(--gap); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a {
+    text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline;
+    padding: 4px 6px; border-radius: 4px; font-size: 12.5px;
+  }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 56px; font-weight: 600; }
+  nav.toc li.current a { background: var(--bug-bg); color: var(--bug); font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+
+  main { padding: 32px 56px 120px; max-width: 1040px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 28px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 26px; margin: 6px 0 10px; line-height: 1.25; }
+  header.doc p.lede { color: var(--muted); font-size: 14.5px; margin: 0; max-width: 75ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 12px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  h2 { font-size: 20px; margin: 36px 0 12px; scroll-margin-top: 24px; }
+  h3 { font-size: 16px; margin: 22px 0 8px; }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em;
+    background: var(--code-bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule);
+  }
+  pre {
+    background: var(--code-bg); padding: 0.75rem 0.9rem; border-radius: 6px; border: 1px solid var(--rule);
+    overflow-x: auto; line-height: 1.4; font-size: 12.5px;
+  }
+  pre code { background: none; border: none; padding: 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+  th, td { border: 1px solid var(--rule); padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .pill.bug { background: var(--bug-bg); color: var(--bug); }
+  .pill.gap { background: var(--gap-bg); color: var(--gap); }
+
+  .spec-ref {
+    background: var(--what-bg); border-left: 4px solid var(--what); padding: 10px 14px;
+    border-radius: 0 4px 4px 0; margin: 10px 0 16px; font-size: 13px;
+  }
+  .spec-ref strong { color: var(--what); margin-right: 6px; }
+  .spec-ref code { background: rgba(255,255,255,0.7); }
+
+  .tc-table th:nth-child(1) { width: 32%; }
+  .tc-table th:nth-child(2) { width: 32%; }
+  .tc-table th:nth-child(3) { width: 36%; }
+  .tc-table td.expected { background: var(--ok-bg); }
+  .tc-table td.observed { background: var(--bug-bg); }
+
+  .mermaid {
+    background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
+    padding: 16px; margin: 12px 0; text-align: center;
+  }
+
+  .hint {
+    background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 10px 14px;
+    font-size: 13px; color: var(--hint-ink); margin: 10px 0 14px; border-radius: 0 4px 4px 0;
+  }
+
+  details { margin: 12px 0; }
+  details summary {
+    cursor: pointer; padding: 6px 10px; background: var(--bg); border: 1px solid var(--rule);
+    border-radius: 4px; font-size: 12.5px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; list-style: none;
+  }
+  details summary::before { content: "▸ "; }
+  details[open] summary::before { content: "▾ "; }
+  details > div { padding: 10px 14px; border: 1px solid var(--rule); border-top: none; border-radius: 0 0 4px 4px; }
+
+  .muted { color: var(--muted); }
+
+  /* Index page card grid */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin: 14px 0 28px; }
+  .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.15s; }
+  .card:hover { border-color: var(--ink); }
+  .card .id { font-family: ui-monospace, monospace; font-weight: 700; font-size: 12px; color: var(--muted); }
+  .card h3 { margin: 0; font-size: 16px; line-height: 1.3; }
+  .card p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .card a.open { margin-top: 6px; font-size: 12.5px; font-weight: 600; text-decoration: none; align-self: flex-start; }
+  .card.bug a.open { color: var(--bug); }
+  .card.gap a.open { color: var(--gap); }
+  .card a.open:hover { text-decoration: underline; }
+
+  @media print {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { display: none; }
+    main { padding: 0 1cm; max-width: none; }
+    section { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc">
+  <h2 class="this">On this page</h2>
+  <ol>
+    <li><a href="#spec">Original spec + fix</a></li>
+    <li><a href="#cases">Test cases</a></li>
+    <li><a href="#source">Source of truth</a></li>
+    <li><a href="#evidence">Code evidence</a></li>
+  </ol>
+  <h2 class="other">Other bugs</h2>
+  <ol>
+    <li><a href="./bug-01.html"><span class="ix">BUG-01</span>CLOS scheduler unwired</a></li>
+    <li><a href="./bug-02.html"><span class="ix">BUG-02</span>DAS scheduler unwired</a></li>
+    <li><a href="./bug-03.html"><span class="ix">BUG-03</span>DAS never reaches ACCEPTED</a></li>
+    <li><a href="./bug-04.html"><span class="ix">BUG-04</span>Capacity OS skips T2</a></li>
+    <li><a href="./bug-05.html"><span class="ix">BUG-05</span>Quality signal contract drift</a></li>
+  </ol>
+  <h2 class="gap">Related gap specs</h2>
+  <ol>
+    <li><a href="./gap-01.html"><span class="ix">GAP-01</span>Cancel bifurcation</a></li>
+    <li><a href="./gap-02.html"><span class="ix">GAP-02</span>Change team member (install)</a></li>
+    <li><a href="./gap-03.html"><span class="ix">GAP-03</span>Failure sub-reason (OS-aligned)</a></li>
+    <li><a href="./gap-04.html"><span class="ix">GAP-04</span>DAS single-CSP zone events</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
+</nav>
+<main>
+  <header class="doc">
+    <div class="eyebrow">Installation Flow — Tech Handover · BUG-06</div>
+    <h1>CAEO <code>customer_id</code> column populated with CSP-ID for installation task</h1>
+    <p class="lede"><code>CL_CONNECTION_ACTIVATED</code> doesn't carry <code>customer_id</code> in its payload, so the CAEO consumer plugs <code>cspId</code> in as a placeholder. Want: <code>customer_id</code> gets populated in the CL event so that CAEO's <code>customer_id</code> column carries the actual customer.</p>
+    <div class="meta-row">
+      <div><strong>Owner:</strong> Ashish Raj</div>
+      <div><strong>Date:</strong> 2026-06-04</div>
+      <div><span class="pill bug">Bug</span></div>
+    </div>
+  </header>
+
+<h2 id="spec">Original spec + fix</h2>
+<div class="spec-ref">
+  <strong>Source:</strong>
+  <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
+  <strong>S-03: <code>CL_CONNECTION_ACTIVATED</code></strong> payload definition (L1195-1213). The CL <code>connections</code> table holds <code>customer_id</code> on every row (it's where CL reads <code>csp_id</code>, <code>zone_id</code>, etc. from at emit time).
+  <br><br>
+  <strong>The fix is in two places — no OS amendment needed:</strong>
+  <br>
+  1. <strong>CL service:</strong> add <code>customerId</code> to the <code>ClConnectionActivated</code> record and populate from the same <code>connections</code> row that supplies the existing fields. CL already emits additive fields beyond what S-03 lists (e.g. <code>correlationId</code>, <code>causationId</code>, <code>activatedAt</code>) without OS amendments — adding one more is the same pattern.
+  <br>
+  2. <strong>CAEO consumer:</strong> read <code>customerId</code> from the event and write it to the <code>customer_access_entitlement.customer_id</code> column. Replace the placeholder write at <code>InboundEventProcessingServiceImpl.java:82</code>.
+  <br><br>
+  <strong>S-03 documentation update</strong> is a paperwork pass — recommended for hygiene, not a blocker for build. The existing consumers (Compensation, Quality, Capacity, CAEO) ignore unknown fields, so the additive change ships unilaterally on CL's side.
+</div>
+
+<h2 id="cases">Test cases — expected vs observed</h2>
+<table class="tc-table">
+  <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>TC-1.</strong> When CL emits <code>CL_CONNECTION_ACTIVATED</code> on T2, then the payload contains <code>customer_id</code>.</td>
+      <td class="expected">JSON contains <code>"customer_id": "&lt;UUID&gt;"</code> — the customer the connection serves, read directly from the CL <code>connections</code> table (same row that supplies <code>csp_id</code>, <code>zone_id</code>, etc.).</td>
+      <td class="observed">Payload has no <code>customer_id</code> field. The CL service producer record (<code>ClConnectionActivated.java</code>) doesn't include it.</td>
+    </tr>
+    <tr>
+      <td><strong>TC-2.</strong> When CAEO consumes <code>CL_CONNECTION_ACTIVATED</code>, then it writes <code>customer_access_entitlement.customer_id</code> from the event's <code>customer_id</code> field.</td>
+      <td class="expected"><code>customer_id</code> column = real customer's UUID.</td>
+      <td class="observed">CAEO at <code>InboundEventProcessingServiceImpl.java:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> — the CSP-ID lands in the customer-id column. Author: Aryan Gaurav, Apr 10 2026.</td>
+    </tr>
+    <tr>
+      <td><strong>TC-3.</strong> When a downstream consumer queries CAEO by <code>customer_id</code>, then it finds entitlement rows for the matching customer.</td>
+      <td class="expected">A query like <code>findByCustomerId("&lt;real-customer-uuid&gt;")</code> returns rows.</td>
+      <td class="observed">Method exists in the repository (<code>findByCustomerId</code>) but is never called anywhere in the monorepo today — because the column has the wrong value. Once fixed, the column becomes queryable.</td>
+    </tr>
+    <tr>
+      <td><strong>TC-4.</strong> When sibling <code>CL_CONNECTION_*</code> events fire (PAUSED, RESCUED, DEACTIVATED), then their payloads also include <code>customer_id</code> if any consumer needs it.</td>
+      <td class="expected">Sibling-event contract uniformity. Engineering audits which sibling events have downstream consumers that would benefit from <code>customer_id</code> and adds the field to those producer records together.</td>
+      <td class="observed">Sibling events also lack <code>customer_id</code>. Out of scope for this item if no downstream consumer needs them — only <code>CL_CONNECTION_ACTIVATED</code> is required to unblock CAEO.</td>
+    </tr>
+    <tr>
+      <td><strong>TC-5.</strong> When the historical backfill runs (one-shot), then existing CAEO rows with <code>customer_id = &lt;some-CSP-ID&gt;</code> get corrected.</td>
+      <td class="expected"><code>UPDATE customer_access_entitlement SET customer_id = c.customer_id FROM csp_connection_lifecycle_service.connections c WHERE customer_access_entitlement.connection_id = c.connection_id</code>. Join via <code>connection_id</code> (always present on both sides).</td>
+      <td class="observed">Backfill not yet run. ~50 of 19,573 CAEO rows currently have CSP-IDs in <code>customer_id</code> column.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="source">Source of truth — already in place</h2>
+<p>The CL <code>connections</code> table holds the <code>connection_id → customer_id</code> mapping on every row. CL has the value at T2 emit time — adding it to the event payload is a column read on the same row. No new upstream lookup needed. Backfill is similarly trivial via the connection-id join.</p>
+
+<h2 id="evidence">Code evidence</h2>
+<ul>
+  <li><strong>Bug site:</strong> <code>services/csp-customer-access-service/.../InboundEventProcessingServiceImpl.java:82</code> — the placeholder write.</li>
+  <li><strong>CL emit site (to update):</strong> <code>services/csp-connection-lifecycle-service/...</code> — <code>CL_CONNECTION_ACTIVATED</code> producer.</li>
+  <li><strong>Source-of-truth column:</strong> <code>csp_connection_lifecycle_service.connections.customer_id</code>.</li>
+  <li><strong>Prod evidence:</strong> connection audit for <code>f285e07f-…</code> — CAEO row created, <code>customer_id = a0a7b6</code> (the CSP-ID).</li>
+</ul>
+
+
+  <div style="margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 12px;">
+    <p>Installation Flow — Tech Handover · BUG-06 · Owner: Ashish Raj</p>
+  </div>
+</main>
+</div>
+</body>
+</html>
