@@ -186,7 +186,7 @@
     <tr><td>Change title</td><td>OS-aligned 6-option failure sub-reason picker + 4-field auto-populate</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
-    <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
+    <tr><td>Version</td><td>v1.2 (2026-06-04)</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td><code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> — S-02 <code>CL_STATE_CHANGED</code> payload (the 4 sub-reason fields, L919-924); §7.2 sub-reason consumption rule BDN-CL-02 (L632-637); current TAS enum at <code>services/csp-tas-service/.../install/domain/model/CancellationReason.java</code>.</td></tr>
   </table>
   <hr class="sect-end">
@@ -336,7 +336,10 @@
   <div class="expected"><strong>What is expected:</strong> Given / When / Then per mapping row, plus edges and a REGRESSION block per A6 guard.</div>
 
   <h3>Business logic (one per mapping row)</h3>
-  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> COVERAGE_NOT_FEASIBLE mapping
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> "Service not available at this location" → CSP-attributable, COVERAGE_NOT_FEASIBLE
+  <em>Real-world:</em> CSP arrives on-site and finds the location can't be served
+  (no line-of-sight, building issue, etc.). Classify as CSP-reported, HIGH confidence.
+
   <span class="kw">Given</span> a CSP picks "Service not available at this location" (picker code COVERAGE_NOT_FEASIBLE)
   <span class="kw">When</span>  the candidate transitions to INSTALLATION_REPORTED_FAILED
         and the chain TAS → CL completes
@@ -344,125 +347,262 @@
         failure_reason             = CSP_REPORTED_FAILURE
         failure_subreason_code     = COVERAGE_NOT_FEASIBLE
         failure_subreason_source   = CSP
-        failure_subreason_confidence = HIGH</pre></div>
+        failure_subreason_confidence = HIGH
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> CUSTOMER_CANCELLED maps to CUSTOMER_REFUSED primary
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — csp_connection_lifecycle_service.connection_event_history
+        WHERE connection_id = &lt;test connection_id&gt;
+        AND event_type = 'INSTALLATION_FAILED'
+        → expect payload-&gt;&gt;'failure_reason' = 'CSP_REPORTED_FAILURE'
+        → payload-&gt;&gt;'failure_subreason_code' = 'COVERAGE_NOT_FEASIBLE'
+        → payload-&gt;&gt;'failure_subreason_source' = 'CSP'
+        → payload-&gt;&gt;'failure_subreason_confidence' = 'HIGH'</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> "Customer is not interested anymore" → customer-driven, CUSTOMER_REFUSED primary
+  <em>Real-world:</em> customer changes their mind on-site. Classify as customer-driven, not
+  CSP-attributable — affects per-CSP quality scoring.
+
   <span class="kw">Given</span> a CSP picks "Customer is not interested anymore" (picker code CUSTOMER_CANCELLED)
   <span class="kw">When</span>  the chain TAS → CL completes
   <span class="kw">Then</span>  failure_reason             = CUSTOMER_REFUSED   (note: NOT CSP_REPORTED_FAILURE)
         failure_subreason_code     = CUSTOMER_CANCELLED
         failure_subreason_source   = CUSTOMER
-        failure_subreason_confidence = HIGH</pre></div>
+        failure_subreason_confidence = HIGH
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> PRICE_CONFUSION maps to CUSTOMER_REFUSED primary
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — connection_event_history payload for the INSTALLATION_FAILED row
+        → failure_reason = 'CUSTOMER_REFUSED'
+        → failure_subreason_code = 'CUSTOMER_CANCELLED'
+        → failure_subreason_source = 'CUSTOMER'
+        → failure_subreason_confidence = 'HIGH'</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> "Customer did not agree with the plan price" → CUSTOMER_REFUSED, PRICE_CONFUSION
+  <em>Real-world:</em> customer balks at the plan price on-site. Classify as customer-driven;
+  drives pricing-feedback dashboards.
+
   <span class="kw">Given</span> a CSP picks "Customer did not agree with the plan price"
   <span class="kw">When</span>  the chain TAS → CL completes
   <span class="kw">Then</span>  failure_reason             = CUSTOMER_REFUSED
         failure_subreason_code     = PRICE_CONFUSION
         failure_subreason_source   = CUSTOMER
-        failure_subreason_confidence = HIGH</pre></div>
+        failure_subreason_confidence = HIGH
+
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — connection_event_history payload
+        → failure_reason = 'CUSTOMER_REFUSED'
+        → failure_subreason_code = 'PRICE_CONFUSION'
+        → failure_subreason_source = 'CUSTOMER'
+        → failure_subreason_confidence = 'HIGH'</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> CSP-attributable codes (SCHEDULE_CONFLICT, DEVICE_UNAVAILABLE, BACKHAUL_ISSUE)
+  <em>Real-world:</em> on-site operational issues — partner-side scheduling, device shortage,
+  network backhaul. All classify as CSP-attributable, HIGH confidence.
+
   <span class="kw">Given</span> a CSP picks any of these three
   <span class="kw">When</span>  the chain TAS → CL completes
   <span class="kw">Then</span>  failure_reason             = CSP_REPORTED_FAILURE
         failure_subreason_code     = the picker value
         failure_subreason_source   = CSP
-        failure_subreason_confidence = HIGH</pre></div>
+        failure_subreason_confidence = HIGH
+
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — connection_event_history payload for each of the 3 picker codes
+        → failure_reason = 'CSP_REPORTED_FAILURE'
+        → failure_subreason_code matches the picker value sent
+        → failure_subreason_source = 'CSP'
+        → failure_subreason_confidence = 'HIGH'</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-5 (negative):</span> No null sub-reason on picker-driven submissions
+  <em>Real-world:</em> a guard. Picker-driven submissions are by definition deliberate;
+  the 4 sub-reason fields must always be populated end-to-end.
+
   <span class="kw">Given</span> the CSP submits the failure picker with one of the 6 options
   <span class="kw">When</span>  the event reaches CL connection_event_history
   <span class="kw">Then</span>  failure_subreason_code is NEVER null
   <span class="kw">And</span>   failure_subreason_source is NEVER null
-  <span class="kw">And</span>   failure_subreason_confidence is NEVER null</pre></div>
+  <span class="kw">And</span>   failure_subreason_confidence is NEVER null
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-6:</span> Picker code reaches the persisted CL payload
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — connection_event_history WHERE event_type = 'INSTALLATION_FAILED'
+        AND created_at &gt; &lt;deploy timestamp&gt;
+        AND payload-&gt;&gt;'failure_reason' IN ('CSP_REPORTED_FAILURE', 'CUSTOMER_REFUSED')
+        → expect 0 rows where any of the 3 sub-reason fields is null</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-6:</span> End-to-end — picker code reaches the persisted CL payload
+  <em>Real-world:</em> verifies the full chain Partner App → TAS → CL with one example.
+
   <span class="kw">Given</span> the Partner App fires POST /install/.../actions/report-installation-failed
         with {reason: "Customer is not interested anymore", reason_code: "CUSTOMER_CANCELLED"}
   <span class="kw">When</span>  TAS handler runs → emits EsInstallReportedFailed → CL translates and persists
   <span class="kw">Then</span>  connection_event_history.payload for the INSTALLATION_FAILED row
-        carries the 4 OS fields populated per the mapping</pre></div>
+        carries the 4 OS fields populated per the mapping
+
+  <span class="kw">Verify:</span>
+    • <strong>TAS DB</strong> — csp_tas_service.install_execution_candidates
+        → current_state = 'INSTALLATION_REPORTED_FAILED' for the test candidate
+    • <strong>TAS outbox</strong> — csp_tas_service.outbox_record
+        WHERE record_type ends in <code>EsInstallReportedFailed</code>
+        → payload contains all 4 sub-reason fields populated (not blank, not null)
+    • <strong>CL DB</strong> — connection_event_history → final persisted row has the 4 fields per LOGIC-2 mapping</pre></div>
 
   <h3>Use &amp; edge cases</h3>
-  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> System-driven failure (P74 timeout) — different code path
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> System-driven failure (P74 timeout) — different code path entirely
+  <em>Real-world:</em> P74 expires — the system declares CSP no-show. No CSP picker involved;
+  classification is set by the system, not by a human selection.
+
   <span class="kw">Given</span> a connection times out on P74 (no picker involved)
   <span class="kw">When</span>  the CLOS scheduler sweep fires (BUG-01 in the bugs handover; not this item)
   <span class="kw">Then</span>  the system path sets:
         failure_subreason_code     = CSP_NO_SHOW
         failure_subreason_source   = SYSTEM
         failure_reason             = TIMEOUT_P74
-  <span class="kw">And</span>   no picker is shown to anyone (system origin, not CSP-initiated)</pre></div>
+  <span class="kw">And</span>   no picker is shown to anyone (system origin, not CSP-initiated)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — connection_event_history WHERE event_type = 'INSTALLATION_FAILED'
+        AND payload-&gt;&gt;'failure_subreason_source' = 'SYSTEM'
+        → payload-&gt;&gt;'failure_subreason_code' = 'CSP_NO_SHOW'
+        → payload-&gt;&gt;'failure_reason' = 'TIMEOUT_P74'
+    • <strong>App</strong> — no picker shown on the CSP app for system-driven failures</pre></div>
 
   <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Picker code arrives at TAS as null (defensive)
+  <em>Real-world:</em> guard. The picker is REQUIRED — a submission without a reason_code
+  should fail loudly, not silently default.
+
   <span class="kw">Given</span> the Partner App for some reason sends reason_code = null
   <span class="kw">When</span>  TAS handler runs
   <span class="kw">Then</span>  the handler rejects with HTTP 400 + a clear validation error
         (the picker is REQUIRED; null is not a valid submission)
   <span class="kw">And</span>   no candidate transition fires
-  <span class="kw">And</span>   no downstream event is emitted</pre></div>
+  <span class="kw">And</span>   no downstream event is emitted
 
-  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Old app version (pre-rollout)
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — POST /install/.../actions/report-installation-failed with reason_code = null
+        → 400 with a clear validation-error body
+    • <strong>TAS DB</strong> — install_execution_candidates → no state change
+    • <strong>TAS outbox</strong> — no new EsInstallReportedFailed row dispatched</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Old app version (pre-rollout) — picker list comes from the server
+  <em>Real-world:</em> picker list is server-driven via GET /install/cancellation-reasons.
+  No app release needed — old apps will see the new list on next launch.
+
   <span class="kw">Given</span> a CSP runs an app version that fetched the old 4-option picker list
   <span class="kw">When</span>  they open the failure picker
   <span class="kw">Then</span>  the next GET /install/cancellation-reasons returns the new 6 options
         (server-side change, no client release)
-  <span class="kw">And</span>   the CSP sees the new list</pre></div>
+  <span class="kw">And</span>   the CSP sees the new list
+
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — GET /api/install/cancellation-reasons → response carries the 6 OS-aligned codes
+        (COVERAGE_NOT_FEASIBLE, CUSTOMER_CANCELLED, PRICE_CONFUSION, SCHEDULE_CONFLICT, DEVICE_UNAVAILABLE, BACKHAUL_ISSUE)
+    • <strong>App</strong> — open the picker on a stale app, after backend deploy → the 6 new options render</pre></div>
 
   <div class="gherkin"><pre><span class="kw">EDGE-4:</span> EsInstallReportedFailed received from a source that doesn't set the 4 fields
+  <em>Real-world:</em> during rollout, a legacy bridge may emit the event without the new fields.
+  CL must accept it (4 fields null) and not regress on existing flow.
+
   <span class="kw">Given</span> some upstream service emits EsInstallReportedFailed without the new fields
         (e.g. a legacy bridge during rollout)
   <span class="kw">When</span>  CL's handleEsInstallReportedFailed runs
   <span class="kw">Then</span>  the 4 fields pass through as null (backward-compatible)
   <span class="kw">And</span>   the existing T3/T12 flow continues unchanged
-        (matches today's behaviour — no regression for legacy senders)</pre></div>
+        (matches today's behaviour — no regression for legacy senders)
+
+  <span class="kw">Verify:</span>
+    • <strong>CL DB</strong> — connection_event_history → row exists for the INSTALLATION_FAILED event
+        with the 4 sub-reason fields = null, and the existing failure_reason / connection_id fields intact
+    • <strong>Regression</strong> — T3 / T12 retry path fires per existing rules</pre></div>
 
   <h3>Regression</h3>
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): INSTALLATION_REPORTED_FAILED state transition unchanged
+  <em>Real-world:</em> the candidate-side state transition itself must not change — this fix
+  is in the event payload, not the state machine.
+
   <span class="kw">Given</span> any path that fires INSTALLATION_FAILED today (CSP-reported via TAS, or
         system-driven via CLOS scheduler)
   <span class="kw">When</span>  the candidate transitions
   <span class="kw">Then</span>  the install candidate moves to INSTALLATION_REPORTED_FAILED
-        and the downstream T3/T12 logic fires identically to today</pre></div>
+        and the downstream T3/T12 logic fires identically to today
+
+  <span class="kw">Verify:</span>
+    • <strong>TAS DB</strong> — install_execution_candidates → current_state = 'INSTALLATION_REPORTED_FAILED' (same terminal as today)
+    • <strong>Regression suite</strong> — existing install-failure unit + integration tests pass unchanged</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): CL T3 retry + P78 cap unchanged
+  <em>Real-world:</em> retry-counter logic and the P78 attempts cap behave exactly as today.
+
   <span class="kw">Given</span> a translated INSTALLATION_FAILED reaching CL
   <span class="kw">When</span>  CL processes
   <span class="kw">Then</span>  T3 retry-counter increments per existing rules
   <span class="kw">And</span>   P78 retry-cap (3 attempts) enforced per existing rules
-  <span class="kw">And</span>   the new sub-reason fields don't affect the retry-counter logic</pre></div>
+  <span class="kw">And</span>   the new sub-reason fields don't affect the retry-counter logic
+
+  <span class="kw">Verify:</span>
+    • <strong>CL DB</strong> — connection retry_count increments by 1 per failure, as today
+    • <strong>CL behaviour</strong> — on 3rd failure, T12 fires (existing rule)</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): System-driven failures unchanged
+  <em>Real-world:</em> the system-driven failure path (P74 timeout etc.) is untouched.
+
   <span class="kw">Given</span> a system path (P74 timeout etc.)
   <span class="kw">When</span>  INSTALLATION_FAILED fires from the system code path
   <span class="kw">Then</span>  failure_reason behaves exactly as today (TIMEOUT_P74 etc.)
-  <span class="kw">And</span>   no picker is involved at any point</pre></div>
+  <span class="kw">And</span>   no picker is involved at any point
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): Old app versions still function
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — connection_event_history rows from the system path have unchanged payload shape</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): Old app versions during rollout
+  <em>Real-world:</em> during rollout a stale app cache might still hold the old 4-option list.
+  Engineering picks the rollout strategy; either choice must fail loudly, not silently.
+
   <span class="kw">Given</span> a stale app cache (4-option picker list still locally cached)
   <span class="kw">When</span>  the CSP submits via the stale picker
   <span class="kw">Then</span>  the picker codes sent are the OLD 4 names
   <span class="kw">And</span>   TAS handler maps them to the closest new code (transitional fallback)
         OR rejects with a clear error pointing the CSP at app refresh
-        — (engineering picks one; both are acceptable during rollout)</pre></div>
+        — (engineering picks one; both are acceptable during rollout)
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Aggregate counts preserved
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — POST with an OLD picker code → either accepted (mapped to nearest new code in TAS) or rejected with a clear 400 — confirm engineering's chosen rollout path is the one observed
+    • <strong>App</strong> — CSP gets a clear message either way</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Aggregate INSTALLATION_FAILED counts preserved
+  <em>Real-world:</em> this enriches categorisation; it doesn't add or remove failure events.
+
   <span class="kw">Given</span> a 30-day window of install failures
   <span class="kw">When</span>  we count INSTALLATION_FAILED events per CSP / zone
   <span class="kw">Then</span>  the count is unchanged
-        (enriching categorisation; not adding or removing events)</pre></div>
+        (enriching categorisation; not adding or removing events)
+
+  <span class="kw">Verify:</span>
+    • <strong>Dashboard query</strong> — count INSTALLATION_FAILED rows in connection_event_history
+        for the same window pre vs post deploy → totals match</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): EsInstallReportedFailed legacy fields stay validated
+  <em>Real-world:</em> the 10 existing fields keep their @NotBlank / @NotNull validations.
+
   <span class="kw">Given</span> the 10 existing fields on EsInstallReportedFailed
   <span class="kw">When</span>  CL receives the event
   <span class="kw">Then</span>  the existing @NotBlank / @NotNull validations fire exactly as today
-  <span class="kw">And</span>   the 4 new fields are validated as Optional (per OS §7.2)</pre></div>
+  <span class="kw">And</span>   the 4 new fields are validated as Optional (per OS §7.2)
+
+  <span class="kw">Verify:</span>
+    • <strong>Negative test</strong> — emit EsInstallReportedFailed with one of the 10 required fields blank → CL rejects, same as today
+    • <strong>Positive test</strong> — emit with the 10 required fields populated but the 4 new fields absent → CL accepts (4 fields default to null)</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-7</span> (A6 row 7): TasInstallTerminal path unchanged
+  <em>Real-world:</em> the parallel TAS → Quality OS event (TasInstallTerminal) stays
+  identical. Extending it to carry the 4 fields is a follow-up if Quality OS needs them.
+
   <span class="kw">Given</span> Quality OS subscribes to TasInstallTerminal
   <span class="kw">When</span>  TAS emits it (alongside EsInstallReportedFailed)
   <span class="kw">Then</span>  the TasInstallTerminal payload is unchanged
-        (extending it to carry the 4 fields is a follow-up item if Quality OS needs it)</pre></div>
+        (extending it to carry the 4 fields is a follow-up item if Quality OS needs it)
+
+  <span class="kw">Verify:</span>
+    • <strong>TAS outbox</strong> — outbox_record entries for TasInstallTerminal have identical payload shape pre vs post deploy
+    • <strong>Quality OS</strong> — receiver-side payload-shape contract test passes</pre></div>
 
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
@@ -511,6 +651,7 @@
     <tbody>
       <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope confirmed via code trace: picker code is dropped at <strong>three</strong> sites (TAS handler buries in extra_data; <code>EsInstallReportedFailed</code> lacks the fields; CL translation hard-codes nulls). All three need the fix.</td><td>Pending</td></tr>
       <tr><td>v1.1</td><td>2026-06-04</td><td>Ashish Raj</td><td>A5 (picker table), B5 (LOGIC-1/2/3/6)</td><td>Final English + Hindi copy for the 6 picker options. Replaces the placeholder strings. Picker codes and 4-field mapping unchanged.</td><td>Pending</td></tr>
+      <tr><td>v1.2</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (all 17 ACs)</td><td>Expanded acceptance criteria so any reviewer can read along with engineering. Each LOGIC / EDGE / REGRESSION now opens with a one-line plain-language "Real-world" framing, and ends with a <strong>Verify:</strong> block naming the exact surface to inspect — DB tables (<code>csp_connection_lifecycle_service.connection_event_history</code> with payload jsonb checks, <code>csp_tas_service.install_execution_candidates</code>, TAS <code>outbox_record</code>), API checks (<code>GET /install/cancellation-reasons</code>), and CSP App surface. No structural / A1-A8 changes.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>

@@ -186,7 +186,7 @@
     <tr><td>Change title</td><td>DAS supply-side events for single-CSP zones</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
-    <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
+    <tr><td>Version</td><td>v1.1 (2026-06-04)</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td><code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> §3.14 L317-318 (continuity-mode entry events), L382 + L445 (P46 breach emission), outbound catalogue L626-627 + L708-710, v1.4 changelog L1118 (BDN-DA-02 + BDN-CA-02).</td></tr>
   </table>
   <hr class="sect-end">
@@ -320,7 +320,12 @@
   <div class="expected"><strong>What is expected:</strong> Given / When / Then per event-emit case + REGRESSION block per A6 guard.</div>
 
   <h3>Business logic</h3>
-  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Continuity-mode entry — both signals fire
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Zone goes from multi-CSP to single-CSP → both entry signals fire
+  <em>Real-world:</em> a zone that previously had 2+ eligible CSPs drops to 1
+  (the other CSP exited / got suspended / got FPV-flagged). DAS routing flips to
+  continuity mode; Capacity OS must be told both pieces of news (continuity active +
+  supply deficit).
+
   <span class="kw">Given</span> a zone where the eligible-CSP count drops from 2 to 1
   <span class="kw">When</span>  DAS routing runs and detectMode() transitions to RoutingMode.CONTINUITY
   <span class="kw">Then</span>  DAS publishes SingleProviderContinuityActive
@@ -328,18 +333,37 @@
   <span class="kw">And</span>   DAS publishes ZoneSupplyDeficitSignal
         (payload: zone_id, csp_id, severity)
   <span class="kw">And</span>   both land in the DAS outbox via the existing @TransactionalEventListener wiring
-  <span class="kw">And</span>   Capacity OS receives ZoneSupplyDeficitSignal at POST /zone-supply-deficit-signal</pre></div>
+  <span class="kw">And</span>   Capacity OS receives ZoneSupplyDeficitSignal at POST /zone-supply-deficit-signal
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Continuity-safety-floor kill — supply-deficit signal fires
+  <span class="kw">Verify:</span>
+    • <strong>DAS outbox</strong> — csp_demand_allocation_service.outbox_record
+        WHERE created_at &gt; &lt;test start&gt; AND payload references &lt;test zone_id&gt;
+        → expect 2 rows: one record_type ending in <code>SingleProviderContinuityActive</code>, one ending in <code>ZoneSupplyDeficitSignal</code>
+        → both with status = 'DELIVERED'
+    • <strong>Capacity OS</strong> — verify the POST /zone-supply-deficit-signal handler logged receipt
+        (check capacity-service logs or processed-event table for the zone_id)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Continuity safety-floor kill — supply-deficit still fires
+  <em>Real-world:</em> the zone has a single CSP and that CSP is SUSPENDED or FPV-flagged.
+  DAS can't allocate at all; allocation = zero. Capacity OS still needs the supply-deficit signal.
+
   <span class="kw">Given</span> a zone in continuity mode where the lone CSP is SUSPENDED or FPV_FLAGGED
   <span class="kw">When</span>  DAS routing runs and hits the safety-floor branch
         (line 56-65 of RoutingEngineServiceImpl)
   <span class="kw">Then</span>  allocation = ZERO (existing behaviour, unchanged)
   <span class="kw">And</span>   ZoneSupplyDeficitSignal is published
         (the OS explicitly mentions emit here at L307)
-  <span class="kw">And</span>   Capacity OS receives the signal</pre></div>
+  <span class="kw">And</span>   Capacity OS receives the signal
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — csp_demand_allocation_service.connection_allocations
+        → no new row for this attempt (allocation = zero, existing behaviour)
+    • <strong>DAS outbox</strong> — 1 new ZoneSupplyDeficitSignal row, status = 'DELIVERED'</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> P46 breach during enforcement-triggered reassignment
+  <em>Real-world:</em> the source CSP is suspended; an enforcement-triggered reassignment
+  pushes the lone CSP over their P46 cap. This is the OS-sanctioned legal breach path.
+
   <span class="kw">Given</span> a zone in continuity mode where the source CSP is SUSPENDED / exited
         AND an enforcement-triggered reassignment would push the lone CSP over P46
   <span class="kw">When</span>  DAS routing allows the over-cap allocation (per OS L380-382)
@@ -347,82 +371,170 @@
   <span class="kw">And</span>   DAS publishes P46BreachByContinuity
         (payload: csp_id, zone_id, breach_amount, breach_reason=ENFORCEMENT_REALLOCATION,
          source_csp_id, timestamp)
-  <span class="kw">And</span>   Capacity OS receives the event at POST /p46-breach-by-continuity</pre></div>
+  <span class="kw">And</span>   Capacity OS receives the event at POST /p46-breach-by-continuity
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — connection_allocations → over-cap allocation row created
+    • <strong>DAS outbox</strong> — 1 new P46BreachByContinuity row, status = 'DELIVERED'
+        → payload contains <code>breach_reason = 'ENFORCEMENT_REALLOCATION'</code> + <code>source_csp_id</code>
+    • <strong>Capacity OS</strong> — POST /p46-breach-by-continuity handler logged receipt</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-4 (negative):</span> No emission for multi-CSP zones
+  <em>Real-world:</em> a healthy zone with 2+ eligible CSPs runs in NORMAL mode and must
+  not emit any of the continuity-mode signals.
+
   <span class="kw">Given</span> a zone with 2+ eligible CSPs
   <span class="kw">When</span>  DAS routing runs
   <span class="kw">Then</span>  detectMode() returns NORMAL (existing behaviour, unchanged)
   <span class="kw">And</span>   NO SingleProviderContinuityActive is published
   <span class="kw">And</span>   NO ZoneSupplyDeficitSignal is published
-  <span class="kw">And</span>   NO P46BreachByContinuity is published</pre></div>
+  <span class="kw">And</span>   NO P46BreachByContinuity is published
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS outbox</strong> — csp_demand_allocation_service.outbox_record
+        WHERE created_at &gt; &lt;test start&gt; AND payload references &lt;test zone_id&gt;
+        AND record_type matches any of the 3 continuity events
+        → expect 0 rows</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-5 (negative):</span> No P46 breach signal for non-enforcement over-cap attempts
+  <em>Real-world:</em> if a regular allocation would push a CSP over P46 (no continuity
+  mode involved), DAS rejects normally. The breach event fires only on the OS-sanctioned path.
+
   <span class="kw">Given</span> a non-continuity zone with a CSP at P46
   <span class="kw">When</span>  an ordinary allocation would push them over P46
   <span class="kw">Then</span>  DAS rejects the allocation (existing behaviour)
   <span class="kw">And</span>   NO P46BreachByContinuity is published
-        (the event fires only on the OS-sanctioned breach path)</pre></div>
+        (the event fires only on the OS-sanctioned breach path)
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — connection_allocations → no allocation row (rejected)
+    • <strong>DAS outbox</strong> — no P46BreachByContinuity row created</pre></div>
 
   <h3>Use &amp; edge cases</h3>
-  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Continuity mode entered, exited, re-entered within minutes
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Zone toggles between NORMAL and CONTINUITY within minutes
+  <em>Real-world:</em> exposures shift fast in some zones — the eligible-CSP count can
+  bounce between 1 and 2. Each NORMAL → CONTINUITY transition emits; exit is silent.
+
   <span class="kw">Given</span> a zone that toggles between 1 and 2 eligible CSPs as exposures change
   <span class="kw">When</span>  the mode flips multiple times in a short window
   <span class="kw">Then</span>  each NORMAL → CONTINUITY transition publishes the pair
   <span class="kw">And</span>   each CONTINUITY → NORMAL transition does NOT publish anything in this item
         (exit signal is out of scope per A6 row 6)
   <span class="kw">And</span>   no debouncing is applied at PM level
-        (engineering may add debouncing as an implementation choice)</pre></div>
+        (engineering may add debouncing as an implementation choice)
 
-  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Zone enters continuity AND the CSP is already at P46
+  <span class="kw">Verify:</span>
+    • <strong>DAS outbox</strong> — count entry-pair rows for the test zone across the window
+        → expect 1 pair (SingleProviderContinuityActive + ZoneSupplyDeficitSignal) per NORMAL→CONTINUITY transition
+        → 0 rows on any CONTINUITY → NORMAL transition</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Zone enters continuity AND the lone CSP is already at P46
+  <em>Real-world:</em> double-bind — zone goes single-CSP and that CSP is already at cap.
+  Entry signals fire first; the breach signal fires when the over-cap allocation is allowed.
+
   <span class="kw">Given</span> a zone entering continuity where the lone CSP is already at P46 cap
   <span class="kw">When</span>  the next allocation would breach P46 via the enforcement path
   <span class="kw">Then</span>  continuity-entry signals fire first
         (SingleProviderContinuityActive + ZoneSupplyDeficitSignal)
   <span class="kw">And</span>   P46BreachByContinuity fires when the over-cap allocation is allowed
-  <span class="kw">And</span>   Capacity OS receives all 3 events (ordering: entry signals before breach)</pre></div>
+  <span class="kw">And</span>   Capacity OS receives all 3 events (ordering: entry signals before breach)
 
-  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Outbox delivery fails (Capacity OS down briefly)
+  <span class="kw">Verify:</span>
+    • <strong>DAS outbox</strong> — 3 rows in order:
+        1. SingleProviderContinuityActive
+        2. ZoneSupplyDeficitSignal
+        3. P46BreachByContinuity
+        (created_at timestamps strictly ascending)
+    • <strong>Capacity OS</strong> — 3 inbound events recorded for the zone in the same order</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Outbox delivery fails (Capacity OS briefly down)
+  <em>Real-world:</em> Capacity OS returns 5xx for a few minutes. The DAS outbox retry
+  handles redelivery — no new retry logic added by this item.
+
   <span class="kw">Given</span> any of the 3 events scheduled to the DAS outbox
   <span class="kw">When</span>  initial delivery fails (HTTP 5xx from Capacity OS)
   <span class="kw">Then</span>  the existing outbox retry logic handles redelivery
         (existing behaviour for all DAS outbound events — no new retry logic in this item)
-  <span class="kw">And</span>   eventual successful delivery still reaches Capacity OS</pre></div>
+  <span class="kw">And</span>   eventual successful delivery still reaches Capacity OS
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS outbox</strong> — outbox_record row transitions from 'FAILED' → 'DELIVERED' across retries
+    • <strong>Capacity OS</strong> — eventual receipt confirmed in capacity-service logs / processed-event table</pre></div>
 
   <h3>Regression</h3>
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Multi-CSP zones unchanged
+  <em>Real-world:</em> healthy multi-CSP zones must see byte-identical behaviour vs today.
+
   <span class="kw">Given</span> a multi-CSP zone
   <span class="kw">When</span>  routing executes (allocations, retries, sweeps)
   <span class="kw">Then</span>  no continuity-mode signals fire
-  <span class="kw">And</span>   routing behaviour is byte-identical to today</pre></div>
+  <span class="kw">And</span>   routing behaviour is byte-identical to today
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB / outbox</strong> — for a sample of multi-CSP zones across the test window,
+        diff allocation rows + outbox rows pre vs post deploy → identical</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): P46 rejection for non-continuity over-cap allocations
+  <em>Real-world:</em> regular P46 enforcement (no continuity involved) must still reject
+  over-cap allocations. The breach event must NOT fire on this path.
+
   <span class="kw">Given</span> a non-continuity zone with a CSP at or above P46
   <span class="kw">When</span>  a non-enforcement allocation would push them over P46
   <span class="kw">Then</span>  DAS rejects (existing behaviour)
-  <span class="kw">And</span>   no P46BreachByContinuity is emitted</pre></div>
+  <span class="kw">And</span>   no P46BreachByContinuity is emitted
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — connection_allocations → no row created (rejection, existing behaviour)
+    • <strong>DAS outbox</strong> — no P46BreachByContinuity row created</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Capacity OS receivers idempotent on duplicate events
+  <em>Real-world:</em> outbox retries can deliver the same event twice. Capacity OS receivers
+  must dedupe — this behaviour is already in place and must not be weakened.
+
   <span class="kw">Given</span> any of the 3 events delivered twice (replay or retry)
   <span class="kw">When</span>  Capacity OS receives the duplicate
-  <span class="kw">Then</span>  Capacity OS processes once (existing receiver behaviour, unchanged)</pre></div>
+  <span class="kw">Then</span>  Capacity OS processes once (existing receiver behaviour, unchanged)
+
+  <span class="kw">Verify:</span>
+    • Replay test — re-fire one of the 3 events for the same zone twice
+    • <strong>Capacity OS</strong> — processed-event log shows duplicate idempotency-key rejected on second arrival</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): detectMode() logic unchanged
+  <em>Real-world:</em> the existing rule for entering continuity (eligibleCount ≤ 1) must
+  not be touched — this fix only adds emit calls at the detected transition points.
+
   <span class="kw">Given</span> the existing detectMode() rule (eligibleCount &le; 1 → CONTINUITY)
   <span class="kw">When</span>  the rule is exercised
-  <span class="kw">Then</span>  the rule fires exactly as today; the change only adds emit calls at the transition points</pre></div>
+  <span class="kw">Then</span>  the rule fires exactly as today; the change only adds emit calls at the transition points
+
+  <span class="kw">Verify:</span>
+    • <strong>Regression suite</strong> — existing detectMode() unit tests pass unchanged
+    • <strong>Code diff</strong> — no changes to detectMode() body; only new publishEvent() calls at the transition site</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Single-CSP cooldown bypass behaviour unchanged
+  <em>Real-world:</em> a separate piece of code (cooldown bypass at line 129) carries a
+  SINGLE_CSP_ZONE_CONTINUITY reason. This fix must not touch it.
+
   <span class="kw">Given</span> the existing cooldown bypass at line 129 with reason SINGLE_CSP_ZONE_CONTINUITY
   <span class="kw">When</span>  the bypass fires
   <span class="kw">Then</span>  bypass behaviour is unchanged
-        (the bypass is a separate item; this change does not touch it)</pre></div>
+        (the bypass is a separate item; this change does not touch it)
+
+  <span class="kw">Verify:</span>
+    • <strong>Code diff</strong> — no changes to the cooldown-bypass branch
+    • <strong>Regression suite</strong> — existing cooldown-bypass tests pass unchanged</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): No continuity-exit event added
+  <em>Real-world:</em> the OS doesn't prescribe an exit signal (CONTINUITY → NORMAL).
+  This item must not add one — exit handling is out of scope.
+
   <span class="kw">Given</span> a zone in continuity mode transitions back to NORMAL (gains a 2nd CSP)
   <span class="kw">When</span>  detectMode() returns NORMAL on the next routing pass
   <span class="kw">Then</span>  no exit event is published
-        (out of scope; existing OS doesn't prescribe one)</pre></div>
+        (out of scope; existing OS doesn't prescribe one)
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS outbox</strong> — on a CONTINUITY → NORMAL transition, no new event of any of the 3 record types is emitted</pre></div>
 
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
@@ -470,6 +582,7 @@
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
       <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope refined via code trace: DAS continuity-mode <strong>detection</strong> is wired; listener-side <strong>outbox plumbing</strong> exists for 2 of 3 events; only the publish-event calls are missing + <code>P46BreachByContinuity</code> record + listener need to be added on the DAS side.</td><td>Pending</td></tr>
+      <tr><td>v1.1</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (all 14 ACs)</td><td>Expanded acceptance criteria so any reviewer can read along with engineering. Each LOGIC / EDGE / REGRESSION now opens with a one-line plain-language "Real-world" framing, and ends with a <strong>Verify:</strong> block naming the exact surface to inspect — DAS outbox (<code>csp_demand_allocation_service.outbox_record</code>, by record_type + status), DAS allocations table, and Capacity OS receiver-side log / processed-event check. No structural / A1-A8 changes.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>

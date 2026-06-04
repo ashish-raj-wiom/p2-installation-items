@@ -186,7 +186,7 @@
     <tr><td>Change title</td><td>Change technician at any active state (Install only)</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
-    <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
+    <tr><td>Version</td><td>v1.1 (2026-06-04)</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td>Install candidate state machine in <code>services/csp-tas-service/.../install/domain/service/InstallationStateMachine.java</code> (existing <code>TECHNICIAN_ASSIGNED</code> self-loop, the only one wired today). ES installation PRD §3 (the 14 in-flight + 6 terminal state set, per <code>CandidateState.java</code>).</td></tr>
   </table>
   <hr class="sect-end">
@@ -311,7 +311,10 @@
   <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, use / edge cases, plus a REGRESSION block per A6 guard. Plus a coverage matrix.</div>
 
   <h3>Business logic</h3>
-  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Swap allowed at each of the 7 active states
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> CSP changes the technician at any of the 7 active install states
+  <em>Real-world:</em> the original technician is unavailable (rostered off, ill, out of capacity)
+  and the CSP needs to assign someone else without restarting the booking.
+
   <span class="kw">Given</span> an install candidate in any of these 7 states:
         TECHNICIAN_ASSIGNED, ARRIVED_AT_SITE, INSTALLATION_IN_PROGRESS_PRE_FEE,
         FEE_COLLECTION_PENDING, INSTALLATION_IN_PROGRESS_POST_FEE,
@@ -320,17 +323,38 @@
   <span class="kw">Then</span>  the candidate's assigned_technician becomes Y
   <span class="kw">And</span>   the candidate state is unchanged (self-loop)
   <span class="kw">And</span>   technician Y receives the standard install-assignment notification
-        (same path as initial assignment)</pre></div>
+        (same path as initial assignment)
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Allowed-actions surface at each of the 7 states
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — csp_tas_service.install_execution_candidates
+        WHERE execution_candidate_id = &lt;test candidate_id&gt;
+        → expect current_state unchanged · assigned_technician_id = &lt;Y&gt;
+    • <strong>DB</strong> — csp_tas_service.install_state_transition_log
+        WHERE candidate_id = &lt;test candidate_id&gt; ORDER BY created_at DESC LIMIT 1
+        → expect a self-loop row, action = 'ASSIGN_TECHNICIAN'
+    • <strong>App (Technician Y)</strong> — booking now appears in Y's active-assignments list</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Allowed-actions surface — the swap CTA shows up at all 7 active states
+  <em>Real-world:</em> for the "Change technician" button to render in the CSP App, the
+  gateway drilldown response must include ASSIGN_TECHNICIAN in allowed_actions for these states.
+
   <span class="kw">Given</span> a candidate in any of the 7 active states
   <span class="kw">When</span>  the CSP App fetches the drilldown
   <span class="kw">Then</span>  allowed_actions includes ASSIGN_TECHNICIAN
   <span class="kw">And</span>   the existing per-state actions are also still present
         (e.g. MARK_ARRIVED at TECHNICIAN_ASSIGNED is unchanged)
-  <span class="kw">And</span>   can_reassign reflects this (true) — or the dedicated flag has been dropped per A5 row 3</pre></div>
+  <span class="kw">And</span>   can_reassign reflects this (true) — or the dedicated flag has been dropped per A5 row 3
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-3 (negative):</span> Swap blocked at pre-tech states
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — GET gateway drilldown for each of the 7 active states
+        → allowed_actions contains ASSIGN_TECHNICIAN
+        → existing per-state actions still present (no replacement)
+    • <strong>App</strong> — "Change technician" CTA visible at each of the 7 states</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3 (negative):</span> No swap CTA at pre-technician-assignment states
+  <em>Real-world:</em> before a technician is even assigned, there's nothing to swap.
+  Initial-assignment is a separate, existing flow.
+
   <span class="kw">Given</span> a candidate in any pre-tech-assignment state
         (ACCEPTED, AWAITING_SLOT_PROPOSAL, SLOT_SELECTED,
          AWAITING_CUSTOMER_SLOT_CONFIRMATION, SLOT_CONFIRMED_BY_CUSTOMER,
@@ -338,99 +362,201 @@
   <span class="kw">When</span>  the CSP App fetches the drilldown
   <span class="kw">Then</span>  allowed_actions does NOT contain a swap-style ASSIGN_TECHNICIAN
         (initial-assign at AWAITING_TECHNICIAN_ASSIGNMENT is the existing assign-flow, not a swap)
-  <span class="kw">And</span>   the swap CTA is suppressed in the UI</pre></div>
+  <span class="kw">And</span>   the swap CTA is suppressed in the UI
+
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — GET gateway drilldown for each pre-tech state
+        → allowed_actions does NOT contain swap-style ASSIGN_TECHNICIAN
+        → at AWAITING_TECHNICIAN_ASSIGNMENT the existing initial-assign action remains
+    • <strong>App</strong> — CSP App at pre-tech states shows no "Change technician" CTA</pre></div>
 
   <div class="gherkin"><pre><span class="kw">LOGIC-4 (negative):</span> Swap blocked at all 6 terminal states
+  <em>Real-world:</em> once the install has reached a terminal outcome (active / cancelled
+  / failed / expired), there's no install left to reassign.
+
   <span class="kw">Given</span> a candidate in any terminal state
         (CONNECTION_ACTIVE, INSTALLATION_CANCELLED_ONSITE, INSTALLATION_REPORTED_FAILED,
          CANCELLED_BY_CUSTOMER, CANCELLED_BY_UPSTREAM, INSTALLATION_EXPIRED)
   <span class="kw">When</span>  the CSP attempts to swap (via API or UI)
   <span class="kw">Then</span>  the state machine rejects the transition
         (no self-loop added at any terminal)
-  <span class="kw">And</span>   the UI does not show the CTA</pre></div>
+  <span class="kw">And</span>   the UI does not show the CTA
+
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — POST swap endpoint for each of 6 terminal states
+        → expect 4xx (existing terminal-state guard, same error code as today)
+    • <strong>DB</strong> — install_execution_candidates row unchanged after the attempt
+    • <strong>App</strong> — CTA not shown for terminal candidates</pre></div>
 
   <h3>Use &amp; edge cases</h3>
-  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Rapid sequential swaps (X → Y → Z in seconds)
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Rapid sequential swaps (X → Y → Z within seconds)
+  <em>Real-world:</em> a CSP changes their mind mid-flow and swaps technicians twice quickly.
+
   <span class="kw">Given</span> a candidate at any of the 7 active states
   <span class="kw">When</span>  the CSP swaps X→Y then Y→Z within a few seconds
   <span class="kw">Then</span>  each swap fires a fresh assignment notification to the new pick
   <span class="kw">And</span>   the candidate's assigned_technician tracks the final value (Z)
-  <span class="kw">And</span>   the state stays at the original active state (self-loop)</pre></div>
+  <span class="kw">And</span>   the state stays at the original active state (self-loop)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — csp_tas_service.install_state_transition_log
+        WHERE candidate_id = &lt;test candidate_id&gt; AND created_at &gt; &lt;test start&gt;
+        → expect 2 self-loop rows (X→Y, Y→Z), each with action='ASSIGN_TECHNICIAN'
+    • <strong>DB</strong> — install_execution_candidates → assigned_technician_id = Z (final)
+    • <strong>App (Z)</strong> — booking present in Z's active list
+    • <strong>App (X, Y)</strong> — booking absent from both</pre></div>
 
   <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Swap mid-fee-collection
+  <em>Real-world:</em> the original technician hits trouble collecting the security fee
+  (customer hesitation, pricing question); the CSP swaps to a senior technician.
+
   <span class="kw">Given</span> a candidate in FEE_COLLECTION_PENDING with technician X handling the conversation
   <span class="kw">When</span>  the CSP swaps to a senior technician Y
   <span class="kw">Then</span>  Y is now the assigned technician
   <span class="kw">And</span>   the candidate stays at FEE_COLLECTION_PENDING (self-loop)
   <span class="kw">And</span>   X's app removes the candidate from the active list on next refresh
   <span class="kw">And</span>   Y's app sees the candidate ready for fee collection
-        (any in-progress fee-collection state is reconciled per existing rules — out of scope here)</pre></div>
+        (any in-progress fee-collection state is reconciled per existing rules — out of scope here)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — install_execution_candidates → current_state = 'FEE_COLLECTION_PENDING' (unchanged), assigned_technician_id = Y
+    • <strong>App (X)</strong> — booking gone from X's active list
+    • <strong>App (Y)</strong> — booking present, ready to resume fee collection</pre></div>
 
   <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Swap during AWAITING_CUSTOMER_OTP
+  <em>Real-world:</em> the OTP has been sent to the customer's phone; the CSP needs to
+  swap the technician. The pending OTP is tied to the customer, not the technician.
+
   <span class="kw">Given</span> a candidate at AWAITING_CUSTOMER_OTP and the OTP has been sent to the customer
   <span class="kw">When</span>  the CSP swaps the technician
   <span class="kw">Then</span>  the swap succeeds (state stays at AWAITING_CUSTOMER_OTP)
   <span class="kw">And</span>   the pending OTP is unaffected (it's tied to the customer, not the technician)
-  <span class="kw">And</span>   when the customer enters the OTP, the verification proceeds with the new technician as the actor</pre></div>
+  <span class="kw">And</span>   when the customer enters the OTP, the verification proceeds with the new technician as the actor
 
-  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Swap-to-self / un-assign
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — install_execution_candidates → current_state = 'AWAITING_CUSTOMER_OTP' (unchanged), assigned_technician_id = new
+    • <strong>Functional</strong> — customer enters OTP → verification succeeds; verification audit log records the new technician as actor</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Swap-to-self / un-assign (defensive)
+  <em>Real-world:</em> if the picker is submitted without a technician selected, the backend
+  must reject — there's no "no-tech-assigned" valid state mid-install.
+
   <span class="kw">Given</span> Install has no SELF assignee concept today
   <span class="kw">When</span>  the CSP opens the swap picker and tries to submit without a tech selected
   <span class="kw">Then</span>  the picker requires a non-null technician (UI validation)
-  <span class="kw">And</span>   the backend rejects null/empty technician_id with a 400</pre></div>
+  <span class="kw">And</span>   the backend rejects null/empty technician_id with a 400
 
-  <div class="gherkin"><pre><span class="kw">EDGE-5:</span> Candidate becomes terminal mid-picker
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — POST swap with technician_id = null → expect 400
+    • <strong>DB</strong> — assigned_technician_id unchanged; no transition row created
+    • <strong>App</strong> — submit button disabled until a tech is picked</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-5:</span> Candidate becomes terminal between opening the picker and submitting
+  <em>Real-world:</em> while the CSP has the picker open, the customer cancels (or install
+  completes). Race condition — the swap must be rejected gracefully.
+
   <span class="kw">Given</span> the CSP has the swap picker open
   <span class="kw">When</span>  the candidate transitions to a terminal state (e.g. customer cancels, or install completes)
   <span class="kw">Then</span>  if the swap was already submitted, the backend rejects with the terminal-state guard
   <span class="kw">And</span>   the UI shows a clear "candidate is no longer active" message
-  <span class="kw">And</span>   the picker closes</pre></div>
+  <span class="kw">And</span>   the picker closes
+
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — submitted swap on a now-terminal candidate → 4xx
+    • <strong>DB</strong> — no state change; assigned_technician_id unchanged
+    • <strong>App</strong> — error toast visible, picker closes</pre></div>
 
   <div class="gherkin"><pre><span class="kw">EDGE-6:</span> CSP App offline at submit
+  <em>Real-world:</em> CSP picks a tech, taps submit, network drops; retry on reconnect.
+  By then the candidate may have moved.
+
   <span class="kw">Given</span> the CSP has picked the new technician but the app is offline
   <span class="kw">When</span>  connectivity returns and the request is retried
   <span class="kw">Then</span>  the swap fires; if the candidate has moved to terminal in the meantime,
         backend rejects with the terminal-state guard
-  <span class="kw">And</span>   the UI shows a graceful failure</pre></div>
+  <span class="kw">And</span>   the UI shows a graceful failure
+
+  <span class="kw">Verify:</span>
+    • Manual test — disable network on the test device, submit swap, re-enable
+    • <strong>DB</strong> — still active: assigned_technician_id updated; terminal: no change, 4xx returned
+    • <strong>App</strong> — clear result for both branches</pre></div>
 
   <h3>Regression</h3>
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Initial-assignment transition unchanged
+  <em>Real-world:</em> the non-swap, first-time assignment of a technician must still work.
+
   <span class="kw">Given</span> a candidate at AWAITING_TECHNICIAN_ASSIGNMENT
   <span class="kw">When</span>  the CSP assigns the initial technician
   <span class="kw">Then</span>  the existing transition fires exactly as today (target state: TECHNICIAN_ASSIGNED)
-  <span class="kw">And</span>   allowed_actions at AWAITING_TECHNICIAN_ASSIGNMENT is unchanged</pre></div>
+  <span class="kw">And</span>   allowed_actions at AWAITING_TECHNICIAN_ASSIGNMENT is unchanged
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): Terminal-state guards still reject
+  <span class="kw">Verify:</span>
+    • <strong>DB</strong> — install_state_transition_log
+        → AWAITING_TECHNICIAN_ASSIGNMENT → TECHNICIAN_ASSIGNED row with ASSIGN_TECHNICIAN, exactly as today
+    • <strong>Regression suite</strong> — existing initial-assignment tests pass unchanged</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): Terminal-state guards still reject swap
+  <em>Real-world:</em> the existing terminal-state guard must not be weakened by this change.
+
   <span class="kw">Given</span> a candidate in any of the 6 terminal states
   <span class="kw">When</span>  swap is attempted via API or UI
-  <span class="kw">Then</span>  backend rejects with the existing terminal-state guard error</pre></div>
+  <span class="kw">Then</span>  backend rejects with the existing terminal-state guard error
+
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — POST swap for each terminal state → 4xx with the same error code as today</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): No swap CTA at pre-tech states
+  <em>Real-world:</em> swap must not accidentally surface at any of the 7 pre-tech states.
+
   <span class="kw">Given</span> a candidate in any pre-tech-assignment state (the 7 listed in the guard)
   <span class="kw">When</span>  the drilldown is fetched
   <span class="kw">Then</span>  allowed_actions doesn't surface a swap-style ASSIGN_TECHNICIAN
-  <span class="kw">And</span>   the CTA is suppressed in the UI</pre></div>
+  <span class="kw">And</span>   the CTA is suppressed in the UI
+
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — GET drilldown for each pre-tech state → allowed_actions excludes swap action</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): Other transitions from the 7 active states unchanged
+  <em>Real-world:</em> adding the swap self-loop must not interfere with the other transitions
+  out of these states (MARK_ARRIVED, BEGIN_INSTALLATION, etc.).
+
   <span class="kw">Given</span> a candidate in any of the 7 active states
   <span class="kw">When</span>  any non-swap transition is attempted (MARK_ARRIVED, BEGIN_INSTALLATION,
         SUBMIT_STEP_PRE_FEE, FEE_COLLECT, SUBMIT_STEP_POST_FEE, VERIFY_OTP,
         SUBMIT_RATING, REPORT_INSTALLATION_FAILED, CANCEL_ONSITE, CANCELLED_BY_*)
   <span class="kw">Then</span>  the transition fires exactly as today
-        (adding ASSIGN_TECHNICIAN doesn't change any other transition behaviour)</pre></div>
+        (adding ASSIGN_TECHNICIAN doesn't change any other transition behaviour)
+
+  <span class="kw">Verify:</span>
+    • <strong>Regression suite</strong> — existing install-flow integration tests for every non-swap action across the 7 active states pass unchanged
+    • <strong>DB</strong> — non-swap transition rows look identical to baseline</pre></div>
 
   <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): DECLINE_BLOCKED_STATES still enforced for decline
+  <em>Real-world:</em> decline-block is a separate guard from swap-allow. Decline must remain
+  blocked in FEE / OTP / RATING states; swap is allowed.
+
   <span class="kw">Given</span> a candidate in FEE_COLLECTION_PENDING, INSTALLATION_IN_PROGRESS_POST_FEE,
         AWAITING_CUSTOMER_OTP, or RATING_PENDING
   <span class="kw">When</span>  the CSP attempts a decline-style action (REPORT_INSTALLATION_FAILED with decline intent)
   <span class="kw">Then</span>  the existing decline-blocked guard fires exactly as today
-  <span class="kw">And</span>   swap remains allowed (this item) — only decline is blocked</pre></div>
+  <span class="kw">And</span>   swap remains allowed (this item) — only decline is blocked
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): Restore + NBREC unchanged
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — POST decline endpoint at these states → existing block error
+    • <strong>API</strong> — POST swap at the same states → success</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): Restore + NBREC candidate families unchanged
+  <em>Real-world:</em> this change is install-only. Restore and Netbox Recovery use
+  different state machines and must not see any difference.
+
   <span class="kw">Given</span> a Restore or NBREC candidate
   <span class="kw">When</span>  the drilldown is fetched
   <span class="kw">Then</span>  allowed_actions for those families is identical to today
-        (this change is in install-only code paths)</pre></div>
+        (this change is in install-only code paths)
+
+  <span class="kw">Verify:</span>
+    • <strong>API</strong> — GET drilldown for Restore + NBREC candidates → allowed_actions matches baseline exactly
+    • <strong>Code diff</strong> — no .java diff in restore or netbox_recovery packages</pre></div>
 
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
@@ -477,6 +603,7 @@
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
       <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Scope per PM direction: swap allowed at all 7 active states from <code>TECHNICIAN_ASSIGNED</code> through <code>RATING_PENDING</code> (any active state where a technician is currently assigned). Requires 6 new state-machine self-loops + allowed-actions exposure + UI surfacing.</td><td>Pending</td></tr>
+      <tr><td>v1.1</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (all 16 ACs)</td><td>Expanded acceptance criteria so any reviewer can read along with engineering. Each LOGIC / EDGE / REGRESSION now opens with a one-line plain-language "Real-world" framing, and ends with a <strong>Verify:</strong> block naming the exact surface to inspect — DB tables (<code>csp_tas_service.install_execution_candidates</code>, <code>install_state_transition_log</code>), gateway drilldown API responses, App surface checks (CSP App + Technician app active-list). No structural / A1-A8 changes.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>
