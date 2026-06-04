@@ -189,7 +189,7 @@
     <tr><td>Change title</td><td>Bifurcate booking cancellations by source (customer vs system)</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
-    <tr><td>Version</td><td>v1.0 (2026-06-03)</td></tr>
+    <tr><td>Version</td><td>v1.1 (2026-06-04)</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td><code>installation-flow-execution-spec-yaml/.../es-connection-installation-service-preinst-prd.yaml</code> v2.5 — both terminal states (<code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>) and both workflow methods (<code>cancelByCustomer</code>, <code>cancelByUpstream</code>) already in spec + code.</td></tr>
   </table>
   <hr class="sect-end">
@@ -288,61 +288,97 @@
   <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, computation, invariants, use / edge cases, plus a REGRESSION block for every A6 guard. Plus a coverage matrix that reads "all covered" on every class.</div>
 
   <h3>Business logic</h3>
-  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> USER_INITIATED → CANCELLED_BY_CUSTOMER
-  <span class="kw">Given</span> a CL_DEACTIVATION_INITIATED arrives at the install TAS handler
-        with deactivationSource = "USER_INITIATED"
-  <span class="kw">When</span>  the handler processes the event
-  <span class="kw">Then</span>  the install candidate transitions via cancelByCustomer(candidateId, eventId, correlationId)
-  <span class="kw">And</span>   the candidate lands in CANCELLED_BY_CUSTOMER terminal state</pre></div>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Customer cancels their booking → task marked "cancelled by customer"
+  <em>Real-world:</em> a customer taps Cancel in the Customer App.
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> SYSTEM_INITIATED → CANCELLED_BY_UPSTREAM with the real reason
-  <span class="kw">Given</span> a CL_DEACTIVATION_INITIATED arrives at the install TAS handler
-        with deactivationSource = "SYSTEM_INITIATED" and deactivationReason = "&lt;some cause&gt;"
+  <span class="kw">Given</span> a cancellation arrives at TAS install with source = "USER_INITIATED"
+        (the actor-tag CL stamps on customer-driven cancels)
   <span class="kw">When</span>  the handler processes the event
-  <span class="kw">Then</span>  the install candidate transitions via cancelByUpstream(
+  <span class="kw">Then</span>  the install candidate is cancelled via cancelByCustomer(candidateId, eventId, correlationId)
+  <span class="kw">And</span>   the candidate lands in CANCELLED_BY_CUSTOMER (the OS-defined terminal for this case)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> System cancels the booking → task marked "cancelled upstream" with the real reason
+  <em>Real-world:</em> any non-customer cancel — support agent in CRM, Wiom timeout,
+  Exit OS, Enforcement OS, etc.
+
+  <span class="kw">Given</span> a cancellation arrives at TAS install with source = "SYSTEM_INITIATED"
+        and deactivationReason = "&lt;the actual upstream cause&gt;"
+  <span class="kw">When</span>  the handler processes the event
+  <span class="kw">Then</span>  the install candidate is cancelled via cancelByUpstream(
             candidateId, "CL_DEACTIVATION_INITIATED",
             &lt;the actual deactivationReason from the event&gt;,
             eventId, correlationId
         )
   <span class="kw">And</span>   the candidate lands in CANCELLED_BY_UPSTREAM
-  <span class="kw">And</span>   the candidate's reasonCode preserves the upstream cause (no longer hard-coded "DEACTIVATION")</pre></div>
+  <span class="kw">And</span>   the candidate's reasonCode preserves the actual upstream cause
+        (no longer hard-coded "DEACTIVATION")</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> Multiple active candidates for the same connection
-  <span class="kw">Given</span> a CL_DEACTIVATION_INITIATED arrives
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> A booking with multiple active install tasks → all get cancelled together
+  <em>Real-world:</em> a single connection sometimes has more than one active install task
+  (e.g. after a retry). The cancel must clean up all of them.
+
+  <span class="kw">Given</span> a cancellation arrives
   <span class="kw">And</span>   the connection has multiple active install candidates
   <span class="kw">When</span>  the handler processes the event
   <span class="kw">Then</span>  ALL active candidates are cancelled (existing behaviour: the loop over activeCandidates)
   <span class="kw">And</span>   each cancel uses the branch chosen by deactivationSource (uniform across all candidates)</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-4 (negative):</span> Unknown / missing deactivationSource defaults to upstream
-  <span class="kw">Given</span> a CL_DEACTIVATION_INITIATED arrives with deactivationSource = null
+  <div class="gherkin"><pre><span class="kw">LOGIC-4 (defensive):</span> Missing or unrecognised cancel source → default to "cancelled upstream"
+  <em>Real-world:</em> a guard. If CL ever emits without a source tag (bug, legacy producer,
+  etc.), we must not silently attribute the cancel to the customer.
+
+  <span class="kw">Given</span> a cancellation arrives with deactivationSource = null
         or an unrecognised string value
   <span class="kw">When</span>  the handler processes
-  <span class="kw">Then</span>  the candidate routes to cancelByUpstream(...) (safe default)
+  <span class="kw">Then</span>  the candidate routes to cancelByUpstream(...) (the safer default)
   <span class="kw">And</span>   the unrecognised value is logged at WARN for ops follow-up
   <span class="kw">And</span>   the candidate does NOT silently route to CANCELLED_BY_CUSTOMER</pre></div>
 
+  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> System-cancel → CleverTap event fires → CSP app removes the booking
+  <em>Real-world:</em> when a system-side cancel reaches CANCELLED_BY_UPSTREAM, the CSP
+  must see the booking disappear from their app. CleverTap is the notification channel
+  the partner app subscribes to — it's what wakes the app and tells it to remove the task.
+
+  <span class="kw">Given</span> the install candidate has landed in CANCELLED_BY_UPSTREAM
+  <span class="kw">When</span>  the terminal transition completes
+  <span class="kw">Then</span>  a CleverTap event fires carrying the cancelled bookingId / connectionId
+  <span class="kw">And</span>   the CSP App consumes the CT event and removes the booking
+        from its active-assignments list
+  <span class="kw">And</span>   if the task was already open on the CSP's screen, it shows as cancelled</pre></div>
+
   <h3>Use &amp; edge cases</h3>
-  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> No active candidates for the connection
-  <span class="kw">Given</span> a CL_DEACTIVATION_INITIATED arrives for a connection with no active install candidates
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Cancellation arrives but no install task exists for that connection
+  <em>Real-world:</em> the install was never started, or it's already completed / cancelled.
+
+  <span class="kw">Given</span> a cancellation arrives for a connection with no active install candidates
   <span class="kw">When</span>  the handler processes
   <span class="kw">Then</span>  no-op (existing behaviour: log + return)
   <span class="kw">And</span>   the deactivationSource branching does NOT trigger any state change
-        (because there's nothing to cancel)</pre></div>
+        (because there's nothing to cancel)
+  <span class="kw">And</span>   no CleverTap event fires (nothing was active to remove)</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Duplicate event arrives (replay or retry)
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> The same cancellation event is delivered twice (replay / retry)
+  <em>Real-world:</em> message broker retries or replays. We must act on it only once.
+
   <span class="kw">Given</span> the same CL_DEACTIVATION_INITIATED is delivered twice
   <span class="kw">When</span>  the handler processes the duplicate
   <span class="kw">Then</span>  isDuplicate guard returns early on the second delivery
-  <span class="kw">And</span>   no second cancel is triggered (existing idempotency)</pre></div>
+  <span class="kw">And</span>   no second cancel is triggered (existing idempotency)
+  <span class="kw">And</span>   exactly one CleverTap event fires for the booking (not two)</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Backfill / cutover
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Historical cancellations (already in the database) are not re-classified
+  <em>Real-world:</em> what was cancelled before this fix stays as-is. No retroactive change.
+
   <span class="kw">Given</span> the fix ships
   <span class="kw">When</span>  historical candidates (cancelled before this change) are queried
   <span class="kw">Then</span>  they continue to look like CANCELLED_BY_UPSTREAM with reasonCode = "DEACTIVATION"
-  <span class="kw">And</span>   no retroactive re-classification happens</pre></div>
+  <span class="kw">And</span>   no retroactive re-classification happens
+  <span class="kw">And</span>   no historical CleverTap event re-emits</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Dashboards / ops queries
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> The split of cancellations changes from day zero — ops should expect it
+  <em>Real-world:</em> the customer-cancel count rises from ~0 to its real value on day-zero.
+  That's classification correctness, not a behaviour change.
+
   <span class="kw">Given</span> an internal dashboard that counted install cancellations by terminal
   <span class="kw">When</span>  this fix ships
   <span class="kw">Then</span>  the CANCELLED_BY_CUSTOMER count rises from ~0 to its real value
@@ -350,49 +386,79 @@
   <span class="kw">And</span>   ops should be told the swing is NOT a customer-behaviour change</pre></div>
 
   <h3>Regression</h3>
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): CL OS state transitions unchanged
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): CL state-machine transitions for cancellation are untouched
+  <em>Real-world:</em> the fix is on the receiving side (TAS). CL's own state changes
+  must behave exactly as they do today.
+
   <span class="kw">Given</span> a customer cancel or system cancel via customer backend
   <span class="kw">When</span>  CL processes
   <span class="kw">Then</span>  T13 (PENDING_INSTALL → PENDING_DEACTIVATION) or T9 (REQUESTED → DEACTIVATED)
         fires exactly as today</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): CSP-side cancel paths unchanged
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): CSP-side cancel paths continue to land in CANCELLED_BY_UPSTREAM
+  <em>Real-world:</em> things like CSP exit, D&amp;A reallocation, Enforcement-driven termination
+  don't go through CL_DEACTIVATION_INITIATED with USER_INITIATED at all, so they
+  naturally stay in the upstream bucket.
+
   <span class="kw">Given</span> any non-CL_DEACTIVATION_INITIATED cancellation source (Exit, Enforcement,
         D&amp;A REALLOCATION_PENDING, etc.)
   <span class="kw">When</span>  the cancel fires
   <span class="kw">Then</span>  it lands in CANCELLED_BY_UPSTREAM exactly as today</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Aggregate cancellation count preserved
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Total cancellations per day stays identical pre vs post fix
+  <em>Real-world:</em> bifurcation re-distributes between two buckets. It doesn't add or
+  remove cancellations — the sum must match day-over-day.
+
   <span class="kw">Given</span> a 30-day window of install cancellations
   <span class="kw">When</span>  we count terminal-state cancellations per booking / CSP / zone
   <span class="kw">Then</span>  the count = (CANCELLED_BY_CUSTOMER + CANCELLED_BY_UPSTREAM)
         equals today's total cancellation count</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): No UI change
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): No copy or layout changes on either app
+  <em>Real-world:</em> bifurcated data becomes available for future PN / UX work.
+  This item ships no visual change to the apps.
+
   <span class="kw">Given</span> customer or partner app UI for cancellations
   <span class="kw">When</span>  this fix ships
   <span class="kw">Then</span>  no copy / layout / surface changes</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Idempotency holds on duplicate events
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Duplicate cancellation events still cancel exactly once
+  <em>Real-world:</em> the existing dedupe guard must continue to work.
+
   <span class="kw">Given</span> the same CL_DEACTIVATION_INITIATED is delivered twice
   <span class="kw">When</span>  both arrive at the install handler
   <span class="kw">Then</span>  exactly one terminal transition occurs (existing isDuplicate guard)</pre></div>
 
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): Recharge TAS path unchanged
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): Recharge TAS (the other consumer) is unchanged
+  <em>Real-world:</em> recharge uses a different DTO that already handles the source-tag
+  correctly. This fix is install-only.
+
   <span class="kw">Given</span> a CL_DEACTIVATION_INITIATED arrives at the recharge TAS handler
         (which uses a different DTO with 11 fields including deactivationSource)
   <span class="kw">When</span>  the recharge handler processes
   <span class="kw">Then</span>  behaviour is identical to today (the recharge DTO is not changed)</pre></div>
 
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-7</span> (new): Customer-cancel → CleverTap event + CSP app removal still works
+  <em>Real-world:</em> today the customer-cancel → CSP-app-removal chain works because every
+  cancel routes through CANCELLED_BY_UPSTREAM. After this fix, customer-cancels route through
+  CANCELLED_BY_CUSTOMER instead. The CT event and app removal must continue to fire from
+  the new branch — no UX regression for the partner.
+
+  <span class="kw">Given</span> a customer cancels (LOGIC-1 path) and the candidate lands in CANCELLED_BY_CUSTOMER
+  <span class="kw">When</span>  the terminal transition completes
+  <span class="kw">Then</span>  a CleverTap event fires for this candidate
+  <span class="kw">And</span>   the CSP App removes the booking from its active-assignments list
+        (unchanged user-facing behaviour from today)</pre></div>
+
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
     <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
     <tbody>
-      <tr><td class="cls">Business logic</td><td>A5 rows 1–4</td><td>4 deltas</td><td>LOGIC-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1–4 + CT notification path</td><td>5 deltas</td><td>LOGIC-1..5</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>—</td><td>N/A (no computation)</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Use / edge</td><td>EDGE-1..4</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
-      <tr><td class="cls">Regression</td><td>A6 rows 1–6</td><td>6 guards</td><td>REGRESSION-1..6</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 rows 1–6 + CT preservation</td><td>7 guards</td><td>REGRESSION-1..7</td><td>All covered</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -429,6 +495,7 @@
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
       <tr><td>v1.0</td><td>2026-06-03</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Verified against csp-os-yaml main: CL emits <code>deactivationSource</code> + <code>deactivationReason</code> on outbound; install TAS DTO drops them.</td><td>Pending</td></tr>
+      <tr><td>v1.1</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5</td><td>Expanded acceptance criteria. Each LOGIC / EDGE / REGRESSION now opens with a one-line plain-language "Real-world" framing so PMs, ops, QA and engineering can read the same doc. Added <strong>LOGIC-5</strong> (system-cancel → CleverTap event → CSP app removes the booking) and <strong>REGRESSION-7</strong> (customer-cancel CT + app removal must continue to work post-fix — today this fires via the upstream branch; after the fix it must fire via the customer branch). CleverTap re-scoped as a notification channel to the CSP app (not marketing analytics). No A1/A2/A5/A6/A8 changes.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>
