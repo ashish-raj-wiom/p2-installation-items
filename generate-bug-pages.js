@@ -774,13 +774,22 @@ sequenceDiagram
 </table>
 
 <h2 id="workflow">Workflow — how <code>zones.active_connection_count</code> is supposed to move</h2>
-<p>Capacity OS maintains <code>zones.active_connection_count</code> as a derived counter sourced exclusively from CL events. The diagram below shows every CL state transition that affects the counter — the bug sits at the <strong>T2 (source = INITIAL)</strong> edge, which is the happy-path install.</p>
+<p>Capacity OS maintains <code>zones.active_connection_count</code> as a derived counter sourced from CL events. The diagram below shows the <strong>intended</strong> behaviour per CL OS §4.3 T2 ("Capacity OS active count +1"). One important caveat in the call-out below: today's Capacity OS §2.5 LOCKED text doesn't yet match this intent.</p>
+
+<div class="hint">
+  <strong>Spec-source contradiction (raised by tech):</strong>
+  <ul style="margin: 4px 0 0 0;">
+    <li><strong>CL OS §4.3 T2 (L250):</strong> "Consumers: Capacity OS (active count +1)…" — explicit "+1" on every T2, which is the happy-path INITIAL.</li>
+    <li><strong>Capacity OS §2.5 LOCKED (L163):</strong> only declares <em>"Resume rule: CL_CONNECTION_ACTIVATED with activation_source = RESUME → increment"</em>. Silent on INITIAL.</li>
+  </ul>
+  <p style="margin: 8px 0 0 0;">Code (<code>InboundEventProcessingServiceImpl.java:446-461</code>) faithfully implements §2.5's literal text — that's why <code>INITIAL</code> doesn't count today. The diagram below shows the <strong>intended</strong> behaviour; §2.5 needs amendment to match.</p>
+</div>
 
 <div class="mermaid">
 stateDiagram-v2
     [*] --> REQUESTED: CONNECTION_REQUEST
     REQUESTED --> PENDING_INSTALL: ALLOCATION_ACCEPTED (T1)
-    PENDING_INSTALL --> ACTIVE: T2 install complete (source=INITIAL)<br/>Capacity +1
+    PENDING_INSTALL --> ACTIVE: T2 install complete (source=INITIAL)<br/>Capacity +1 (intent per CL OS T2)
     ACTIVE --> ACTIVE: recharge (source=RENEWAL)<br/>Capacity no-op
     ACTIVE --> PAUSED: T4 recharge expired<br/>Capacity -1
     PAUSED --> ACTIVE: recharge confirmed (source=RESUME)<br/>Capacity +1
@@ -790,46 +799,52 @@ stateDiagram-v2
     DEACTIVATED --> [*]
 </div>
 
-<h3>Per-event behaviour</h3>
-<p>CL emits <code>CL_CONNECTION_ACTIVATED</code> with three distinct <code>activation_source</code> values. The counter must respond differently to each — fixing only the INITIAL path while leaving RENEWAL untouched is the careful part of the fix.</p>
+<h3>Per-event behaviour — today's code vs intended</h3>
+<p>CL emits <code>CL_CONNECTION_ACTIVATED</code> with three distinct <code>activation_source</code> values. The intended fix discriminates between them carefully — fixing only INITIAL while leaving RENEWAL untouched.</p>
 <table>
-  <thead><tr><th>CL event</th><th><code>activation_source</code></th><th>Counter action</th><th>Why</th></tr></thead>
+  <thead><tr><th>CL event</th><th><code>activation_source</code></th><th>State transition</th><th>Today (§2.5 literal)</th><th>Intended (CL OS T2)</th></tr></thead>
   <tbody>
     <tr>
       <td><code>CL_CONNECTION_ACTIVATED</code></td>
       <td><code>INITIAL</code></td>
+      <td>PENDING_INSTALL → ACTIVE</td>
+      <td>no-op <em>(the bug — under-count)</em></td>
       <td><strong>+1</strong></td>
-      <td>First-time install (T2 happy path) — new active connection in the zone</td>
     </tr>
     <tr>
       <td><code>CL_CONNECTION_ACTIVATED</code></td>
       <td><code>RESUME</code></td>
+      <td>PAUSED → ACTIVE</td>
       <td><strong>+1</strong></td>
-      <td>PAUSED → ACTIVE — connection re-enters the active count</td>
+      <td><strong>+1</strong></td>
     </tr>
     <tr>
       <td><code>CL_CONNECTION_ACTIVATED</code></td>
       <td><code>RENEWAL</code></td>
-      <td><strong>no-op</strong></td>
-      <td>ACTIVE → ACTIVE — no state change; just a recharge metadata refresh</td>
+      <td>ACTIVE → ACTIVE</td>
+      <td>no-op</td>
+      <td>no-op <em>(must stay no-op — naïve "remove the guard" would over-count here)</em></td>
     </tr>
     <tr>
       <td><code>CL_CONNECTION_PAUSED</code></td>
       <td>n/a</td>
+      <td>ACTIVE → PAUSED</td>
       <td><strong>−1</strong></td>
-      <td>ACTIVE → PAUSED — no longer in the active state</td>
+      <td><strong>−1</strong></td>
     </tr>
     <tr>
       <td><code>CL_DEACTIVATION_INITIATED</code><br>(previous_state = ACTIVE)</td>
       <td>n/a</td>
+      <td>ACTIVE → PENDING_DEACTIVATION</td>
       <td><strong>−1</strong></td>
-      <td>ACTIVE → PENDING_DEACTIVATION — exit from active</td>
+      <td><strong>−1</strong></td>
     </tr>
     <tr>
       <td><code>CL_DEACTIVATION_INITIATED</code><br>(previous_state = PAUSED)</td>
       <td>n/a</td>
-      <td><strong>no-op</strong></td>
-      <td>Already −1 on pause; a second −1 would double-count</td>
+      <td>PAUSED → PENDING_DEACTIVATION</td>
+      <td>no-op</td>
+      <td>no-op</td>
     </tr>
   </tbody>
 </table>
@@ -840,8 +855,10 @@ stateDiagram-v2
   <li><strong>Zone retire gate</strong> — <code>ZoneServiceImpl:136</code>: <code>guardActiveConnectionCountZeroForRetire</code> blocks retirement until the counter reaches 0.</li>
 </ul>
 
-<h3>Where the bug bites</h3>
-<p>The diagram shows the <strong>INITIAL +1</strong> at T2 as the prescribed behaviour. In code (<code>InboundEventProcessingServiceImpl.java:446-461</code>), only the <code>RESUME</code> branch increments — <code>INITIAL</code> falls into the <code>else</code> branch and logs <code>LOG_CONNECTION_ACTIVATION_SKIP</code>. Net effect: every happy-path install silently drops from the counter; the load-ratio under-counts; cap calibration miscalibrates; the zone-retire guard can report 0 prematurely.</p>
+<h3>Where the bug bites — and the right shape of the fix</h3>
+<p>Net effect today: every happy-path install (T2 INITIAL) silently drops from the counter; the load-ratio under-counts; cap calibration miscalibrates; the zone-retire guard can report 0 prematurely.</p>
+<p><strong>Fix shape (per tech recommendation):</strong> change <code>if ("RESUME".equals(activationSource))</code> to <code>if ("INITIAL".equals(activationSource) || "RESUME".equals(activationSource))</code>. <strong>Allowlist</strong> INITIAL + RESUME explicitly. Do not remove the guard wholesale — that would also increment on every <code>RENEWAL</code> event (every recharge of an already-ACTIVE connection) and create an over-count bug far worse than the current under-count.</p>
+<p><strong>OS prerequisite:</strong> Capacity OS §2.5 LOCKED needs amendment to declare the INITIAL branch alongside RESUME (proposed wording: <em>"increment on activation_source IN (INITIAL, RESUME); RENEWAL is a no-op"</em>). Without the amendment, the code change ships ahead of the OS contract.</p>
 
 <h2 id="backfill">Backfill</h2>
 <p>Once the guard is removed, future T2 events increment correctly. Historical drift requires a one-shot reconciliation: <code>UPDATE zones SET active_connection_count = (SELECT count(*) FROM csp_connection_lifecycle_service.connections WHERE current_state='ACTIVE' AND zone_id = zones.zone_id)</code>. Run during a window with cap-calibration paused.</p>
