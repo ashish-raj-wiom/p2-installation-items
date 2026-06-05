@@ -71,9 +71,11 @@ const BUGS = [
     sections: [
       { id: 'spec', label: 'Original spec' },
       { id: 'cases', label: 'Test cases' },
+      { id: 'workflow', label: 'Workflow — counter movement' },
       { id: 'backfill', label: 'Backfill' },
       { id: 'evidence', label: 'Code evidence' },
     ],
+    hasMermaid: true,
   },
   {
     id: 'bug-05',
@@ -770,6 +772,76 @@ sequenceDiagram
     </td></tr>
   </tbody>
 </table>
+
+<h2 id="workflow">Workflow — how <code>zones.active_connection_count</code> is supposed to move</h2>
+<p>Capacity OS maintains <code>zones.active_connection_count</code> as a derived counter sourced exclusively from CL events. The diagram below shows every CL state transition that affects the counter — the bug sits at the <strong>T2 (source = INITIAL)</strong> edge, which is the happy-path install.</p>
+
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> REQUESTED: CONNECTION_REQUEST
+    REQUESTED --> PENDING_INSTALL: ALLOCATION_ACCEPTED (T1)
+    PENDING_INSTALL --> ACTIVE: T2 install complete (source=INITIAL)<br/>Capacity +1
+    ACTIVE --> ACTIVE: recharge (source=RENEWAL)<br/>Capacity no-op
+    ACTIVE --> PAUSED: T4 recharge expired<br/>Capacity -1
+    PAUSED --> ACTIVE: recharge confirmed (source=RESUME)<br/>Capacity +1
+    ACTIVE --> PENDING_DEACTIVATION: T5 / T6 user / exit<br/>Capacity -1
+    PAUSED --> PENDING_DEACTIVATION: T7 P76 sweep<br/>Capacity no-op (already -1 on pause)
+    PENDING_DEACTIVATION --> DEACTIVATED: T8 P77 finalised
+    DEACTIVATED --> [*]
+</div>
+
+<h3>Per-event behaviour</h3>
+<p>CL emits <code>CL_CONNECTION_ACTIVATED</code> with three distinct <code>activation_source</code> values. The counter must respond differently to each — fixing only the INITIAL path while leaving RENEWAL untouched is the careful part of the fix.</p>
+<table>
+  <thead><tr><th>CL event</th><th><code>activation_source</code></th><th>Counter action</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>CL_CONNECTION_ACTIVATED</code></td>
+      <td><code>INITIAL</code></td>
+      <td><strong>+1</strong></td>
+      <td>First-time install (T2 happy path) — new active connection in the zone</td>
+    </tr>
+    <tr>
+      <td><code>CL_CONNECTION_ACTIVATED</code></td>
+      <td><code>RESUME</code></td>
+      <td><strong>+1</strong></td>
+      <td>PAUSED → ACTIVE — connection re-enters the active count</td>
+    </tr>
+    <tr>
+      <td><code>CL_CONNECTION_ACTIVATED</code></td>
+      <td><code>RENEWAL</code></td>
+      <td><strong>no-op</strong></td>
+      <td>ACTIVE → ACTIVE — no state change; just a recharge metadata refresh</td>
+    </tr>
+    <tr>
+      <td><code>CL_CONNECTION_PAUSED</code></td>
+      <td>n/a</td>
+      <td><strong>−1</strong></td>
+      <td>ACTIVE → PAUSED — no longer in the active state</td>
+    </tr>
+    <tr>
+      <td><code>CL_DEACTIVATION_INITIATED</code><br>(previous_state = ACTIVE)</td>
+      <td>n/a</td>
+      <td><strong>−1</strong></td>
+      <td>ACTIVE → PENDING_DEACTIVATION — exit from active</td>
+    </tr>
+    <tr>
+      <td><code>CL_DEACTIVATION_INITIATED</code><br>(previous_state = PAUSED)</td>
+      <td>n/a</td>
+      <td><strong>no-op</strong></td>
+      <td>Already −1 on pause; a second −1 would double-count</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Where the counter is used downstream</h3>
+<ul>
+  <li><strong>Cap calibration</strong> — <code>BatchEvaluationServiceImpl:105</code> computes <code>load_ratio = active_connection_count / cap</code>. Drives expansion / contraction decisions per zone.</li>
+  <li><strong>Zone retire gate</strong> — <code>ZoneServiceImpl:136</code>: <code>guardActiveConnectionCountZeroForRetire</code> blocks retirement until the counter reaches 0.</li>
+</ul>
+
+<h3>Where the bug bites</h3>
+<p>The diagram shows the <strong>INITIAL +1</strong> at T2 as the prescribed behaviour. In code (<code>InboundEventProcessingServiceImpl.java:446-461</code>), only the <code>RESUME</code> branch increments — <code>INITIAL</code> falls into the <code>else</code> branch and logs <code>LOG_CONNECTION_ACTIVATION_SKIP</code>. Net effect: every happy-path install silently drops from the counter; the load-ratio under-counts; cap calibration miscalibrates; the zone-retire guard can report 0 prematurely.</p>
 
 <h2 id="backfill">Backfill</h2>
 <p>Once the guard is removed, future T2 events increment correctly. Historical drift requires a one-shot reconciliation: <code>UPDATE zones SET active_connection_count = (SELECT count(*) FROM csp_connection_lifecycle_service.connections WHERE current_state='ACTIVE' AND zone_id = zones.zone_id)</code>. Run during a window with cap-calibration paused.</p>
