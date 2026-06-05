@@ -92,6 +92,14 @@
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;

@@ -92,6 +92,14 @@
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
@@ -201,31 +209,71 @@
       <td class="expected">JSON payload contains <code>"signal_id": "&lt;UUID&gt;"</code>.</td>
       <td class="observed">JSON payload contains <code>"event_id": "&lt;UUID&gt;"</code> — wrong field name. Quality OS validates <code>@NotBlank signalId</code>, gets blank, rejects. Producer record at <code>ClInstallationQualitySignal.java</code> inherits <code>eventId</code> from <code>DomainEvent</code> envelope.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — <code>csp_connection_lifecycle_service.outbox_record</code> WHERE record_type ends in <code>ClInstallationQualitySignal</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → payload JSON contains key <code>"signal_id"</code> (not <code>"event_id"</code>)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When CL emits the payload, then field <code>signal_type</code> carries the §7.4 enum entry for this signal.</td>
       <td class="expected">JSON contains <code>"signal_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> (string-typed enum entry).</td>
       <td class="observed">JSON contains <code>"event_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> — wrong field name. Producer record has no <code>signalType</code> field; relies on base <code>getEventType()</code>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — same query as TC-1 → payload contains key <code>"signal_type"</code> with value <code>"CL_INSTALLATION_QUALITY_SIGNAL"</code></li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When T2 fires, then field <code>previous_state</code> is populated.</td>
       <td class="expected">JSON contains <code>"previous_state": "PENDING_INSTALL"</code> (per §7.2 — required for state transitions, and T2 is one).</td>
       <td class="observed">JSON contains <code>"previous_state": null</code>. Producer code passes <code>null</code> at the T2 emit site instead of <code>"PENDING_INSTALL"</code>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — same outbox query → payload contains <code>"previous_state": "PENDING_INSTALL"</code> (not null)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the payload reaches Quality OS, then it passes the receiver's <code>@NotBlank</code> / <code>@NotNull</code> validation.</td>
       <td class="expected">HTTP 200; <code>install_maturation_ledger</code> row written.</td>
       <td class="observed">HTTP 400 <code>VALIDATION_FAILED</code> on three fields (<code>signalId</code>, <code>signalType</code>, <code>previousState</code>). 53 / 53 outbox rows marked FAILED. Receiver matches the OS exactly — the producer is the side that drifted.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — <code>csp_connection_lifecycle_service.outbox_record</code> WHERE record_type ends in <code>ClInstallationQualitySignal</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect status = 'DELIVERED' (not 'FAILED')</li>
+        <li><strong>Quality OS DB</strong> — <code>csp_quality_service.install_maturation_ledger</code> → new rows per successful signal</li>
+        <li><strong>Replay</strong> — replay the 53 historical FAILED outbox rows → all deliver successfully (assuming producer fix is in place)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When CL re-emits an existing signal (e.g. on retry), then Quality OS dedupes by <code>(connection_id, activation_event_ref)</code> per the OS idempotency rule.</td>
       <td class="expected">Duplicate signals don't create duplicate <code>install_maturation_ledger</code> rows.</td>
       <td class="observed">Receiver-side idempotency works correctly (already implemented). Once the producer is fixed and historical FAILED rows are replayed, dedupe handles it cleanly.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Replay test</strong> — re-emit the same <code>ClInstallationQualitySignal</code> twice for the same connection</li>
+        <li><strong>Quality OS DB</strong> — <code>install_maturation_ledger</code> WHERE connection_id = &lt;test&gt; → expect exactly 1 row (not 2), dedupe key is <code>(connection_id, activation_event_ref)</code></li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-6.</strong> When the signal is emitted, then the payload does <strong>not</strong> include fields not in the OS contract.</td>
       <td class="expected">Payload contains only the base schema + S-10 specific fields. No <code>correlation_id</code>, no <code>causation_id</code>.</td>
       <td class="observed">Payload contains <code>correlation_id: null</code> and <code>causation_id: &lt;UUID&gt;</code>. Receiver tolerates unknown fields (Jackson default), so these are noise — but the producer record should be trimmed to S-10.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — same payload check → no <code>correlation_id</code> or <code>causation_id</code> keys (only S-10 + base-schema fields)</li>
+        <li><strong>Code</strong> — <code>ClInstallationQualitySignal.java</code> producer record fields match S-10 spec verbatim</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 

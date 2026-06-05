@@ -92,6 +92,14 @@
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
@@ -203,26 +211,63 @@
       <td class="expected">JSON contains <code>"customer_id": "&lt;UUID&gt;"</code> — the customer the connection serves, read directly from the CL <code>connections</code> table (same row that supplies <code>csp_id</code>, <code>zone_id</code>, etc.).</td>
       <td class="observed">Payload has no <code>customer_id</code> field. The CL service producer record (<code>ClConnectionActivated.java</code>) doesn't include it.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — <code>csp_connection_lifecycle_service.outbox_record</code> WHERE record_type ends in <code>ClConnectionActivated</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → payload JSON contains key <code>"customer_id"</code> with a non-null UUID</li>
+        <li><strong>Code</strong> — <code>ClConnectionActivated.java</code> record now has a <code>customerId</code> field</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When CAEO consumes <code>CL_CONNECTION_ACTIVATED</code>, then it writes <code>customer_access_entitlement.customer_id</code> from the event's <code>customer_id</code> field.</td>
       <td class="expected"><code>customer_id</code> column = real customer's UUID.</td>
       <td class="observed">CAEO at <code>InboundEventProcessingServiceImpl.java:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> — the CSP-ID lands in the customer-id column. Author: Aryan Gaurav, Apr 10 2026.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_customer_access_service.customer_access_entitlement</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> → <code>customer_id</code> = real customer UUID</li>
+        <li><strong>Cross-check</strong> — for sampled CAEO rows: <code>customer_id</code> matches <code>csp_connection_lifecycle_service.connections.customer_id</code> for the same <code>connection_id</code></li>
+        <li><strong>Code</strong> — CAEO <code>InboundEventProcessingServiceImpl.java:82</code> reads <code>event.customerId()</code> (not <code>event.cspId()</code>)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When a downstream consumer queries CAEO by <code>customer_id</code>, then it finds entitlement rows for the matching customer.</td>
       <td class="expected">A query like <code>findByCustomerId("&lt;real-customer-uuid&gt;")</code> returns rows.</td>
       <td class="observed">Method exists in the repository (<code>findByCustomerId</code>) but is never called anywhere in the monorepo today — because the column has the wrong value. Once fixed, the column becomes queryable.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>SELECT * FROM csp_customer_access_service.customer_access_entitlement WHERE customer_id = '&lt;real customer UUID&gt;'</code> → expect rows matching the customer's connections</li>
+        <li><strong>API</strong> — call any downstream endpoint that uses <code>findByCustomerId</code> → returns non-empty results for real customers</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When sibling <code>CL_CONNECTION_*</code> events fire (PAUSED, RESCUED, DEACTIVATED), then their payloads also include <code>customer_id</code> if any consumer needs it.</td>
       <td class="expected">Sibling-event contract uniformity. Engineering audits which sibling events have downstream consumers that would benefit from <code>customer_id</code> and adds the field to those producer records together.</td>
       <td class="observed">Sibling events also lack <code>customer_id</code>. Out of scope for this item if no downstream consumer needs them — only <code>CL_CONNECTION_ACTIVATED</code> is required to unblock CAEO.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (out-of-scope check):</strong>
+      <ul>
+        <li><strong>Code diff</strong> — confirm no changes to <code>ClConnectionPaused.java</code>, <code>ClConnectionRescued.java</code>, <code>ClConnectionDeactivated.java</code> in this release</li>
+        <li><strong>Outbox</strong> — payloads for sibling events still lack <code>customer_id</code> (intentionally out of scope; only ACTIVATED is fixed)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When the historical backfill runs (one-shot), then existing CAEO rows with <code>customer_id = &lt;some-CSP-ID&gt;</code> get corrected.</td>
       <td class="expected"><code>UPDATE customer_access_entitlement SET customer_id = c.customer_id FROM csp_connection_lifecycle_service.connections c WHERE customer_access_entitlement.connection_id = c.connection_id</code>. Join via <code>connection_id</code> (always present on both sides).</td>
       <td class="observed">Backfill not yet run. ~50 of 19,573 CAEO rows currently have CSP-IDs in <code>customer_id</code> column.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after backfill:</strong>
+      <ul>
+        <li><strong>DB (pre-backfill)</strong> — <code>SELECT COUNT(*) FROM csp_customer_access_service.customer_access_entitlement cae JOIN csp_connection_lifecycle_service.connections c ON cae.connection_id = c.connection_id WHERE cae.customer_id != c.customer_id</code> → count of rows needing correction (~50)</li>
+        <li><strong>Run</strong> the backfill UPDATE</li>
+        <li><strong>DB (post-backfill)</strong> — same query → expect 0 rows</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 

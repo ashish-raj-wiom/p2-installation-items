@@ -201,6 +201,14 @@ const CSS = `
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
@@ -308,21 +316,55 @@ const BUG_BODY = {
       <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>transition_type = T9</code>, source = SYSTEM, <code>new_state = DEACTIVATED</code>.</td>
       <td class="observed">No T9 transitions emitted in 90d. Stale <code>REQUESTED</code> rows accumulate indefinitely.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_connection_lifecycle_service.connection_state_transition_log</code> WHERE <code>transition_type = 'T9'</code> AND <code>source = 'SYSTEM'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows for stale REQUESTED candidates</li>
+        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'REQUESTED'</code> AND <code>created_at &lt; now() - interval '7 days'</code> → expect 0 rows after the sweep runs</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'DELIVERED' → row per deactivated candidate</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When a connection sits in <code>PAUSED</code> for &gt; P76 (90d), then the P76 sweep transitions it to <code>PENDING_DEACTIVATION</code> via <code>PAUSE_DURATION_EXCEEDED</code>.</td>
       <td class="expected">CL emits <code>CL_DEACTIVATION_INITIATED</code>; downstream Exit OS / RECHARGE_VALIDATOR receive the signal.</td>
       <td class="observed">No such transitions. 11k+ <code>PAUSED</code> rows past 90d sit untouched.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_state_transition_log</code> WHERE <code>transition_type = 'T7'</code> AND <code>reason = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'PAUSED'</code> AND <code>p76_timer_start &lt; now() - interval '90 days'</code> → expect count drops as sweeps run</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClDeactivationInitiated</code> AND status = 'DELIVERED' → row per row transitioned</li>
+        <li><strong>Custody OS</strong> — corresponding device records transition <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> (proves the fanout reached downstream)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When a connection sits in <code>PENDING_DEACTIVATION</code> for &gt; P77 (45d), then the P77 sweep transitions it to <code>DEACTIVATED</code> via <code>DEACTIVATION_COMPLETE</code>.</td>
       <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>new_state = DEACTIVATED</code>, source = SYSTEM.</td>
       <td class="observed">No such transitions. Stale <code>PENDING_DEACTIVATION</code> rows accumulate.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_state_transition_log</code> WHERE <code>transition_type = 'T8'</code> AND <code>reason = 'DEACTIVATION_COMPLETE'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'PENDING_DEACTIVATION'</code> AND <code>state_timestamp &lt; now() - interval '45 days'</code> → expect count drops as sweeps run</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'DELIVERED' → row per finalised candidate</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the sweep cadence runs (15-minute granularity is acceptable; finer is fine), then sweep methods are invoked from a recurring schedule.</td>
       <td class="expected"><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> is called at service-startup with the four sweep batches registered. <code>AWS_SCHEDULER_ENABLED: true</code> in <code>application-prod.yml</code>.</td>
       <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> at <code>application-prod.yml:18</code>. <code>scheduleRecurring(...)</code> never called. Sweep methods reachable only via internal endpoints, which nothing calls.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Config</strong> — <code>application-prod.yml</code> + <code>application-qa.yml</code> → <code>AWS_SCHEDULER_ENABLED: true</code></li>
+        <li><strong>Startup logs</strong> — CL service boot logs include <code>scheduleRecurring(...)</code> entries for the 5 sweep batches (P75 / P76 / P77 / install timeout / retry exhaustion)</li>
+        <li><strong>AWS Console</strong> — EventBridge schedule group exists; 5 schedules visible and enabled</li>
+        <li><strong>Interim path</strong> — until AWS infra ships, <code>curl POST</code> to <code>InternalTaskController</code> endpoints from an external cron (Lambda / GitHub Actions / k8s CronJob); HTTP 200 confirms sweep ran</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
@@ -392,6 +434,14 @@ stateDiagram-v2
       <td class="expected">TAS marks candidate <code>CANCELLED_BY_UPSTREAM</code> reason <code>RETRY_EXHAUSTED</code>.</td>
       <td class="observed">Handler logs "no action required"; candidate stays OPEN. Tech must add T12 to the trigger set.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Code</strong> — <code>csp-tas-service/.../ClStateChangedHandler.java</code> → <code>UPSTREAM_RETRY_TRIGGERS</code> set contains both <code>T11</code> and <code>T12</code></li>
+        <li><strong>TAS DB</strong> — <code>csp_tas_service.install_execution_candidates</code> for connections that hit P78 retry exhaustion → <code>current_state = 'CANCELLED_BY_UPSTREAM'</code>, reason = <code>'RETRY_EXHAUSTED'</code></li>
+        <li><strong>TAS DB</strong> — <code>install_state_transition_log</code> → transition row with <code>trigger_source = 'CL_STATE_CHANGED'</code> and <code>transition_type = 'T12'</code></li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
@@ -424,21 +474,52 @@ stateDiagram-v2
       <td class="expected">DAS writes <code>UNASSIGNED</code> + <code>p50_exhausted_at = now()</code>.</td>
       <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (baseline still holds after fix):</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.connection_allocations</code> WHERE <code>retry_count &gt;= 5</code> → expect <code>state = 'UNASSIGNED'</code> and <code>p50_exhausted_at IS NOT NULL</code> (existing behaviour preserved)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When the P191 sweep cadence fires, then it re-enters routing for all <code>UNASSIGNED</code> rows past their held-state max.</td>
       <td class="expected">Held rows re-attempt routing. If a previously-cooled-down CSP becomes eligible, they're re-assigned. Otherwise extend held-state.</td>
       <td class="observed">Sweep never fires. 230 <code>UNASSIGNED</code> rows in prod, oldest &gt; 24h, never re-routed.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>state = 'UNASSIGNED'</code> AND <code>retry_count &lt; 5</code> → count drops as sweeps run (some get re-routed and move to <code>ASSIGNED</code> → <code>ACCEPTED</code>)</li>
+        <li><strong>DAS service logs</strong> — grep for <code>"Held allocation sweep: re-routing connectionId="</code> → expect entries on each sweep run</li>
+        <li><strong>Outbox</strong> — when re-routing succeeds, <code>outbox_record</code> contains <code>ALLOCATION_ACCEPTED</code> events, status = 'DELIVERED'</li>
+        <li><strong>Cross-service</strong> — CL side: <code>connections</code> with these <code>connection_id</code>s transition <code>REQUESTED → PENDING_INSTALL</code> (CL T1 fires)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded.</td>
       <td class="expected">DAS writes <code>routing_failure_count++</code> on the allocation row. After sustained failure, allocation eventually transitions to expired.</td>
       <td class="observed">Counter never advances; rows sit indefinitely.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_allocations.routing_failure_count</code> increments per failed re-route attempt</li>
+        <li><strong>DB</strong> — once a row reaches the failure threshold, expect terminal transition (existing rule preserved post-sweep wiring)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the scheduler config is set correctly at service startup, then <code>scheduleRecurring(...)</code> registers the P191 batch.</td>
       <td class="expected"><code>AWS_SCHEDULER_ENABLED: true</code> in DAS <code>application-prod.yml</code>; <code>scheduleRecurring</code> called with the P191 batch (and the other 5 DAS sweep batches, which are out of scope for PM but co-wired by tech).</td>
       <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> in DAS <code>application-prod.yml</code>. Same root cause as <a href="./bug-01.html">BUG-01</a>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Config</strong> — DAS <code>application-prod.yml</code> + <code>application-qa.yml</code> → <code>AWS_SCHEDULER_ENABLED: true</code></li>
+        <li><strong>Startup logs</strong> — DAS service boot logs show the 6 sweep batches registered (P191 + 5 siblings)</li>
+        <li><strong>AWS Console</strong> — EventBridge schedule group provisioned for DAS; 6 schedules visible and enabled</li>
+        <li><strong>Interim path</strong> — <code>curl POST</code> to <code>BatchTriggerController</code> endpoints from external cron; HTTP 200 confirms sweep ran</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
@@ -527,26 +608,61 @@ stateDiagram-v2
       <td class="expected">Allocation row: <code>state = ACCEPTED</code>, <code>acceptance_timestamp</code> set. INV-DAO-03 stickiness now applies — subsequent re-routes blocked.</td>
       <td class="observed">Allocation row: <code>state = ASSIGNED</code>, <code>acceptance_timestamp = NULL</code>. 504 / 504 rows in this state across prod history.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.connection_allocations</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect <code>state = 'ACCEPTED'</code> and <code>acceptance_timestamp IS NOT NULL</code> on newly-created rows</li>
+        <li><strong>DB</strong> — same table, GROUP BY state → expect ACCEPTED count rising, ASSIGNED count near 0 going forward</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When TAS reads the allocation to drive install candidate creation, then it observes <code>ACCEPTED</code> state.</td>
       <td class="expected">TAS reads <code>state = ACCEPTED</code>; install candidate created with confirmed allocation.</td>
       <td class="observed">TAS still creates the install candidate (via the parallel <code>ALLOCATION_ACCEPTED</code> event path), but reads <code>state = ASSIGNED</code> on the allocation row. State and event are out of sync.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Cross-DB join</strong> — TAS <code>install_execution_candidates</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> JOIN DAS <code>connection_allocations</code> on allocation_id → expect every row pairs to a DAS row with <code>state = 'ACCEPTED'</code></li>
+        <li><strong>TAS logs</strong> — handler logs at candidate creation reference the allocation state as ACCEPTED (not ASSIGNED)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When the same connection is reallocated after CSP install-failure, then INV-DAO-03 stickiness has already terminated for the prior allocation.</td>
       <td class="expected">Prior allocation row stays in <code>ACCEPTED</code> until install completes or fails. After failure, INV-DAO-03 releases stickiness and the new allocation enters the pipeline.</td>
       <td class="observed">INV-DAO-03 stickiness is inert because nothing reaches <code>ACCEPTED</code>. Re-allocation works by accident, but the guard isn't actually guarding anything.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Negative test</strong> — try to manually reallocate a connection whose existing allocation row is in <code>ACCEPTED</code> → expect INV-DAO-03 guard to reject (existing rule, now actually exercised)</li>
+        <li><strong>DB</strong> — after a CSP install-failure, the prior ACCEPTED row stays ACCEPTED until terminal; new allocation row appears for the retry</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the routing happy-path completes (DAS picks CSP-A successfully), then the database state-transition <code>ASSIGNED → ACCEPTED</code> happens in a single atomic write.</td>
       <td class="expected">DAS routing engine writes <code>state = ACCEPTED</code> in the same SQL transaction as the initial allocation write. No cross-service call, no auto-accept event. Atomic.</td>
       <td class="observed">Routing engine writes <code>state = ASSIGNED</code> and stops. AMENDMENT-02 deleted the prior cross-service call; the replacement atomic-write was never added.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Code</strong> — <code>RoutingEngineServiceImpl</code> diff shows the atomic write: INSERT (ASSIGNED) + UPDATE (ACCEPTED, acceptance_timestamp) + outbox row, all inside a single <code>@Transactional</code> method</li>
+        <li><strong>DB</strong> — for a routing event, <code>connection_allocations</code> + <code>outbox_record</code> rows share the same transaction commit boundary (created_at within microseconds)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When the integration-spec mentions <code>InstallDasClient.notifyAccepted()</code>, then that class either exists in code OR the integration spec is updated to reflect the atomic-write approach.</td>
       <td class="expected">Integration spec is internally consistent — either the named sender exists, or the spec describes the atomic-write fix.</td>
       <td class="observed">Integration spec at <code>app-specs/das-install-integration-flow.md</code> names <code>InstallDasClient.notifyAccepted()</code> — a class that does not exist in any service. Spec is stale.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Doc</strong> — <code>app-specs/das-install-integration-flow.md</code> no longer references <code>InstallDasClient.notifyAccepted()</code></li>
+        <li><strong>Doc</strong> — spec describes the atomic-write approach inside DAS routing engine</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
@@ -597,26 +713,61 @@ sequenceDiagram
       <td class="expected">Counter advances by 1 per <code>INITIAL</code> T2 event.</td>
       <td class="observed">Code at <code>InboundEventProcessingServiceImpl.java:446-461</code> gates increment to <code>if ("RESUME".equals(activationSource))</code>. <code>INITIAL</code> hits the <code>else</code> branch with debug log <code>LOG_CONNECTION_ACTIVATION_SKIP</code>. Counter unchanged.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_capacity_coverage_service.zones.active_connection_count</code> snapshot before vs after an <code>INITIAL</code> T2 event for the same zone → expect +1</li>
+        <li><strong>Capacity service logs</strong> — <code>LOG_CONNECTION_COUNT_INCREMENT</code> entry with the zone_id + new count for the test INITIAL event</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When a connection transitions <code>PAUSED → ACTIVE</code> (<code>activation_source = RESUME</code>), then Capacity OS increments the counter.</td>
       <td class="expected">Counter advances by 1.</td>
       <td class="observed">This path works — RESUME hits the <code>if</code> branch correctly.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (regression — must keep working after fix):</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>zones.active_connection_count</code> snapshot before vs after a <code>RESUME</code> event → expect +1 (unchanged from today)</li>
+        <li><strong>Capacity service logs</strong> — RESUME path still hits the <code>LOG_CONNECTION_COUNT_INCREMENT</code> entry</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When the load-ratio is computed in the batch-evaluation cycle, then it reads accurate <code>active_connection_count</code>.</td>
       <td class="expected">Load ratio at <code>BatchEvaluationServiceImpl:105</code> = real ACTIVE / cap. Cap-calibration cycles compute correctly.</td>
       <td class="observed">Load ratio reads stale counter (under-counted for zones with high INITIAL throughput). Cap-calibration cycles miscalibrate.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Cross-DB check</strong> — for each zone: <code>zones.active_connection_count</code> in Capacity OS DB = <code>SELECT COUNT(*) FROM csp_connection_lifecycle_service.connections WHERE current_state = 'ACTIVE' AND zone_id = &lt;zone&gt;</code> → totals should match (or differ by &lt; in-flight tolerance)</li>
+        <li><strong>Logs</strong> — <code>BatchEvaluationServiceImpl</code> cap-calibration cycle logs show load_ratio computed from the post-fix counter</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When a zone's last ACTIVE connection deactivates, then <code>guardActiveConnectionCountZeroForRetire</code> allows the zone to retire.</td>
       <td class="expected">Counter reaches 0; retire-guard at <code>ZoneServiceImpl:136</code> allows zone retirement.</td>
       <td class="observed">If the zone had INITIAL activations that never incremented, the counter may report 0 prematurely (when ACTIVE connections still exist) — or remain stuck at 0 if it was never advanced. Direction of drift depends on RESUME / INITIAL mix.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Test</strong> — pick a zone with 1 ACTIVE connection; deactivate it; <code>zones.active_connection_count</code> reaches 0; call zone-retire → expect retire-guard at <code>ZoneServiceImpl:136</code> to allow retirement</li>
+        <li><strong>Negative test</strong> — same with 2 ACTIVE connections; deactivate 1 → counter = 1; attempt retire → guard rejects (counter &gt; 0)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When the CSP partner views their active-connection count on the partner app, then the number matches CL truth.</td>
       <td class="expected">Partner app count = CL <code>connections</code> table count for <code>(csp_id, state=ACTIVE)</code>.</td>
       <td class="observed">Already correct — partner app reads CL directly via <code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code>. <strong>Bypasses Capacity OS entirely.</strong> Capacity OS bug doesn't affect this surface.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (baseline still holds; unaffected by this fix):</strong>
+      <ul>
+        <li><strong>API</strong> — partner-app active-count GET endpoint → returns the same value as <code>SELECT COUNT(*) FROM csp_connection_lifecycle_service.connections WHERE csp_id = &lt;csp&gt; AND current_state = 'ACTIVE'</code></li>
+        <li><strong>Note</strong> — this is independent of <code>zones.active_connection_count</code>; partner app reads CL directly</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
@@ -655,31 +806,71 @@ sequenceDiagram
       <td class="expected">JSON payload contains <code>"signal_id": "&lt;UUID&gt;"</code>.</td>
       <td class="observed">JSON payload contains <code>"event_id": "&lt;UUID&gt;"</code> — wrong field name. Quality OS validates <code>@NotBlank signalId</code>, gets blank, rejects. Producer record at <code>ClInstallationQualitySignal.java</code> inherits <code>eventId</code> from <code>DomainEvent</code> envelope.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — <code>csp_connection_lifecycle_service.outbox_record</code> WHERE record_type ends in <code>ClInstallationQualitySignal</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → payload JSON contains key <code>"signal_id"</code> (not <code>"event_id"</code>)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When CL emits the payload, then field <code>signal_type</code> carries the §7.4 enum entry for this signal.</td>
       <td class="expected">JSON contains <code>"signal_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> (string-typed enum entry).</td>
       <td class="observed">JSON contains <code>"event_type": "CL_INSTALLATION_QUALITY_SIGNAL"</code> — wrong field name. Producer record has no <code>signalType</code> field; relies on base <code>getEventType()</code>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — same query as TC-1 → payload contains key <code>"signal_type"</code> with value <code>"CL_INSTALLATION_QUALITY_SIGNAL"</code></li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When T2 fires, then field <code>previous_state</code> is populated.</td>
       <td class="expected">JSON contains <code>"previous_state": "PENDING_INSTALL"</code> (per §7.2 — required for state transitions, and T2 is one).</td>
       <td class="observed">JSON contains <code>"previous_state": null</code>. Producer code passes <code>null</code> at the T2 emit site instead of <code>"PENDING_INSTALL"</code>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — same outbox query → payload contains <code>"previous_state": "PENDING_INSTALL"</code> (not null)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the payload reaches Quality OS, then it passes the receiver's <code>@NotBlank</code> / <code>@NotNull</code> validation.</td>
       <td class="expected">HTTP 200; <code>install_maturation_ledger</code> row written.</td>
       <td class="observed">HTTP 400 <code>VALIDATION_FAILED</code> on three fields (<code>signalId</code>, <code>signalType</code>, <code>previousState</code>). 53 / 53 outbox rows marked FAILED. Receiver matches the OS exactly — the producer is the side that drifted.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — <code>csp_connection_lifecycle_service.outbox_record</code> WHERE record_type ends in <code>ClInstallationQualitySignal</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect status = 'DELIVERED' (not 'FAILED')</li>
+        <li><strong>Quality OS DB</strong> — <code>csp_quality_service.install_maturation_ledger</code> → new rows per successful signal</li>
+        <li><strong>Replay</strong> — replay the 53 historical FAILED outbox rows → all deliver successfully (assuming producer fix is in place)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When CL re-emits an existing signal (e.g. on retry), then Quality OS dedupes by <code>(connection_id, activation_event_ref)</code> per the OS idempotency rule.</td>
       <td class="expected">Duplicate signals don't create duplicate <code>install_maturation_ledger</code> rows.</td>
       <td class="observed">Receiver-side idempotency works correctly (already implemented). Once the producer is fixed and historical FAILED rows are replayed, dedupe handles it cleanly.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Replay test</strong> — re-emit the same <code>ClInstallationQualitySignal</code> twice for the same connection</li>
+        <li><strong>Quality OS DB</strong> — <code>install_maturation_ledger</code> WHERE connection_id = &lt;test&gt; → expect exactly 1 row (not 2), dedupe key is <code>(connection_id, activation_event_ref)</code></li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-6.</strong> When the signal is emitted, then the payload does <strong>not</strong> include fields not in the OS contract.</td>
       <td class="expected">Payload contains only the base schema + S-10 specific fields. No <code>correlation_id</code>, no <code>causation_id</code>.</td>
       <td class="observed">Payload contains <code>correlation_id: null</code> and <code>causation_id: &lt;UUID&gt;</code>. Receiver tolerates unknown fields (Jackson default), so these are noise — but the producer record should be trimmed to S-10.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — same payload check → no <code>correlation_id</code> or <code>causation_id</code> keys (only S-10 + base-schema fields)</li>
+        <li><strong>Code</strong> — <code>ClInstallationQualitySignal.java</code> producer record fields match S-10 spec verbatim</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
@@ -755,26 +946,63 @@ WHERE record_type = 'io.wiom.csp.connection_lifecycle.domain.event.outbound.ClIn
       <td class="expected">JSON contains <code>"customer_id": "&lt;UUID&gt;"</code> — the customer the connection serves, read directly from the CL <code>connections</code> table (same row that supplies <code>csp_id</code>, <code>zone_id</code>, etc.).</td>
       <td class="observed">Payload has no <code>customer_id</code> field. The CL service producer record (<code>ClConnectionActivated.java</code>) doesn't include it.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Outbox</strong> — <code>csp_connection_lifecycle_service.outbox_record</code> WHERE record_type ends in <code>ClConnectionActivated</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → payload JSON contains key <code>"customer_id"</code> with a non-null UUID</li>
+        <li><strong>Code</strong> — <code>ClConnectionActivated.java</code> record now has a <code>customerId</code> field</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When CAEO consumes <code>CL_CONNECTION_ACTIVATED</code>, then it writes <code>customer_access_entitlement.customer_id</code> from the event's <code>customer_id</code> field.</td>
       <td class="expected"><code>customer_id</code> column = real customer's UUID.</td>
       <td class="observed">CAEO at <code>InboundEventProcessingServiceImpl.java:82</code> writes <code>.customerId(event.cspId() != null ? event.cspId() : null)</code> — the CSP-ID lands in the customer-id column. Author: Aryan Gaurav, Apr 10 2026.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_customer_access_service.customer_access_entitlement</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> → <code>customer_id</code> = real customer UUID</li>
+        <li><strong>Cross-check</strong> — for sampled CAEO rows: <code>customer_id</code> matches <code>csp_connection_lifecycle_service.connections.customer_id</code> for the same <code>connection_id</code></li>
+        <li><strong>Code</strong> — CAEO <code>InboundEventProcessingServiceImpl.java:82</code> reads <code>event.customerId()</code> (not <code>event.cspId()</code>)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When a downstream consumer queries CAEO by <code>customer_id</code>, then it finds entitlement rows for the matching customer.</td>
       <td class="expected">A query like <code>findByCustomerId("&lt;real-customer-uuid&gt;")</code> returns rows.</td>
       <td class="observed">Method exists in the repository (<code>findByCustomerId</code>) but is never called anywhere in the monorepo today — because the column has the wrong value. Once fixed, the column becomes queryable.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>SELECT * FROM csp_customer_access_service.customer_access_entitlement WHERE customer_id = '&lt;real customer UUID&gt;'</code> → expect rows matching the customer's connections</li>
+        <li><strong>API</strong> — call any downstream endpoint that uses <code>findByCustomerId</code> → returns non-empty results for real customers</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When sibling <code>CL_CONNECTION_*</code> events fire (PAUSED, RESCUED, DEACTIVATED), then their payloads also include <code>customer_id</code> if any consumer needs it.</td>
       <td class="expected">Sibling-event contract uniformity. Engineering audits which sibling events have downstream consumers that would benefit from <code>customer_id</code> and adds the field to those producer records together.</td>
       <td class="observed">Sibling events also lack <code>customer_id</code>. Out of scope for this item if no downstream consumer needs them — only <code>CL_CONNECTION_ACTIVATED</code> is required to unblock CAEO.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (out-of-scope check):</strong>
+      <ul>
+        <li><strong>Code diff</strong> — confirm no changes to <code>ClConnectionPaused.java</code>, <code>ClConnectionRescued.java</code>, <code>ClConnectionDeactivated.java</code> in this release</li>
+        <li><strong>Outbox</strong> — payloads for sibling events still lack <code>customer_id</code> (intentionally out of scope; only ACTIVATED is fixed)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When the historical backfill runs (one-shot), then existing CAEO rows with <code>customer_id = &lt;some-CSP-ID&gt;</code> get corrected.</td>
       <td class="expected"><code>UPDATE customer_access_entitlement SET customer_id = c.customer_id FROM csp_connection_lifecycle_service.connections c WHERE customer_access_entitlement.connection_id = c.connection_id</code>. Join via <code>connection_id</code> (always present on both sides).</td>
       <td class="observed">Backfill not yet run. ~50 of 19,573 CAEO rows currently have CSP-IDs in <code>customer_id</code> column.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after backfill:</strong>
+      <ul>
+        <li><strong>DB (pre-backfill)</strong> — <code>SELECT COUNT(*) FROM csp_customer_access_service.customer_access_entitlement cae JOIN csp_connection_lifecycle_service.connections c ON cae.connection_id = c.connection_id WHERE cae.customer_id != c.customer_id</code> → count of rows needing correction (~50)</li>
+        <li><strong>Run</strong> the backfill UPDATE</li>
+        <li><strong>DB (post-backfill)</strong> — same query → expect 0 rows</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 

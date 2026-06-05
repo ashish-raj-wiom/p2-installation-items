@@ -92,6 +92,14 @@
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
@@ -198,21 +206,52 @@
       <td class="expected">DAS writes <code>UNASSIGNED</code> + <code>p50_exhausted_at = now()</code>.</td>
       <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (baseline still holds after fix):</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.connection_allocations</code> WHERE <code>retry_count &gt;= 5</code> → expect <code>state = 'UNASSIGNED'</code> and <code>p50_exhausted_at IS NOT NULL</code> (existing behaviour preserved)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When the P191 sweep cadence fires, then it re-enters routing for all <code>UNASSIGNED</code> rows past their held-state max.</td>
       <td class="expected">Held rows re-attempt routing. If a previously-cooled-down CSP becomes eligible, they're re-assigned. Otherwise extend held-state.</td>
       <td class="observed">Sweep never fires. 230 <code>UNASSIGNED</code> rows in prod, oldest &gt; 24h, never re-routed.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>state = 'UNASSIGNED'</code> AND <code>retry_count &lt; 5</code> → count drops as sweeps run (some get re-routed and move to <code>ASSIGNED</code> → <code>ACCEPTED</code>)</li>
+        <li><strong>DAS service logs</strong> — grep for <code>"Held allocation sweep: re-routing connectionId="</code> → expect entries on each sweep run</li>
+        <li><strong>Outbox</strong> — when re-routing succeeds, <code>outbox_record</code> contains <code>ALLOCATION_ACCEPTED</code> events, status = 'DELIVERED'</li>
+        <li><strong>Cross-service</strong> — CL side: <code>connections</code> with these <code>connection_id</code>s transition <code>REQUESTED → PENDING_INSTALL</code> (CL T1 fires)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded.</td>
       <td class="expected">DAS writes <code>routing_failure_count++</code> on the allocation row. After sustained failure, allocation eventually transitions to expired.</td>
       <td class="observed">Counter never advances; rows sit indefinitely.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_allocations.routing_failure_count</code> increments per failed re-route attempt</li>
+        <li><strong>DB</strong> — once a row reaches the failure threshold, expect terminal transition (existing rule preserved post-sweep wiring)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the scheduler config is set correctly at service startup, then <code>scheduleRecurring(...)</code> registers the P191 batch.</td>
       <td class="expected"><code>AWS_SCHEDULER_ENABLED: true</code> in DAS <code>application-prod.yml</code>; <code>scheduleRecurring</code> called with the P191 batch (and the other 5 DAS sweep batches, which are out of scope for PM but co-wired by tech).</td>
       <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> in DAS <code>application-prod.yml</code>. Same root cause as <a href="./bug-01.html">BUG-01</a>.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Config</strong> — DAS <code>application-prod.yml</code> + <code>application-qa.yml</code> → <code>AWS_SCHEDULER_ENABLED: true</code></li>
+        <li><strong>Startup logs</strong> — DAS service boot logs show the 6 sweep batches registered (P191 + 5 siblings)</li>
+        <li><strong>AWS Console</strong> — EventBridge schedule group provisioned for DAS; 6 schedules visible and enabled</li>
+        <li><strong>Interim path</strong> — <code>curl POST</code> to <code>BatchTriggerController</code> endpoints from external cron; HTTP 200 confirms sweep ran</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 

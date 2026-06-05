@@ -92,6 +92,14 @@
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
@@ -200,21 +208,55 @@
       <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>transition_type = T9</code>, source = SYSTEM, <code>new_state = DEACTIVATED</code>.</td>
       <td class="observed">No T9 transitions emitted in 90d. Stale <code>REQUESTED</code> rows accumulate indefinitely.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_connection_lifecycle_service.connection_state_transition_log</code> WHERE <code>transition_type = 'T9'</code> AND <code>source = 'SYSTEM'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows for stale REQUESTED candidates</li>
+        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'REQUESTED'</code> AND <code>created_at &lt; now() - interval '7 days'</code> → expect 0 rows after the sweep runs</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'DELIVERED' → row per deactivated candidate</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When a connection sits in <code>PAUSED</code> for &gt; P76 (90d), then the P76 sweep transitions it to <code>PENDING_DEACTIVATION</code> via <code>PAUSE_DURATION_EXCEEDED</code>.</td>
       <td class="expected">CL emits <code>CL_DEACTIVATION_INITIATED</code>; downstream Exit OS / RECHARGE_VALIDATOR receive the signal.</td>
       <td class="observed">No such transitions. 11k+ <code>PAUSED</code> rows past 90d sit untouched.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_state_transition_log</code> WHERE <code>transition_type = 'T7'</code> AND <code>reason = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'PAUSED'</code> AND <code>p76_timer_start &lt; now() - interval '90 days'</code> → expect count drops as sweeps run</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClDeactivationInitiated</code> AND status = 'DELIVERED' → row per row transitioned</li>
+        <li><strong>Custody OS</strong> — corresponding device records transition <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> (proves the fanout reached downstream)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When a connection sits in <code>PENDING_DEACTIVATION</code> for &gt; P77 (45d), then the P77 sweep transitions it to <code>DEACTIVATED</code> via <code>DEACTIVATION_COMPLETE</code>.</td>
       <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>new_state = DEACTIVATED</code>, source = SYSTEM.</td>
       <td class="observed">No such transitions. Stale <code>PENDING_DEACTIVATION</code> rows accumulate.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>connection_state_transition_log</code> WHERE <code>transition_type = 'T8'</code> AND <code>reason = 'DEACTIVATION_COMPLETE'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'PENDING_DEACTIVATION'</code> AND <code>state_timestamp &lt; now() - interval '45 days'</code> → expect count drops as sweeps run</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'DELIVERED' → row per finalised candidate</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the sweep cadence runs (15-minute granularity is acceptable; finer is fine), then sweep methods are invoked from a recurring schedule.</td>
       <td class="expected"><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> is called at service-startup with the four sweep batches registered. <code>AWS_SCHEDULER_ENABLED: true</code> in <code>application-prod.yml</code>.</td>
       <td class="observed"><code>AWS_SCHEDULER_ENABLED: false</code> at <code>application-prod.yml:18</code>. <code>scheduleRecurring(...)</code> never called. Sweep methods reachable only via internal endpoints, which nothing calls.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Config</strong> — <code>application-prod.yml</code> + <code>application-qa.yml</code> → <code>AWS_SCHEDULER_ENABLED: true</code></li>
+        <li><strong>Startup logs</strong> — CL service boot logs include <code>scheduleRecurring(...)</code> entries for the 5 sweep batches (P75 / P76 / P77 / install timeout / retry exhaustion)</li>
+        <li><strong>AWS Console</strong> — EventBridge schedule group exists; 5 schedules visible and enabled</li>
+        <li><strong>Interim path</strong> — until AWS infra ships, <code>curl POST</code> to <code>InternalTaskController</code> endpoints from an external cron (Lambda / GitHub Actions / k8s CronJob); HTTP 200 confirms sweep ran</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
@@ -284,6 +326,14 @@ stateDiagram-v2
       <td class="expected">TAS marks candidate <code>CANCELLED_BY_UPSTREAM</code> reason <code>RETRY_EXHAUSTED</code>.</td>
       <td class="observed">Handler logs "no action required"; candidate stays OPEN. Tech must add T12 to the trigger set.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Code</strong> — <code>csp-tas-service/.../ClStateChangedHandler.java</code> → <code>UPSTREAM_RETRY_TRIGGERS</code> set contains both <code>T11</code> and <code>T12</code></li>
+        <li><strong>TAS DB</strong> — <code>csp_tas_service.install_execution_candidates</code> for connections that hit P78 retry exhaustion → <code>current_state = 'CANCELLED_BY_UPSTREAM'</code>, reason = <code>'RETRY_EXHAUSTED'</code></li>
+        <li><strong>TAS DB</strong> — <code>install_state_transition_log</code> → transition row with <code>trigger_source = 'CL_STATE_CHANGED'</code> and <code>transition_type = 'T12'</code></li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 

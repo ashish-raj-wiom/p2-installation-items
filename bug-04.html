@@ -92,6 +92,14 @@
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
@@ -199,26 +207,61 @@
       <td class="expected">Counter advances by 1 per <code>INITIAL</code> T2 event.</td>
       <td class="observed">Code at <code>InboundEventProcessingServiceImpl.java:446-461</code> gates increment to <code>if ("RESUME".equals(activationSource))</code>. <code>INITIAL</code> hits the <code>else</code> branch with debug log <code>LOG_CONNECTION_ACTIVATION_SKIP</code>. Counter unchanged.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_capacity_coverage_service.zones.active_connection_count</code> snapshot before vs after an <code>INITIAL</code> T2 event for the same zone → expect +1</li>
+        <li><strong>Capacity service logs</strong> — <code>LOG_CONNECTION_COUNT_INCREMENT</code> entry with the zone_id + new count for the test INITIAL event</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When a connection transitions <code>PAUSED → ACTIVE</code> (<code>activation_source = RESUME</code>), then Capacity OS increments the counter.</td>
       <td class="expected">Counter advances by 1.</td>
       <td class="observed">This path works — RESUME hits the <code>if</code> branch correctly.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (regression — must keep working after fix):</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>zones.active_connection_count</code> snapshot before vs after a <code>RESUME</code> event → expect +1 (unchanged from today)</li>
+        <li><strong>Capacity service logs</strong> — RESUME path still hits the <code>LOG_CONNECTION_COUNT_INCREMENT</code> entry</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When the load-ratio is computed in the batch-evaluation cycle, then it reads accurate <code>active_connection_count</code>.</td>
       <td class="expected">Load ratio at <code>BatchEvaluationServiceImpl:105</code> = real ACTIVE / cap. Cap-calibration cycles compute correctly.</td>
       <td class="observed">Load ratio reads stale counter (under-counted for zones with high INITIAL throughput). Cap-calibration cycles miscalibrate.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Cross-DB check</strong> — for each zone: <code>zones.active_connection_count</code> in Capacity OS DB = <code>SELECT COUNT(*) FROM csp_connection_lifecycle_service.connections WHERE current_state = 'ACTIVE' AND zone_id = &lt;zone&gt;</code> → totals should match (or differ by &lt; in-flight tolerance)</li>
+        <li><strong>Logs</strong> — <code>BatchEvaluationServiceImpl</code> cap-calibration cycle logs show load_ratio computed from the post-fix counter</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When a zone's last ACTIVE connection deactivates, then <code>guardActiveConnectionCountZeroForRetire</code> allows the zone to retire.</td>
       <td class="expected">Counter reaches 0; retire-guard at <code>ZoneServiceImpl:136</code> allows zone retirement.</td>
       <td class="observed">If the zone had INITIAL activations that never incremented, the counter may report 0 prematurely (when ACTIVE connections still exist) — or remain stuck at 0 if it was never advanced. Direction of drift depends on RESUME / INITIAL mix.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Test</strong> — pick a zone with 1 ACTIVE connection; deactivate it; <code>zones.active_connection_count</code> reaches 0; call zone-retire → expect retire-guard at <code>ZoneServiceImpl:136</code> to allow retirement</li>
+        <li><strong>Negative test</strong> — same with 2 ACTIVE connections; deactivate 1 → counter = 1; attempt retire → guard rejects (counter &gt; 0)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When the CSP partner views their active-connection count on the partner app, then the number matches CL truth.</td>
       <td class="expected">Partner app count = CL <code>connections</code> table count for <code>(csp_id, state=ACTIVE)</code>.</td>
       <td class="observed">Already correct — partner app reads CL directly via <code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code>. <strong>Bypasses Capacity OS entirely.</strong> Capacity OS bug doesn't affect this surface.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify (baseline still holds; unaffected by this fix):</strong>
+      <ul>
+        <li><strong>API</strong> — partner-app active-count GET endpoint → returns the same value as <code>SELECT COUNT(*) FROM csp_connection_lifecycle_service.connections WHERE csp_id = &lt;csp&gt; AND current_state = 'ACTIVE'</code></li>
+        <li><strong>Note</strong> — this is independent of <code>zones.active_connection_count</code>; partner app reads CL directly</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 

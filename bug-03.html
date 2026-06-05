@@ -92,6 +92,14 @@
   .tc-table th:nth-child(3) { width: 36%; }
   .tc-table td.expected { background: var(--ok-bg); }
   .tc-table td.observed { background: var(--bug-bg); }
+  .tc-table tr.tc-verify td {
+    background: #fef9c3; font-size: 12.5px; border-top: none;
+    padding: 8px 14px 10px; color: #1a1a1a; line-height: 1.5;
+  }
+  .tc-table tr.tc-verify td strong.v-label { color: #92400e; }
+  .tc-table tr.tc-verify td code { background: rgba(255,255,255,0.7); }
+  .tc-table tr.tc-verify td ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .tc-table tr.tc-verify td li { margin: 3px 0; }
 
   .mermaid {
     background: var(--bg); border: 1px solid var(--rule); border-radius: 6px;
@@ -206,26 +214,61 @@
       <td class="expected">Allocation row: <code>state = ACCEPTED</code>, <code>acceptance_timestamp</code> set. INV-DAO-03 stickiness now applies — subsequent re-routes blocked.</td>
       <td class="observed">Allocation row: <code>state = ASSIGNED</code>, <code>acceptance_timestamp = NULL</code>. 504 / 504 rows in this state across prod history.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.connection_allocations</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect <code>state = 'ACCEPTED'</code> and <code>acceptance_timestamp IS NOT NULL</code> on newly-created rows</li>
+        <li><strong>DB</strong> — same table, GROUP BY state → expect ACCEPTED count rising, ASSIGNED count near 0 going forward</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-2.</strong> When TAS reads the allocation to drive install candidate creation, then it observes <code>ACCEPTED</code> state.</td>
       <td class="expected">TAS reads <code>state = ACCEPTED</code>; install candidate created with confirmed allocation.</td>
       <td class="observed">TAS still creates the install candidate (via the parallel <code>ALLOCATION_ACCEPTED</code> event path), but reads <code>state = ASSIGNED</code> on the allocation row. State and event are out of sync.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Cross-DB join</strong> — TAS <code>install_execution_candidates</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> JOIN DAS <code>connection_allocations</code> on allocation_id → expect every row pairs to a DAS row with <code>state = 'ACCEPTED'</code></li>
+        <li><strong>TAS logs</strong> — handler logs at candidate creation reference the allocation state as ACCEPTED (not ASSIGNED)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When the same connection is reallocated after CSP install-failure, then INV-DAO-03 stickiness has already terminated for the prior allocation.</td>
       <td class="expected">Prior allocation row stays in <code>ACCEPTED</code> until install completes or fails. After failure, INV-DAO-03 releases stickiness and the new allocation enters the pipeline.</td>
       <td class="observed">INV-DAO-03 stickiness is inert because nothing reaches <code>ACCEPTED</code>. Re-allocation works by accident, but the guard isn't actually guarding anything.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Negative test</strong> — try to manually reallocate a connection whose existing allocation row is in <code>ACCEPTED</code> → expect INV-DAO-03 guard to reject (existing rule, now actually exercised)</li>
+        <li><strong>DB</strong> — after a CSP install-failure, the prior ACCEPTED row stays ACCEPTED until terminal; new allocation row appears for the retry</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-4.</strong> When the routing happy-path completes (DAS picks CSP-A successfully), then the database state-transition <code>ASSIGNED → ACCEPTED</code> happens in a single atomic write.</td>
       <td class="expected">DAS routing engine writes <code>state = ACCEPTED</code> in the same SQL transaction as the initial allocation write. No cross-service call, no auto-accept event. Atomic.</td>
       <td class="observed">Routing engine writes <code>state = ASSIGNED</code> and stops. AMENDMENT-02 deleted the prior cross-service call; the replacement atomic-write was never added.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Code</strong> — <code>RoutingEngineServiceImpl</code> diff shows the atomic write: INSERT (ASSIGNED) + UPDATE (ACCEPTED, acceptance_timestamp) + outbox row, all inside a single <code>@Transactional</code> method</li>
+        <li><strong>DB</strong> — for a routing event, <code>connection_allocations</code> + <code>outbox_record</code> rows share the same transaction commit boundary (created_at within microseconds)</li>
+      </ul>
+    </td></tr>
     <tr>
       <td><strong>TC-5.</strong> When the integration-spec mentions <code>InstallDasClient.notifyAccepted()</code>, then that class either exists in code OR the integration spec is updated to reflect the atomic-write approach.</td>
       <td class="expected">Integration spec is internally consistent — either the named sender exists, or the spec describes the atomic-write fix.</td>
       <td class="observed">Integration spec at <code>app-specs/das-install-integration-flow.md</code> names <code>InstallDasClient.notifyAccepted()</code> — a class that does not exist in any service. Spec is stale.</td>
     </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>Doc</strong> — <code>app-specs/das-install-integration-flow.md</code> no longer references <code>InstallDasClient.notifyAccepted()</code></li>
+        <li><strong>Doc</strong> — spec describes the atomic-write approach inside DAS routing engine</li>
+      </ul>
+    </td></tr>
   </tbody>
 </table>
 
