@@ -760,28 +760,42 @@ sequenceDiagram
       </ul>
     </td></tr>
     <tr>
-      <td><strong>TC-5 (decrement timing — secondary).</strong> When a connection transitions <code>ACTIVE → PAUSED</code> (<code>CL_CONNECTION_PAUSED</code>), then DAS decrements the counter.</td>
-      <td class="expected">Counter advances by −1. Per OS, "active" means CL state = ACTIVE; PAUSED is excluded.</td>
-      <td class="observed"><strong>DAS has no <code>handleClConnectionPaused</code> handler at all.</strong> Grep returns zero matches. PAUSED connections continue to count toward the CSP's P46 budget until full deactivation.</td>
+      <td><strong>TC-5 (decrement on PAUSE).</strong> When a connection transitions <code>ACTIVE → PAUSED</code> (<code>CL_CONNECTION_PAUSED</code>), then DAS decrements the counter.</td>
+      <td class="expected">Counter advances by −1. Per CL OS, "active" means CL state = ACTIVE; PAUSED is excluded.</td>
+      <td class="observed"><strong>DAS has no <code>handleClConnectionPaused</code> handler at all.</strong> Grep returns zero matches. Without this fix, paused connections would count toward the CSP's P46 budget for up to 90+ days until full deactivation.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
         <li><strong>DB</strong> — snapshot <code>active_connections</code> before vs after a <code>CL_CONNECTION_PAUSED</code> event → expect −1</li>
-        <li><strong>Inbound handler</strong> — DAS adds <code>POST /cl-connection-paused</code> endpoint + handler; CL outbox successfully delivers; <code>outbox_record.status = 'DELIVERED'</code></li>
+        <li><strong>Inbound handler</strong> — DAS exposes <code>POST /cl-connection-paused</code>; CL outbox successfully delivers; <code>outbox_record.status = 'DELIVERED'</code></li>
+        <li><strong>Code</strong> — new <code>handleClConnectionPaused</code> method in <code>InboundEventProcessingServiceImpl</code></li>
       </ul>
     </td></tr>
     <tr>
-      <td><strong>TC-6 (decrement timing — secondary).</strong> When a connection transitions <code>ACTIVE → PENDING_DEACTIVATION</code> (<code>CL_DEACTIVATION_INITIATED</code> with <code>previous_state = ACTIVE</code>), then DAS decrements the counter. When <code>previous_state = PAUSED</code>, no change.</td>
-      <td class="expected">Decrement aligns with "leaving ACTIVE state," not terminal closure.</td>
-      <td class="observed">DAS today decrements on <code>CL_CONNECTION_DEACTIVATED</code> (line 350) — the terminal event after P77 (45-day finaliser). Timing is misaligned: PAUSED-before-deactivation pathway double-counts the connection as still active until full closure.</td>
+      <td><strong>TC-6 (decrement on DEACT_INITIATED).</strong> When a connection transitions <code>ACTIVE → PENDING_DEACTIVATION</code> (<code>CL_DEACTIVATION_INITIATED</code> with <code>previous_state = ACTIVE</code>), then DAS decrements the counter. When <code>previous_state = PAUSED</code>, no change.</td>
+      <td class="expected">Decrement fires when the connection leaves ACTIVE — not when it terminally closes weeks later.</td>
+      <td class="observed">DAS today decrements on the terminal <code>CL_CONNECTION_DEACTIVATED</code> (line 350, ~45-day P77 finaliser) — not on <code>CL_DEACTIVATION_INITIATED</code>. Timing is misaligned with CL state semantics.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
         <li><strong>DB</strong> — for an ACTIVE → PENDING_DEACTIVATION transition: snapshot <code>active_connections</code> → expect −1 at <code>CL_DEACTIVATION_INITIATED</code> arrival</li>
         <li><strong>DB</strong> — for a PAUSED → PENDING_DEACTIVATION transition (via P76 sweep): snapshot → expect no change (already decremented at PAUSE)</li>
-        <li><strong>Regression</strong> — terminal <code>CL_CONNECTION_DEACTIVATED</code> no longer decrements (avoid double-counting)</li>
+        <li><strong>Code</strong> — <code>handleClDeactivationInitiated</code> now calls <code>setActiveConnections</code> when <code>previous_state = ACTIVE</code></li>
+      </ul>
+    </td></tr>
+    <tr>
+      <td><strong>TC-7 (regression: terminal handler unhooked from counter).</strong> When a connection reaches DEACTIVATED via the terminal <code>CL_CONNECTION_DEACTIVATED</code> event, then DAS does NOT touch the counter (the connection's exit from ACTIVE was already accounted for at the PAUSE or DEACT_INITIATED event).</td>
+      <td class="expected">Counter unchanged at the terminal event. Decrement at line 350 (today's only mutation site) is removed or repointed to DEACT_INITIATED.</td>
+      <td class="observed">Today's line-350 decrement is the only counter mutation in DAS. After TC-5 and TC-6 land, leaving it in place would cause double-decrement on the PAUSE→PENDING_DEACT→DEACTIVATED path (−1 at PAUSE, then −1 again at terminal).</td>
+    </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — snapshot <code>active_connections</code> before vs after a terminal <code>CL_CONNECTION_DEACTIVATED</code> event → expect <strong>unchanged</strong> (was −1 in pre-fix code)</li>
+        <li><strong>Code diff</strong> — <code>handleClConnectionDeactivated</code> at line 350 no longer calls <code>setActiveConnections</code> (the decrement moved to <code>handleClDeactivationInitiated</code> per TC-6)</li>
+        <li><strong>End-to-end</strong> — for a full ACTIVE → PAUSED → PENDING_DEACT → DEACTIVATED lifecycle: counter starts at +1, drops by 1 at PAUSE, no change for the rest → ends at 0 (not −1)</li>
       </ul>
     </td></tr>
   </tbody>
@@ -869,21 +883,17 @@ stateDiagram-v2
   <li><strong>Routing telemetry</strong> — <code>RoutingEngineServiceImpl:480-482</code> emits <code>{active, p46, load}</code> on every allocation decision. Today's <code>load</code> is always 0 in production logs.</li>
 </ul>
 
-<h3>Where the bug bites — and the right shape of the fix</h3>
+<h3>Where the bug bites — and the fix shape</h3>
 <p><strong>Net effect today:</strong> the counter is the wrong number — clamped at 0 from a never-incremented baseline → routing's P46 guard never trips → DAS over-allocates per CSP, every zone. Real-time impact at allocation time.</p>
 
-<p><strong>Primary fix (restores P46 routing enforcement):</strong></p>
-<ul>
+<p><strong>Fix shape — three coordinated changes:</strong></p>
+<ol>
   <li><strong>Add INCREMENT in <code>handleClConnectionActivated</code></strong> (current line 305-321). <strong>Allowlist</strong> <code>INITIAL</code> and <code>RESUME</code>: <code>if ("INITIAL".equals(source) || "RESUME".equals(source)) { ... setActiveConnections(current + 1) ... }</code>. Do NOT add an unguarded increment — that would also fire on every <code>RENEWAL</code> (recharge of an already-ACTIVE connection) and over-count across each connection's lifetime.</li>
-</ul>
+  <li><strong>Add new <code>handleClConnectionPaused</code> handler</strong> + corresponding inbound endpoint <code>POST /cl-connection-paused</code> + CL outbox subscription. Decrement on every <code>ACTIVE → PAUSED</code> transition.</li>
+  <li><strong>Move the decrement</strong> from <code>handleClConnectionDeactivated</code> (current line 350, fires on terminal <code>CL_CONNECTION_DEACTIVATED</code>) to <code>handleClDeactivationInitiated</code> (current line 284). Gate on <code>previous_state = ACTIVE</code> only. Terminal <code>CL_CONNECTION_DEACTIVATED</code> becomes a no-op for this counter — the connection's exit from ACTIVE was already accounted for at PAUSE or at DEACT_INITIATED, so a terminal decrement would double-count.</li>
+</ol>
 
-<p><strong>Secondary fix (decrement timing alignment with CL state semantics):</strong></p>
-<ul>
-  <li><strong>Add <code>handleClConnectionPaused</code> handler</strong> + corresponding inbound endpoint <code>POST /cl-connection-paused</code> + CL outbox subscription. Decrement on <code>ACTIVE → PAUSED</code>.</li>
-  <li><strong>Move the decrement</strong> from <code>handleClConnectionDeactivated</code> (line 350, fires on terminal) to <code>handleClDeactivationInitiated</code> (current line 284) — and gate on <code>previous_state = ACTIVE</code> only.</li>
-</ul>
-
-<p><strong>Pragmatic alternative:</strong> ship only the primary fix and accept that PAUSED connections still count toward a CSP's P46 budget until full deactivation. The counter then represents "allocated connections that haven't fully exited" rather than strict ACTIVE count. PM call — both are defensible.</p>
+<p>The three together produce a counter that strictly matches "currently in ACTIVE state per CL OS." P46 routing enforcement comes back on and tracks reality across the connection's full lifecycle, including pauses. Without change #3, the existing line-350 decrement causes double-counting on the PAUSE → PENDING_DEACT → DEACTIVATED path — the three changes are coupled.</p>
 
 <h3>What this fix does NOT depend on</h3>
 <ul>
