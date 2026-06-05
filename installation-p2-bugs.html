@@ -189,8 +189,8 @@
       </div>
       <div class="card bug">
         <span class="id">BUG-04</span>
-        <h3>Capacity OS skips connection-count increment after installation</h3>
-        <p>The OS prescribes "<strong>Capacity OS counts +1 on T2</strong>" in four explicit places. The code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — so the normal happy-path <code>INITIAL</code> installs silently fall into an empty <code>else</code> branch and the counter doesn't move. <strong>Not CSP-app-visible</strong> — partner app reads CL directly. Affects internal routing decisions (load-ratio + zone-retire guard) only.</p>
+        <h3>DAS skips active-connection increment — P46 routing enforcement effectively disabled</h3>
+        <p>DAS routing's per-CSP-per-zone P46 cap guard (<code>AllocationGuards.guardCspBelowP46Cap</code>) reads <code>CspZoneExposureEntity.activeConnections</code> — but this counter is <strong>only ever decremented, never incremented</strong> in DAS code. The counter stays clamped at 0 → the guard <code>if (activeConnections &gt;= p46CapacityCap)</code> never trips → <strong>P46 cap enforcement at routing time is effectively disabled</strong>. DAS will allocate to a CSP regardless of their actual active load. Real-time, every allocation, every zone. <strong>Not CSP-app-visible</strong> — partner app reads CL directly.</p>
         <a class="open" href="./bug-04.html">Open spec →</a>
       </div>
       <div class="card bug">

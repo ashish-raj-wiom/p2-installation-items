@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BUG-04 — Capacity OS skips T2 · Installation Flow</title>
+<title>BUG-04 — DAS active-count never increments · Installation Flow</title>
 <style>
   :root {
     --bg: #fafaf9; --surface: #ffffff;
@@ -179,8 +179,8 @@
 <main>
   <header class="doc">
     <div class="eyebrow">Installation Flow — Tech Handover · BUG-04</div>
-    <h1>Capacity OS skips connection-count increment after installation</h1>
-    <p class="lede">The OS prescribes "<strong>Capacity OS counts +1 on T2</strong>" in four explicit places. The code guards the increment with <code>if ("RESUME".equals(activationSource))</code> — so the normal happy-path <code>INITIAL</code> installs silently fall into an empty <code>else</code> branch and the counter doesn't move. <strong>Not CSP-app-visible</strong> — partner app reads CL directly. Affects internal routing decisions (load-ratio + zone-retire guard) only.</p>
+    <h1>DAS skips active-connection increment — P46 routing enforcement effectively disabled</h1>
+    <p class="lede">DAS routing's per-CSP-per-zone P46 cap guard (<code>AllocationGuards.guardCspBelowP46Cap</code>) reads <code>CspZoneExposureEntity.activeConnections</code> — but this counter is <strong>only ever decremented, never incremented</strong> in DAS code. The counter stays clamped at 0 → the guard <code>if (activeConnections &gt;= p46CapacityCap)</code> never trips → <strong>P46 cap enforcement at routing time is effectively disabled</strong>. DAS will allocate to a CSP regardless of their actual active load. Real-time, every allocation, every zone. <strong>Not CSP-app-visible</strong> — partner app reads CL directly.</p>
     <div class="meta-row">
       <div><strong>Owner:</strong> Ashish Raj</div>
       <div><strong>Date:</strong> 2026-06-04</div>
@@ -191,12 +191,14 @@
 <h2 id="spec">Original spec</h2>
 <div class="spec-ref">
   <strong>Source:</strong>
-  <code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &middot;
-  <strong>§4.3 T2 (L250):</strong> "Consumers: Capacity OS (active count +1), Quality OS (measurement begins), D&amp;A OS (allocation confirmed)…"
-  <strong>§4.1 (L202)</strong> &middot;
-  <strong>§6.3 (L508):</strong> identical wording.
+  <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> &middot;
+  <strong>§4.2 (L205):</strong> <em>"Load Ratio (for routing) = Active connections / P46 capacity cap. Used in §4.3 Stage 5 utilization ranking."</em>
+  <strong>§4.2 (L203):</strong> <em>"Zone Share = Active connections served by CSP / Total active connections in zone."</em>
+  <strong>§4.3 Stage 3 Gate 3e:</strong> P46 cap enforcement at allocation time (<code>guardCspBelowP46Cap</code>).
   <br>
-  <code>os/Capacity_Coverage_OS_LOCKED.md</code> &middot; <strong>§2.5:</strong> "Counter reflects all ACTIVE connections in the zone, regardless of how they entered ACTIVE state."
+  <strong>Active-connection semantics (per CL OS):</strong> a connection is "active" only while its CL state = <code>ACTIVE</code>. Excludes <code>REQUESTED, PENDING_INSTALL, PAUSED, PENDING_DEACTIVATION, DEACTIVATED</code>.
+  <br>
+  <strong>CL events DAS subscribes to today:</strong> <code>CL_CONNECTION_ACTIVATED</code> (carries <code>activation_source</code> ∈ {<code>INITIAL</code>, <code>RESUME</code>, <code>RENEWAL</code>}), <code>CL_DEACTIVATION_INITIATED</code> (carries <code>previous_state</code>), <code>CL_CONNECTION_DEACTIVATED</code>, <code>CL_STATE_CHANGED</code>.
 </div>
 
 <h2 id="cases">Test cases — expected vs observed</h2>
@@ -204,111 +206,114 @@
   <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
   <tbody>
     <tr>
-      <td><strong>TC-1.</strong> When a connection completes T2 (<code>PENDING_INSTALL → ACTIVE</code>, <code>activation_source = INITIAL</code>), then Capacity OS increments <code>zones.active_connection_count</code> for the zone by 1.</td>
-      <td class="expected">Counter advances by 1 per <code>INITIAL</code> T2 event.</td>
-      <td class="observed">Code at <code>InboundEventProcessingServiceImpl.java:446-461</code> gates increment to <code>if ("RESUME".equals(activationSource))</code>. <code>INITIAL</code> hits the <code>else</code> branch with debug log <code>LOG_CONNECTION_ACTIVATION_SKIP</code>. Counter unchanged.</td>
+      <td><strong>TC-1.</strong> When a connection completes T2 (<code>PENDING_INSTALL → ACTIVE</code>, <code>activation_source = INITIAL</code>), then DAS increments <code>CspZoneExposureEntity.activeConnections</code> for the matching (csp_id, zone_id) by 1.</td>
+      <td class="expected">Counter advances by 1 per <code>INITIAL</code> T2.</td>
+      <td class="observed">DAS's <code>handleClConnectionActivated</code> at <code>InboundEventProcessingServiceImpl.java:305-321</code> only flips <code>AllocationState</code> to <code>ACTIVE</code>. <strong>It never calls <code>setActiveConnections(... + 1)</code>.</strong> Grep across all DAS source returns one match for <code>setActiveConnections</code> — the decrement at line 350.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>csp_capacity_coverage_service.zones.active_connection_count</code> snapshot before vs after an <code>INITIAL</code> T2 event for the same zone → expect +1</li>
-        <li><strong>Capacity service logs</strong> — <code>LOG_CONNECTION_COUNT_INCREMENT</code> entry with the zone_id + new count for the test INITIAL event</li>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.csp_zone_exposures</code> WHERE <code>csp_id = &lt;test csp&gt;</code> AND <code>zone_id = &lt;test zone&gt;</code> → snapshot <code>active_connections</code> before vs after the <code>INITIAL</code> T2 → expect +1</li>
+        <li><strong>DAS service logs</strong> — handler log entry confirming the increment for the test eventId</li>
       </ul>
     </td></tr>
     <tr>
-      <td><strong>TC-2.</strong> When a connection transitions <code>PAUSED → ACTIVE</code> (<code>activation_source = RESUME</code>), then Capacity OS increments the counter.</td>
-      <td class="expected">Counter advances by 1.</td>
-      <td class="observed">This path works — RESUME hits the <code>if</code> branch correctly.</td>
-    </tr>
-    <tr class="tc-verify"><td colspan="3">
-      <strong class="v-label">Verify (regression — must keep working after fix):</strong>
-      <ul>
-        <li><strong>DB</strong> — <code>zones.active_connection_count</code> snapshot before vs after a <code>RESUME</code> event → expect +1 (unchanged from today)</li>
-        <li><strong>Capacity service logs</strong> — RESUME path still hits the <code>LOG_CONNECTION_COUNT_INCREMENT</code> entry</li>
-      </ul>
-    </td></tr>
-    <tr>
-      <td><strong>TC-3.</strong> When the load-ratio is computed in the batch-evaluation cycle, then it reads accurate <code>active_connection_count</code>.</td>
-      <td class="expected">Load ratio at <code>BatchEvaluationServiceImpl:105</code> = real ACTIVE / cap. Cap-calibration cycles compute correctly.</td>
-      <td class="observed">Load ratio reads stale counter (under-counted for zones with high INITIAL throughput). Cap-calibration cycles miscalibrate.</td>
+      <td><strong>TC-2.</strong> When a connection transitions <code>PAUSED → ACTIVE</code> (<code>activation_source = RESUME</code>), then DAS increments the counter.</td>
+      <td class="expected">Counter advances by 1 per <code>RESUME</code> event.</td>
+      <td class="observed">Same handler skips RESUME for the same reason as INITIAL — <strong>no increment path exists at all</strong> in <code>handleClConnectionActivated</code>.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>Cross-DB check</strong> — for each zone: <code>zones.active_connection_count</code> in Capacity OS DB = <code>SELECT COUNT(*) FROM csp_connection_lifecycle_service.connections WHERE current_state = 'ACTIVE' AND zone_id = &lt;zone&gt;</code> → totals should match (or differ by &lt; in-flight tolerance)</li>
-        <li><strong>Logs</strong> — <code>BatchEvaluationServiceImpl</code> cap-calibration cycle logs show load_ratio computed from the post-fix counter</li>
+        <li><strong>DB</strong> — <code>csp_zone_exposures.active_connections</code> snapshot before vs after a <code>RESUME</code> event → expect +1</li>
       </ul>
     </td></tr>
     <tr>
-      <td><strong>TC-4.</strong> When a zone's last ACTIVE connection deactivates, then <code>guardActiveConnectionCountZeroForRetire</code> allows the zone to retire.</td>
-      <td class="expected">Counter reaches 0; retire-guard at <code>ZoneServiceImpl:136</code> allows zone retirement.</td>
-      <td class="observed">If the zone had INITIAL activations that never incremented, the counter may report 0 prematurely (when ACTIVE connections still exist) — or remain stuck at 0 if it was never advanced. Direction of drift depends on RESUME / INITIAL mix.</td>
+      <td><strong>TC-3 (guard against over-fix).</strong> When CL emits <code>CL_CONNECTION_ACTIVATED</code> with <code>activation_source = RENEWAL</code> (recharge of an already-ACTIVE connection), then DAS does NOT change the counter.</td>
+      <td class="expected">Counter unchanged — <code>RENEWAL</code> is not a state change into <code>ACTIVE</code>.</td>
+      <td class="observed">Today the counter doesn't change for any source (nothing increments). The fix must preserve RENEWAL = no-op; a naïve "always +1 on activate" would over-count by incrementing on every recharge across the connection's lifetime.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>Test</strong> — pick a zone with 1 ACTIVE connection; deactivate it; <code>zones.active_connection_count</code> reaches 0; call zone-retire → expect retire-guard at <code>ZoneServiceImpl:136</code> to allow retirement</li>
-        <li><strong>Negative test</strong> — same with 2 ACTIVE connections; deactivate 1 → counter = 1; attempt retire → guard rejects (counter &gt; 0)</li>
+        <li><strong>DB</strong> — <code>csp_zone_exposures.active_connections</code> snapshot before vs after a <code>RENEWAL</code> event → expect unchanged</li>
+        <li><strong>Stress test</strong> — run 5 consecutive RENEWAL events for the same connection → counter unchanged after each</li>
       </ul>
     </td></tr>
     <tr>
-      <td><strong>TC-5.</strong> When the CSP partner views their active-connection count on the partner app, then the number matches CL truth.</td>
-      <td class="expected">Partner app count = CL <code>connections</code> table count for <code>(csp_id, state=ACTIVE)</code>.</td>
-      <td class="observed">Already correct — partner app reads CL directly via <code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code>. <strong>Bypasses Capacity OS entirely.</strong> Capacity OS bug doesn't affect this surface.</td>
+      <td><strong>TC-4 (the goal of the fix).</strong> When a CSP reaches their P46 capacity cap in a zone, then the next allocation in that zone is rejected at routing time.</td>
+      <td class="expected"><code>AllocationGuards.guardCspBelowP46Cap</code> (line 78) throws <code>CSP_AT_CAPACITY_CAP</code> when <code>activeConnections &gt;= p46CapacityCap</code>. P46 enforcement at routing time is restored.</td>
+      <td class="observed">Counter stays clamped at 0 → guard reads <code>0 &gt;= P46_cap</code> (e.g. 50) → always false → <strong>guard never trips → P46 routing enforcement is effectively disabled today</strong>. DAS over-allocates per CSP, every zone.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
-      <strong class="v-label">Verify (baseline still holds; unaffected by this fix):</strong>
+      <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>API</strong> — partner-app active-count GET endpoint → returns the same value as <code>SELECT COUNT(*) FROM csp_connection_lifecycle_service.connections WHERE csp_id = &lt;csp&gt; AND current_state = 'ACTIVE'</code></li>
-        <li><strong>Note</strong> — this is independent of <code>zones.active_connection_count</code>; partner app reads CL directly</li>
+        <li><strong>Functional</strong> — set up a test CSP with N − 1 active connections in a zone (where N = P46 default cap, currently 50); attempt 2 more allocations; expect the first to succeed (reaches N) and the second to fail with <code>CSP_AT_CAPACITY_CAP</code></li>
+        <li><strong>DAS routing logs</strong> — telemetry at <code>RoutingEngineServiceImpl:480-482</code> shows non-zero <code>load</code> values (today's logs show <code>load = 0</code> universally)</li>
+      </ul>
+    </td></tr>
+    <tr>
+      <td><strong>TC-5 (decrement timing — secondary).</strong> When a connection transitions <code>ACTIVE → PAUSED</code> (<code>CL_CONNECTION_PAUSED</code>), then DAS decrements the counter.</td>
+      <td class="expected">Counter advances by −1. Per OS, "active" means CL state = ACTIVE; PAUSED is excluded.</td>
+      <td class="observed"><strong>DAS has no <code>handleClConnectionPaused</code> handler at all.</strong> Grep returns zero matches. PAUSED connections continue to count toward the CSP's P46 budget until full deactivation.</td>
+    </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — snapshot <code>active_connections</code> before vs after a <code>CL_CONNECTION_PAUSED</code> event → expect −1</li>
+        <li><strong>Inbound handler</strong> — DAS adds <code>POST /cl-connection-paused</code> endpoint + handler; CL outbox successfully delivers; <code>outbox_record.status = 'DELIVERED'</code></li>
+      </ul>
+    </td></tr>
+    <tr>
+      <td><strong>TC-6 (decrement timing — secondary).</strong> When a connection transitions <code>ACTIVE → PENDING_DEACTIVATION</code> (<code>CL_DEACTIVATION_INITIATED</code> with <code>previous_state = ACTIVE</code>), then DAS decrements the counter. When <code>previous_state = PAUSED</code>, no change.</td>
+      <td class="expected">Decrement aligns with "leaving ACTIVE state," not terminal closure.</td>
+      <td class="observed">DAS today decrements on <code>CL_CONNECTION_DEACTIVATED</code> (line 350) — the terminal event after P77 (45-day finaliser). Timing is misaligned: PAUSED-before-deactivation pathway double-counts the connection as still active until full closure.</td>
+    </tr>
+    <tr class="tc-verify"><td colspan="3">
+      <strong class="v-label">Verify after fix:</strong>
+      <ul>
+        <li><strong>DB</strong> — for an ACTIVE → PENDING_DEACTIVATION transition: snapshot <code>active_connections</code> → expect −1 at <code>CL_DEACTIVATION_INITIATED</code> arrival</li>
+        <li><strong>DB</strong> — for a PAUSED → PENDING_DEACTIVATION transition (via P76 sweep): snapshot → expect no change (already decremented at PAUSE)</li>
+        <li><strong>Regression</strong> — terminal <code>CL_CONNECTION_DEACTIVATED</code> no longer decrements (avoid double-counting)</li>
       </ul>
     </td></tr>
   </tbody>
 </table>
 
-<h2 id="workflow">Workflow — how <code>zones.active_connection_count</code> is supposed to move</h2>
-<p>Capacity OS maintains <code>zones.active_connection_count</code> as a derived counter sourced from CL events. The diagram below shows the <strong>intended</strong> behaviour per CL OS §4.3 T2 ("Capacity OS active count +1"). One important caveat in the call-out below: today's Capacity OS §2.5 LOCKED text doesn't yet match this intent.</p>
-
-<div class="hint">
-  <strong>Spec-source contradiction (raised by tech):</strong>
-  <ul style="margin: 4px 0 0 0;">
-    <li><strong>CL OS §4.3 T2 (L250):</strong> "Consumers: Capacity OS (active count +1)…" — explicit "+1" on every T2, which is the happy-path INITIAL.</li>
-    <li><strong>Capacity OS §2.5 LOCKED (L163):</strong> only declares <em>"Resume rule: CL_CONNECTION_ACTIVATED with activation_source = RESUME → increment"</em>. Silent on INITIAL.</li>
-  </ul>
-  <p style="margin: 8px 0 0 0;">Code (<code>InboundEventProcessingServiceImpl.java:446-461</code>) faithfully implements §2.5's literal text — that's why <code>INITIAL</code> doesn't count today. The diagram below shows the <strong>intended</strong> behaviour; §2.5 needs amendment to match.</p>
-</div>
+<h2 id="workflow">Workflow — how <code>CspZoneExposureEntity.activeConnections</code> is supposed to move</h2>
+<p>DAS routing's P46 cap guard reads a per-CSP-per-zone counter (<code>CspZoneExposureEntity.activeConnections</code>). DAS subscribes directly to CL events and derives this counter from CL state transitions. The diagram below shows the intended behaviour and where the bug bites.</p>
 
 <div class="mermaid">
 stateDiagram-v2
     [*] --> REQUESTED: CONNECTION_REQUEST
     REQUESTED --> PENDING_INSTALL: ALLOCATION_ACCEPTED (T1)
-    PENDING_INSTALL --> ACTIVE: T2 install complete (source=INITIAL)<br/>Capacity +1 (intent per CL OS T2)
-    ACTIVE --> ACTIVE: recharge (source=RENEWAL)<br/>Capacity no-op
-    ACTIVE --> PAUSED: T4 recharge expired<br/>Capacity -1
-    PAUSED --> ACTIVE: recharge confirmed (source=RESUME)<br/>Capacity +1
-    ACTIVE --> PENDING_DEACTIVATION: T5 / T6 user / exit<br/>Capacity -1
-    PAUSED --> PENDING_DEACTIVATION: T7 P76 sweep<br/>Capacity no-op (already -1 on pause)
-    PENDING_DEACTIVATION --> DEACTIVATED: T8 P77 finalised
+    PENDING_INSTALL --> ACTIVE: T2 install complete (source=INITIAL)<br/>DAS counter +1 (intended; missing today)
+    ACTIVE --> ACTIVE: recharge (source=RENEWAL)<br/>DAS counter no-op
+    ACTIVE --> PAUSED: T4 recharge expired<br/>DAS counter -1 (intended; no handler today)
+    PAUSED --> ACTIVE: recharge confirmed (source=RESUME)<br/>DAS counter +1 (intended; missing today)
+    ACTIVE --> PENDING_DEACTIVATION: T5 / T6 user / exit<br/>DAS counter -1 (intended; today fires at terminal instead)
+    PAUSED --> PENDING_DEACTIVATION: T7 P76 sweep<br/>DAS counter no-op (already -1 at PAUSE)
+    PENDING_DEACTIVATION --> DEACTIVATED: T8 P77 finalised<br/>DAS counter no-op (intended; today fires here — misaligned)
     DEACTIVATED --> [*]
 </div>
 
-<h3>Per-event behaviour — today's code vs intended</h3>
-<p>CL emits <code>CL_CONNECTION_ACTIVATED</code> with three distinct <code>activation_source</code> values. The intended fix discriminates between them carefully — fixing only INITIAL while leaving RENEWAL untouched.</p>
+<h3>Per-event behaviour — today vs intended (DAS-side)</h3>
+<p>CL emits <code>CL_CONNECTION_ACTIVATED</code> with three distinct <code>activation_source</code> values. The fix must discriminate carefully — fixing INITIAL while leaving RENEWAL untouched.</p>
 <table>
-  <thead><tr><th>CL event</th><th><code>activation_source</code></th><th>State transition</th><th>Today (§2.5 literal)</th><th>Intended (CL OS T2)</th></tr></thead>
+  <thead><tr><th>CL event</th><th>source / previous_state</th><th>State transition</th><th>Today (DAS code)</th><th>Intended (per CL state semantics)</th></tr></thead>
   <tbody>
     <tr>
       <td><code>CL_CONNECTION_ACTIVATED</code></td>
       <td><code>INITIAL</code></td>
       <td>PENDING_INSTALL → ACTIVE</td>
-      <td>no-op <em>(the bug — under-count)</em></td>
+      <td>no-op <em>(handler exists, doesn't touch counter)</em></td>
       <td><strong>+1</strong></td>
     </tr>
     <tr>
       <td><code>CL_CONNECTION_ACTIVATED</code></td>
       <td><code>RESUME</code></td>
       <td>PAUSED → ACTIVE</td>
-      <td><strong>+1</strong></td>
+      <td>no-op</td>
       <td><strong>+1</strong></td>
     </tr>
     <tr>
@@ -316,51 +321,89 @@ stateDiagram-v2
       <td><code>RENEWAL</code></td>
       <td>ACTIVE → ACTIVE</td>
       <td>no-op</td>
-      <td>no-op <em>(must stay no-op — naïve "remove the guard" would over-count here)</em></td>
+      <td>no-op <em>(must stay — naïve "always +1" would over-count)</em></td>
     </tr>
     <tr>
       <td><code>CL_CONNECTION_PAUSED</code></td>
       <td>n/a</td>
       <td>ACTIVE → PAUSED</td>
-      <td><strong>−1</strong></td>
+      <td><strong>no handler</strong> <em>(DAS doesn't subscribe)</em></td>
       <td><strong>−1</strong></td>
     </tr>
     <tr>
-      <td><code>CL_DEACTIVATION_INITIATED</code><br>(previous_state = ACTIVE)</td>
-      <td>n/a</td>
+      <td><code>CL_DEACTIVATION_INITIATED</code></td>
+      <td>previous_state = ACTIVE</td>
       <td>ACTIVE → PENDING_DEACTIVATION</td>
-      <td><strong>−1</strong></td>
+      <td>state-tracking only (line 284), no counter change</td>
       <td><strong>−1</strong></td>
     </tr>
     <tr>
-      <td><code>CL_DEACTIVATION_INITIATED</code><br>(previous_state = PAUSED)</td>
-      <td>n/a</td>
+      <td><code>CL_DEACTIVATION_INITIATED</code></td>
+      <td>previous_state = PAUSED</td>
       <td>PAUSED → PENDING_DEACTIVATION</td>
+      <td>state-tracking only, no counter change</td>
       <td>no-op</td>
-      <td>no-op</td>
+    </tr>
+    <tr>
+      <td><code>CL_CONNECTION_DEACTIVATED</code></td>
+      <td>(terminal, post-P77)</td>
+      <td>PENDING_DEACTIVATION → DEACTIVATED</td>
+      <td><strong>−1</strong> at line 350 <em>(only mutation site in all of DAS)</em></td>
+      <td>no-op <em>(already decremented at PAUSE or DEACT_INITIATED)</em></td>
     </tr>
   </tbody>
 </table>
 
-<h3>Where the counter is used downstream</h3>
+<h3>Where the counter is used downstream (inside DAS)</h3>
 <ul>
-  <li><strong>Cap calibration</strong> — <code>BatchEvaluationServiceImpl:105</code> computes <code>load_ratio = active_connection_count / cap</code>. Drives expansion / contraction decisions per zone.</li>
-  <li><strong>Zone retire gate</strong> — <code>ZoneServiceImpl:136</code>: <code>guardActiveConnectionCountZeroForRetire</code> blocks retirement until the counter reaches 0.</li>
+  <li><strong>P46 routing guard</strong> — <code>AllocationGuards.guardCspBelowP46Cap()</code> line 78: <code>if (exposure.getActiveConnections() &gt;= exposure.getP46CapacityCap()) throw CSP_AT_CAPACITY_CAP</code>. <strong>This is the routing-time enforcement that's effectively disabled today.</strong></li>
+  <li><strong>Continuity-cap guard</strong> — <code>guardCspBelowContinuityCap()</code> line 89: same read, compared against <code>P46 cap × continuity ratio</code>.</li>
+  <li><strong>Routing telemetry</strong> — <code>RoutingEngineServiceImpl:480-482</code> emits <code>{active, p46, load}</code> on every allocation decision. Today's <code>load</code> is always 0 in production logs.</li>
 </ul>
 
 <h3>Where the bug bites — and the right shape of the fix</h3>
-<p>Net effect today: every happy-path install (T2 INITIAL) silently drops from the counter; the load-ratio under-counts; cap calibration miscalibrates; the zone-retire guard can report 0 prematurely.</p>
-<p><strong>Fix shape (per tech recommendation):</strong> change <code>if ("RESUME".equals(activationSource))</code> to <code>if ("INITIAL".equals(activationSource) || "RESUME".equals(activationSource))</code>. <strong>Allowlist</strong> INITIAL + RESUME explicitly. Do not remove the guard wholesale — that would also increment on every <code>RENEWAL</code> event (every recharge of an already-ACTIVE connection) and create an over-count bug far worse than the current under-count.</p>
-<p><strong>OS prerequisite:</strong> Capacity OS §2.5 LOCKED needs amendment to declare the INITIAL branch alongside RESUME (proposed wording: <em>"increment on activation_source IN (INITIAL, RESUME); RENEWAL is a no-op"</em>). Without the amendment, the code change ships ahead of the OS contract.</p>
+<p><strong>Net effect today:</strong> the counter is the wrong number — clamped at 0 from a never-incremented baseline → routing's P46 guard never trips → DAS over-allocates per CSP, every zone. Real-time impact at allocation time.</p>
+
+<p><strong>Primary fix (restores P46 routing enforcement):</strong></p>
+<ul>
+  <li><strong>Add INCREMENT in <code>handleClConnectionActivated</code></strong> (current line 305-321). <strong>Allowlist</strong> <code>INITIAL</code> and <code>RESUME</code>: <code>if ("INITIAL".equals(source) || "RESUME".equals(source)) { ... setActiveConnections(current + 1) ... }</code>. Do NOT add an unguarded increment — that would also fire on every <code>RENEWAL</code> (recharge of an already-ACTIVE connection) and over-count across each connection's lifetime.</li>
+</ul>
+
+<p><strong>Secondary fix (decrement timing alignment with CL state semantics):</strong></p>
+<ul>
+  <li><strong>Add <code>handleClConnectionPaused</code> handler</strong> + corresponding inbound endpoint <code>POST /cl-connection-paused</code> + CL outbox subscription. Decrement on <code>ACTIVE → PAUSED</code>.</li>
+  <li><strong>Move the decrement</strong> from <code>handleClConnectionDeactivated</code> (line 350, fires on terminal) to <code>handleClDeactivationInitiated</code> (current line 284) — and gate on <code>previous_state = ACTIVE</code> only.</li>
+</ul>
+
+<p><strong>Pragmatic alternative:</strong> ship only the primary fix and accept that PAUSED connections still count toward a CSP's P46 budget until full deactivation. The counter then represents "allocated connections that haven't fully exited" rather than strict ACTIVE count. PM call — both are defensible.</p>
+
+<h3>What this fix does NOT depend on</h3>
+<ul>
+  <li><strong>No cross-service coordination required.</strong> Verified: zero HTTP clients from DAS to other services for this counter; DAS routing reads exclusively DAS-local state.</li>
+  <li><strong>No change to P46 cap values.</strong> The cap value DAS uses is the static default <code>P46_DEFAULT_CAPACITY_CAP</code> (= 50 in local), set on row creation at <code>ExposureServiceImpl.java:140</code>. After this fix, enforcement happens at that static cap. Wiring dynamic cap updates is a separate concern, not blocking this bug.</li>
+</ul>
 
 <h2 id="backfill">Backfill</h2>
-<p>Once the guard is removed, future T2 events increment correctly. Historical drift requires a one-shot reconciliation: <code>UPDATE zones SET active_connection_count = (SELECT count(*) FROM csp_connection_lifecycle_service.connections WHERE current_state='ACTIVE' AND zone_id = zones.zone_id)</code>. Run during a window with cap-calibration paused.</p>
+<p>Once increment + decrement timing land, the counter tracks future events correctly. Historical drift requires a one-shot reconciliation sourced from CL truth:</p>
+<pre><code>UPDATE csp_demand_allocation_service.csp_zone_exposures z
+   SET active_connections = (
+     SELECT COUNT(*)
+       FROM csp_connection_lifecycle_service.connections c
+      WHERE c.current_state = 'ACTIVE'
+        AND c.csp_id  = z.csp_id
+        AND c.zone_id = z.zone_id
+   );</code></pre>
+<p>Run during a routing-quiet window or with allocation throttled — routing reads the counter in real time, so a mid-flight backfill against a busy zone risks transient incorrect enforcement.</p>
 
 <h2 id="evidence">Code evidence</h2>
 <ul>
-  <li><strong>Bug site:</strong> <code>services/csp-capacity-coverage-service/.../InboundEventProcessingServiceImpl.java:446-461</code> — remove the RESUME-only guard.</li>
-  <li><strong>Reader sites (where the drift matters):</strong> <code>BatchEvaluationServiceImpl:105</code> (load-ratio for cap-calibration) &middot; <code>ZoneServiceImpl:136</code> (<code>guardActiveConnectionCountZeroForRetire</code>).</li>
-  <li><strong>Proof bug doesn't affect CSP app:</strong> <code>services/csp-connection-lifecycle-service/.../CspConnectionQueryController.java:62</code> &middot; <code>services/csp-gateway-service/.../AssuranceStripFacadeService.java:520-525</code>.</li>
+  <li><strong>Bug site (missing increment):</strong> <code>services/csp-demand-allocation-service/.../application/impl/InboundEventProcessingServiceImpl.java:305-321</code> — <code>handleClConnectionActivated</code> only flips <code>AllocationState</code>; the counter is never touched.</li>
+  <li><strong>Only mutation site (decrement, timing-misaligned):</strong> same file, line 350 — fires on terminal <code>CL_CONNECTION_DEACTIVATED</code>.</li>
+  <li><strong>Missing handler:</strong> no <code>handleClConnectionPaused</code> in DAS source.</li>
+  <li><strong>Routing-time read sites:</strong> <code>AllocationGuards.guardCspBelowP46Cap</code> line 78 (P46 guard) · <code>guardCspBelowContinuityCap</code> line 89 (continuity guard) · <code>RoutingEngineServiceImpl:480-482</code> (telemetry).</li>
+  <li><strong>P46 cap field (static default, set once on row creation):</strong> <code>ExposureServiceImpl.java:140</code> — <code>e.setP46CapacityCap(parameters.getP46DefaultCapacityCap())</code>. Config value: <code>p46-default-capacity-cap: ${P46_DEFAULT_CAPACITY_CAP}</code> (50 in <code>application-local.yml:42</code>).</li>
+  <li><strong>Grep proof of single-mutation:</strong> <code>grep -rn "setActiveConnections" csp-demand-allocation-service/src/main/java</code> returns exactly one match — the line-350 decrement.</li>
+  <li><strong>Proof bug doesn't affect CSP app:</strong> partner-app active-count reads CL directly via <code>gateway → CspConnectionQueryController.countByCspIdAndCurrentState</code> — bypasses DAS entirely.</li>
 </ul>
 
 
