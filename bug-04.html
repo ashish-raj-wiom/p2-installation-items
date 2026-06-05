@@ -285,17 +285,18 @@
 
 <div class="mermaid">
 stateDiagram-v2
-    [*] --> REQUESTED: CONNECTION_REQUEST
-    REQUESTED --> PENDING_INSTALL: ALLOCATION_ACCEPTED (T1)
-    PENDING_INSTALL --> ACTIVE: T2 install complete (source=INITIAL)<br/>DAS counter +1 (intended; missing today)
-    ACTIVE --> ACTIVE: recharge (source=RENEWAL)<br/>DAS counter no-op
-    ACTIVE --> PAUSED: T4 recharge expired<br/>DAS counter -1 (intended; no handler today)
-    PAUSED --> ACTIVE: recharge confirmed (source=RESUME)<br/>DAS counter +1 (intended; missing today)
-    ACTIVE --> PENDING_DEACTIVATION: T5 / T6 user / exit<br/>DAS counter -1 (intended; today fires at terminal instead)
-    PAUSED --> PENDING_DEACTIVATION: T7 P76 sweep<br/>DAS counter no-op (already -1 at PAUSE)
-    PENDING_DEACTIVATION --> DEACTIVATED: T8 P77 finalised<br/>DAS counter no-op (intended; today fires here — misaligned)
+    [*] --> REQUESTED : CONNECTION_REQUEST
+    REQUESTED --> PENDING_INSTALL : T1 ALLOCATION_ACCEPTED
+    PENDING_INSTALL --> ACTIVE : T2 INITIAL — DAS counter +1
+    ACTIVE --> ACTIVE : RENEWAL — DAS counter no-op
+    ACTIVE --> PAUSED : T4 — DAS counter -1
+    PAUSED --> ACTIVE : RESUME — DAS counter +1
+    ACTIVE --> PENDING_DEACTIVATION : T5 or T6 — DAS counter -1
+    PAUSED --> PENDING_DEACTIVATION : T7 P76 sweep — DAS counter no-op
+    PENDING_DEACTIVATION --> DEACTIVATED : T8 P77 finalised
     DEACTIVATED --> [*]
 </div>
+<p style="font-size: 12.5px; color: var(--muted); margin: 6px 0 14px;"><em>Diagram shows the <strong>intended</strong> counter movements. The "today vs intended" delta per event is in the table below.</em></p>
 
 <h3>Per-event behaviour — today vs intended (DAS-side)</h3>
 <p>CL emits <code>CL_CONNECTION_ACTIVATED</code> with three distinct <code>activation_source</code> values. The fix must discriminate carefully — fixing INITIAL while leaving RENEWAL untouched.</p>
