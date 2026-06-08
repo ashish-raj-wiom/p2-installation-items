@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-05 — Prevent re-allocation to same CSP after install failure · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  .row-mode-note { font-size: 12.5px; color: var(--muted); margin-left: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-05</div>
+  <h1>Prevent re-allocation to same CSP after install failure</h1>
+  <p class="lede">Once a CSP marks <code>INSTALLATION_FAILED</code> for a connection, they must never receive that same connection again. Today they can — in single-CSP zones the routing engine's "continuity over starvation" fallback (B-FLW-02) re-includes the cooled-down CSP for the same connection, and the install-failure handler doesn't increment the per-CSP P195 ping-pong counter so the lifetime cap never fires for this path. Three coordinated changes: increment P195 on install-failure, remove the single-CSP fallback, set P195 = 1 globally.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Light</span> — A1, A2, A5, A6, A8, B5. Three-file change (two .java + one config), one OS amendment.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>The DAS install-failure handler now increments the per-CSP P195 counter alongside the existing P51 cooldown. The single-CSP fallback bypass in <code>RoutingEngineServiceImpl</code> is removed. The P195 default goes from <code>3</code> (code) / <code>2</code> (OS) to <code>1</code>. Combined effect: <strong>once a CSP marks install-failure for a connection, that connection never goes back to them — multi-CSP zone reroutes, single-CSP zone produces a service vacuum until the existing CL P75 sweep deactivates it.</strong></dd>
+    <dt>What triggered it?</dt>    <dd>Live QA verification — across 8 recent install-failure → CL retry cycles, every <code>assignment_count_per_csp</code> was empty <code>{}</code>. The counter the OS-mandated P195 cap depends on never increments on the install-failure path. Compounded by the single-CSP fallback which re-includes the P51-cooled CSP for "continuity over starvation."</dd>
+    <dt>Blast radius</dt>          <dd>DAS only. <code>InboundEventProcessingServiceImpl.java</code> (one line added in install-failure handler) · <code>RoutingEngineServiceImpl.java</code> (single-CSP fallback block removed) · <code>DemandAllocationParameters.java</code> + <code>application*.yml</code> (P195 default 3 → 1). D&amp;A OS: §P195 default + FM-DAO-12 wording.</dd>
+    <dt>Reversible?</dt>           <dd>Yes — config-level rollback of P195; code revert of the two file edits.</dd>
+    <dt>Money / PII / migration?</dt><dd>No / No / No. Going-forward only — no backfill of historical connections.</dd>
+    <dt>OS impact / sign-off?</dt> <dd>D&amp;A OS: P195 default 2 → 1; FM-DAO-12 wording updated to reflect "one CSP, one attempt per connection." All other OSes: no impact. Sign-off Pending.</dd>
+    <dt>Tier</dt>                  <dd>Light</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why we are changing this, what it does today, what it should do, and the precise delta.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and a link to the feature's original PRD / OS.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Prevent re-allocation to same CSP after install failure</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft → For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-06-08)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td><code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> §P51 (L566, assignment cooldown), §P195 (L572, same-connection reassign cap), §FM-DAO-12 (same-connection ping-pong), §B-FLW-02 (continuity over starvation). DAS code paths: <code>RoutingEngineServiceImpl.java:108-135</code> (the bypass) and <code>InboundEventProcessingServiceImpl.java:410-466</code> (the install-failure handler).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short problem statement. Observable trigger, who is affected, cost of leaving it.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>Three-part defect that compounds. <strong>(1)</strong> The DAS install-failure handler at <code>InboundEventProcessingServiceImpl.java:451-454</code> calls <code>addDeclineCooldown(...)</code> (writes the 24h P51 cooldown) but does <strong>not</strong> call <code>incrementAssignmentCount(...)</code> — so the per-CSP P195 counter never moves on install failure. <strong>(2)</strong> <code>RoutingEngineServiceImpl.java:108-135</code> ("v1.5: Single-CSP fallback — continuity over starvation") re-includes a P51-cooled CSP into the eligible pool whenever the entire exclusion set is "P51-only" and the bypassed CSP is the only candidate in the zone. <strong>(3)</strong> The P195 default is <code>3</code> in code (<code>DemandAllocationParameters.java:98-100</code>) and <code>2</code> in OS (L572) — neither matches the "one CSP, one attempt" policy this gap establishes. <strong>Combined effect:</strong> a CSP marks install-failure → 24h P51 cooldown fires → in a multi-CSP zone P51 alone is enough to reroute, but in a single-CSP zone the bypass re-includes the same CSP and the connection goes back to them. Even after 24h, no P195 increment means the CSP is eligible again for any reason at all.</td></tr>
+    <tr><td>Who experiences it?</td><td><strong>Customer</strong> — gets a technician dispatched from the same CSP that just marked their install failed. <strong>CSP</strong> — gets a booking back they already declined for fundamental reasons (coverage, backhaul, device). <strong>Wiom</strong> — wasted re-allocation; the install-failure signal carries no operational weight. <strong>Verified in QA:</strong> 8 install-failure → CL_RETRY_REROUTE rows in the last 6 hours, all with <code>assignment_count_per_csp = {}</code>. The counter the OS-mandated P195 cap depends on never moves on this path.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Every install-failure in a single-CSP zone today loops back to the same CSP. The defect cannot be fixed by config tuning alone (P195 lower bound has no effect when the counter never increments). It compounds with the broken P41 timeout sweep (BUG-02) — when the scheduler is restored, P41 timeout-driven retries would also start landing back on the same CSP unless this gap is closed first.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes → before → after → why</em>.</div>
+  <span class="row-mode req">All rows required</span>
+  <table class="delta">
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>DAS install-failure handler — <code>InboundEventProcessingServiceImpl.handleInstallationFailed(...)</code> at line 451-454</td>
+        <td>Writes only the P51 cooldown:
+          <pre style="margin:6px 0 0; font-size:12px; background:#f3f4f6; padding:8px; border-radius:3px;">if (event.cspId() != null) {
+  AllocationServiceImpl.addDeclineCooldown(
+      allocation, event.cspId());
+  log.info("P51 cooldown applied ...");
+}</pre>
+        </td>
+        <td>Also increments the P195 counter:
+          <pre style="margin:6px 0 0; font-size:12px; background:#eef6ff; padding:8px; border-radius:3px;">if (event.cspId() != null) {
+  AllocationServiceImpl.addDeclineCooldown(
+      allocation, event.cspId());
+  <strong>AllocationServiceImpl.incrementAssignmentCount(
+      allocation, event.cspId());</strong>
+  log.info("P51 cooldown + P195 count "
+      + "applied for install failure ...");
+}</pre>
+        </td>
+        <td>P195's permanence guarantee depends on the counter moving. Today the install-failure path silently skips it. The decline path and P41 timeout path already call <code>incrementAssignmentCount</code> — this brings the install-failure path to parity.</td>
+      </tr>
+      <tr>
+        <td>DAS routing engine — single-CSP fallback at <code>RoutingEngineServiceImpl.java:108-135</code></td>
+        <td>If the eligible pool is empty and the entire exclusion set is "P51-only" with exactly one bypassed CSP, re-include that CSP for this routing pass:
+          <pre style="margin:6px 0 0; font-size:12px; background:#f3f4f6; padding:8px; border-radius:3px;">if (eligibleSet.isEmpty()
+    &amp;&amp; allExclusionsAreP51
+    &amp;&amp; p51OnlyCsps.size() == 1) {
+  eligibleSet.add(bypassedCsp);
+  cooldownBypassed = true;
+  cooldownBypassReason =
+      "SINGLE_CSP_ZONE_CONTINUITY";
+}</pre>
+        </td>
+        <td>Block removed entirely (along with the <code>cooldownBypassed</code> / <code>cooldownBypassReason</code> variables that feed only the audit log). When the eligible pool is empty, the routing pass returns <code>ALLOC_STATE_ROUTING_FAILURE</code> with <code>LOOP_EXHAUSTED</code> as today.</td>
+        <td>The three scenarios the bypass protects all collapse: <strong>P41 timeout</strong> isn't wired in prod (BUG-02 — scheduler down); <strong>decline</strong> is rare and per stated policy a declined-then-resent booking is not desired anyway; <strong>install-failure</strong> is the bug. Keeping the bypass forces us to rely on implicit "bypass only fires for P51-only exclusions" behaviour — fragile to refactor.</td>
+      </tr>
+      <tr>
+        <td>P195 default value — <code>DemandAllocationParameters.java:98-100</code> + <code>application*.yml</code></td>
+        <td>Code default = <code>3</code>; OS default = <code>2</code>:
+          <pre style="margin:6px 0 0; font-size:12px; background:#f3f4f6; padding:8px; border-radius:3px;">@Min(1) @Max(10)
+private int p195SameConnectionReassignLimit
+    = <strong>3</strong>;</pre>
+        </td>
+        <td>Code default = <code>1</code>; OS default = <code>1</code>:
+          <pre style="margin:6px 0 0; font-size:12px; background:#eef6ff; padding:8px; border-radius:3px;">@Min(1) @Max(10)
+private int p195SameConnectionReassignLimit
+    = <strong>1</strong>;</pre>
+        </td>
+        <td>One CSP, one attempt per connection — the policy this gap establishes. Applies uniformly across all three trigger paths (decline / P41 timeout / install-failure). Each path already increments the counter (or will, after the change above), so all three reach the cap on first attempt and the CSP is permanently excluded from that connection.</td>
+      </tr>
+      <tr>
+        <td>D&amp;A OS — §P195 default + FM-DAO-12 wording</td>
+        <td>§P195: default = <code>2</code>. FM-DAO-12 framed around "ping-pong tolerance" between CSPs in a multi-CSP zone.</td>
+        <td>§P195: default = <code>1</code>. FM-DAO-12 wording amended: "one CSP, one attempt per connection — once any of decline / acceptance-timeout / install-failure fires, that CSP is excluded from this connection's lifetime."</td>
+        <td>Aligns OS text with the new operational policy + the code change. Recipients (Tech, Quality OS) read OS not code.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>What does <em>not</em> change:</strong> The P51 cooldown duration (24h, parameter <code>p51AssignmentCooldownHours</code>) stays as-is. P51 continues to fire as today on all three trigger paths. The change is additive: P195 also fires now on the install-failure path. After the fix, install-failure on a CSP results in <strong>both</strong> a P51 (24h) exclusion and a P195 (permanent, lifetime of the connection) exclusion. The permanent one is what matters once 24h elapses; the 24h one matters during the immediate retry window.</div>
+  <div class="hint"><strong>Service-vacuum behaviour:</strong> In a single-CSP zone, after install-failure the routing engine emits <code>ALLOC_STATE_ROUTING_FAILURE</code> with <code>LOOP_EXHAUSTED</code>. The connection stays in CL <code>REQUESTED</code>. The existing CL <code>P75</code> sweep (7-day expiry) eventually transitions it to <code>DEACTIVATED</code>. If the customer wants service, they rebook — a new <code>connection_id</code> is created, P195 counters start fresh, and the previously-failed CSP is eligible again on the new connection. This is the OS-sanctioned recovery path; no new notification surface ships in this gap.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Adjacent behaviours that must survive untouched. Each line becomes a REGRESSION block in B5.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:38%">Behaviour to protect</th><th>Why it's at risk</th></tr>
+    <tr><td>1</td><td>Multi-CSP zone install-failure reroute</td><td>Today P51 alone is enough to reroute in a multi-CSP zone (the bypass doesn't fire because the eligible pool is not empty). After the fix both P51 and P195 fire on the failed CSP; the connection still reroutes to a different CSP. Must verify the reroute still happens — and that the failed CSP is NOT in the candidate pool of the new routing pass.</td></tr>
+    <tr><td>2</td><td>CL T3 retry transition (PENDING_INSTALL → REQUESTED on INSTALLATION_FAILED)</td><td>This change is downstream of CL. CL's own state-machine behaviour on receipt of INSTALLATION_FAILED must remain identical: T3 fires, retry_count increments, the connection re-enters REQUESTED and emits CL_RETRY_REROUTE to DAS.</td></tr>
+    <tr><td>3</td><td>Decline path P195 increment (existing)</td><td>The decline path at <code>AllocationServiceImpl.java:67-73</code> already calls both <code>addDeclineCooldown</code> AND <code>incrementAssignmentCount</code>. After this fix the install-failure path matches. The decline path itself must continue to fire both — no regression.</td></tr>
+    <tr><td>4</td><td>P41 timeout path P195 increment (existing — for when BUG-02 is closed)</td><td>The P41 timeout sweep at <code>BatchTriggerServiceImpl.java:45-48</code> already calls both <code>addDeclineCooldown</code> AND <code>incrementAssignmentCount</code>. The scheduler is currently down (BUG-02), so this code doesn't execute today, but the wiring must not be broken by the changes in this gap.</td></tr>
+    <tr><td>5</td><td>Routing audit log column shape</td><td>The audit log currently writes <code>cooldown_bypassed</code> (boolean) and <code>cooldown_bypass_reason</code> (text) on every routing pass. After the bypass is removed, both columns are always-NULL going forward. The columns themselves must NOT be dropped — historical reads continue to work.</td></tr>
+    <tr><td>6</td><td>TAS install candidate INSTALLATION_REPORTED_FAILED transition</td><td>The TAS-side state transition on install failure (and the parallel CL persistence + GAP-03 sub-reason fields on the wire) must remain untouched. This gap is DAS-only — no TAS or CL DTO change.</td></tr>
+    <tr><td>7</td><td>P51 cooldown duration (24h) and its existing semantics</td><td>P51 continues to fire on all three trigger paths (decline / P41 timeout / install-failure) with its current 24h duration. The change is to <em>also</em> fire P195, not to alter P51.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius. Every "Yes" needs a consulted owner and a sign-off status.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Amendment</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>D&amp;A OS</td><td>Yes</td><td>§P195 default: <code>2</code> → <code>1</code>. FM-DAO-12 wording amended to reflect "one CSP, one attempt per connection — once any of decline / acceptance-timeout / install-failure fires, the CSP is excluded from this connection's lifetime." B-FLW-02 ("continuity over starvation") removed from the operational invariant set: in a single-CSP zone, install-failure / decline / timeout produce a service vacuum, not a re-include.</td><td>Parameter default change + invariant text amendment</td><td>D&amp;A OS owner</td><td>Pending</td></tr>
+      <tr><td>CL OS</td><td>No</td><td>T3 retry transition unchanged. CL has no view of P195 or the routing engine bypass; it only sees CL_RETRY_REROUTE coming back from DAS.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>TAS / Installation Flow OS</td><td>No</td><td>INSTALLATION_REPORTED_FAILED transition + downstream events unchanged. This gap does not touch TAS or the install candidate state machine.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>Quality OS / Compensation OS</td><td>No</td><td>P195 is upstream of Quality / Compensation. Install-failure attribution continues to land in the same downstream surfaces as today.</td><td>None</td><td>—</td><td>—</td></tr>
+      <tr><td>Capacity OS</td><td>No</td><td>P46 (capacity cap) is orthogonal to P51 / P195 (per-CSP-per-connection). Capacity routing unaffected.</td><td>None</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Verification layer for engineering build and test. Light tier keeps only B5.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, computation, invariants, use / edge cases, plus a REGRESSION block for every A6 guard. Plus a coverage matrix that reads "all covered" on every class. <strong>Negative checks are first-class</strong> — every Verify block explicitly asserts what must NOT be present (the failed CSP not in the new candidate pool; the bypass field not set; the counter not over-incremented).</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Install failure increments the per-CSP attempt counter for that connection
+  <em>Real-world:</em> a CSP marks install-failure for a connection. From that moment,
+  the OS-mandated lifetime cap (P195) must know that this CSP has used one of its
+  attempts. Today this is the gap — the counter never moves.
+
+  <span class="kw">Given</span> a connection in PENDING_INSTALL assigned to csp_A
+  <span class="kw">When</span>  csp_A marks INSTALLATION_FAILED and DAS processes the
+        InstallationReportedFailed event
+  <span class="kw">Then</span>  the per-CSP P195 counter is incremented for csp_A
+  <span class="kw">And</span>   the existing P51 cooldown is also written for csp_A (parity with today)
+  <span class="kw">And</span>   the routing engine treats csp_A as P195-excluded on every future
+        routing pass for THIS connection (lifetime, not 24h)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive)</strong> — demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect assignment_count_per_csp::jsonb @&gt; '{"csp_A": 1}'::jsonb
+        → expect decline_cooldown_csp_ids::jsonb @&gt; '["csp_A"]'::jsonb
+    • <strong>DB (negative — over-increment)</strong> — same row
+        → expect assignment_count_per_csp -&gt;&gt; 'csp_A' = '1'
+          (NOT '2' or higher — exactly one increment per install-failure)
+    • <strong>Service logs</strong> — grep DAS logs for the new INFO line
+        "P51 cooldown + P195 count applied for install failure: connectionId=&lt;X&gt;"
+        on the install-failure causation_id</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Multi-CSP zone — install-failure re-routes to a different CSP, the failed CSP is no longer a candidate
+  <em>Real-world:</em> the healthy case. The zone has multiple eligible CSPs. The failed
+  CSP must drop out and another CSP must pick the booking up. This is what happens
+  today (P51 alone is enough), but after the fix P195 ALSO excludes — and the failed
+  CSP must not reappear in the candidate pool for the rest of this connection's life.
+
+  <span class="kw">Given</span> a zone with csp_A and at least one other eligible CSP (csp_B)
+  <span class="kw">And</span>   a connection assigned to csp_A
+  <span class="kw">When</span>  csp_A marks INSTALLATION_FAILED
+  <span class="kw">And</span>   CL fires T3 (PENDING_INSTALL → REQUESTED) and emits CL_RETRY_REROUTE
+  <span class="kw">Then</span>  DAS routes the connection to csp_B (or any non-csp_A eligible CSP)
+  <span class="kw">And</span>   csp_A is excluded from the candidate pool on this pass (P51 + P195 both fire)
+  <span class="kw">And</span>   csp_A stays excluded on every subsequent pass for this connection
+        (even after the 24h P51 expires — P195 is lifetime)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive)</strong> — demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+        ORDER BY updated_at DESC LIMIT 1
+        → expect csp_id != csp_A (rerouted)
+        → expect allocation_state IN ('PENDING_ACCEPTANCE','ACCEPTED', ...)
+    • <strong>DB (negative — failed CSP must NOT be candidate)</strong> — routing audit:
+        demand_allocation_service.routing_audit_log
+        WHERE connection_id = &lt;test connection_id&gt; AND retry_attempt &gt; 0
+        → expect csp_A is NOT in candidate_csps_after_filter
+        → expect csp_A IS in candidate_csps_excluded WITH reason containing
+          both 'P51_COOLDOWN' and 'P195_SAME_CONNECTION_REASSIGN_LIMIT'
+    • <strong>DB (negative — bypass column)</strong> — same routing_audit_log row
+        → expect cooldown_bypassed IS NULL (was sometimes TRUE before the fix; now never set)
+        → expect cooldown_bypass_reason IS NULL</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> Single-CSP zone — install-failure produces a service vacuum (headline fix)
+  <em>Real-world:</em> the bug we are fixing. Only one CSP is eligible in the zone. They
+  mark install-failure. The connection MUST NOT loop back to them. It sits in CL
+  REQUESTED until the existing P75 7-day sweep deactivates it. No new allocation row
+  for csp_A. No bypass.
+
+  <span class="kw">Given</span> a zone where csp_A is the only eligible CSP (other CSPs absent or filtered out)
+  <span class="kw">And</span>   a connection assigned to csp_A
+  <span class="kw">When</span>  csp_A marks INSTALLATION_FAILED
+  <span class="kw">And</span>   CL fires T3 and emits CL_RETRY_REROUTE
+  <span class="kw">Then</span>  DAS routing returns ALLOC_STATE_ROUTING_FAILURE / LOOP_EXHAUSTED
+  <span class="kw">And</span>   no new allocation row is created naming csp_A as the assignee
+  <span class="kw">And</span>   the bypass code path is not executed at all
+  <span class="kw">And</span>   CL connection stays in REQUESTED
+  <span class="kw">And</span>   the eventual CL P75 7-day sweep transitions the connection to DEACTIVATED
+        (existing behaviour — out of scope here, but the chain works)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive — routing failure)</strong> — demand_allocation_service.routing_audit_log
+        WHERE connection_id = &lt;test connection_id&gt; AND retry_attempt &gt; 0
+        → expect allocation_event_type = 'CL_RETRY_REROUTE'
+        → expect result_state = 'ALLOC_STATE_ROUTING_FAILURE'
+        → expect failure_flag = 'LOOP_EXHAUSTED'
+    • <strong>DB (negative — no re-allocation to failed CSP)</strong> —
+        demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+          AND csp_id = csp_A
+          AND id != &lt;original allocation_id&gt;
+        → expect 0 rows
+    • <strong>DB (negative — bypass must not fire)</strong> — same routing_audit_log row:
+        → expect cooldown_bypassed IS NULL (NOT TRUE)
+        → expect cooldown_bypass_reason IS NULL
+    • <strong>CL state</strong> — csp_connection_lifecycle_service.connections
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect current_state = 'REQUESTED' (waiting for P75 expiry)
+        → expect csp_id = NULL or matches the no-CSP convention</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> Customer rebooks after the P75-killed connection → new connection_id starts fresh
+  <em>Real-world:</em> P195 is per-connection. Once the original connection_id is dead and
+  the customer rebooks, a new connection_id is born. The previously-failed CSP is
+  eligible again on the new connection — they are NOT permanently banned from the
+  customer, only from that one connection.
+
+  <span class="kw">Given</span> a connection that died via LOGIC-3 service vacuum (DEACTIVATED via P75)
+  <span class="kw">And</span>   the customer rebooks → CL creates a new connection_id
+  <span class="kw">When</span>  DAS routes the new connection_id
+  <span class="kw">Then</span>  csp_A is in the eligible pool (P195 counter is empty for the new connection_id)
+  <span class="kw">And</span>   csp_A's P51 cooldown from the old connection does NOT carry over
+        (P51 is per-connection too)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive — new allocation, fresh counter)</strong> —
+        demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;new connection_id&gt;
+        → expect assignment_count_per_csp IS NULL or = '{}' or does NOT contain csp_A
+        → expect decline_cooldown_csp_ids IS NULL or = '[]' or does NOT contain csp_A
+    • <strong>DB (negative — counter is per-connection, not per-customer)</strong> —
+        same row:
+        → expect assignment_count_per_csp does NOT carry the value from
+          the previous (dead) connection_id</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> Decline path continues to fire both P51 + P195 (parity — no regression to existing path)
+  <em>Real-world:</em> the decline path already does this correctly. After the fix, the
+  install-failure path matches it. Both paths must continue to write both exclusions.
+
+  <span class="kw">Given</span> a connection assigned to csp_A in PENDING_ACCEPTANCE
+  <span class="kw">When</span>  csp_A actively declines the assignment
+  <span class="kw">Then</span>  DAS writes both the P51 cooldown AND increments the P195 counter
+        for csp_A (existing behaviour — must continue to work)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive)</strong> — demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect assignment_count_per_csp::jsonb @&gt; '{"csp_A": 1}'::jsonb
+        → expect decline_cooldown_csp_ids::jsonb @&gt; '["csp_A"]'::jsonb
+    • Identical positive check to LOGIC-1, but via the decline trigger
+      → confirms parity between the two trigger paths</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Install-failure event is delivered twice (idempotency — counter must not double-increment)
+  <em>Real-world:</em> the message broker may retry. The counter must reflect one
+  attempt, not two. Otherwise the cap math is wrong for every subsequent CSP.
+
+  <span class="kw">Given</span> csp_A marks INSTALLATION_FAILED
+  <span class="kw">And</span>   the InstallationReportedFailed event is delivered twice to DAS
+        (same correlation_id / event_id)
+  <span class="kw">When</span>  the handler processes the duplicate
+  <span class="kw">Then</span>  the existing idempotency guard (event_id dedup or causation-based)
+        suppresses the second write
+  <span class="kw">And</span>   the P195 counter for csp_A is exactly 1 — not 2
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive — exactly one)</strong> —
+        demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect assignment_count_per_csp -&gt;&gt; 'csp_A' = '1'
+    • <strong>DB (negative — over-increment)</strong> —
+        → expect assignment_count_per_csp -&gt;&gt; 'csp_A' != '2' and != '3'
+    • <strong>Service logs</strong> — exactly one "P51 cooldown + P195 count applied
+        for install failure" line for this connectionId, not two</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Multi-CSP zone where every CSP eventually hits the P195 cap
+  <em>Real-world:</em> in a zone with N CSPs, after N install-failures the eligible pool
+  is exhausted via P195. The connection must route-fail with LOOP_EXHAUSTED, not loop
+  back to anyone.
+
+  <span class="kw">Given</span> a zone with csp_A, csp_B, csp_C all eligible
+  <span class="kw">And</span>   a connection that has been retried through all three
+        (each marked install-failure)
+  <span class="kw">When</span>  CL emits the (N+1)th CL_RETRY_REROUTE
+  <span class="kw">Then</span>  DAS returns ALLOC_STATE_ROUTING_FAILURE with LOOP_EXHAUSTED
+  <span class="kw">And</span>   no new allocation row is created
+  <span class="kw">And</span>   the bypass does not fire (removed entirely)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive)</strong> — demand_allocation_service.routing_audit_log
+        WHERE connection_id = &lt;test connection_id&gt;
+        ORDER BY created_at DESC LIMIT 1
+        → expect result_state = 'ALLOC_STATE_ROUTING_FAILURE'
+        → expect failure_flag = 'LOOP_EXHAUSTED'
+        → expect candidate_csps_excluded contains csp_A, csp_B, csp_C
+          each WITH reason 'P195_SAME_CONNECTION_REASSIGN_LIMIT'
+    • <strong>DB (negative)</strong> —
+        demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+          AND created_at &gt; &lt;the (N+1)th CL_RETRY_REROUTE timestamp&gt;
+        → expect 0 rows (no new allocation created)
+    • <strong>DB (negative — bypass)</strong> — same routing_audit_log row
+        → expect cooldown_bypassed IS NULL</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Install-failure on a connection whose allocation is already terminal — counter still moves idempotently
+  <em>Real-world:</em> a race / late event. The allocation row already reached a terminal
+  state. The counter should still get the +1 (or stay at 1 if already there). The CL
+  retry decision is upstream and is what matters; the counter is just bookkeeping.
+
+  <span class="kw">Given</span> csp_A marks INSTALLATION_FAILED
+  <span class="kw">And</span>   the corresponding allocation row is already in a terminal state
+        when the InstallationReportedFailed event reaches DAS
+  <span class="kw">When</span>  the handler processes
+  <span class="kw">Then</span>  the P195 counter for csp_A reflects the install-failure (1, or
+        unchanged if already 1)
+  <span class="kw">And</span>   no spurious new allocation row is created from this event alone
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (positive)</strong> — demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect assignment_count_per_csp -&gt;&gt; 'csp_A' = '1'
+    • <strong>DB (negative — no spurious row)</strong> —
+        → expect no new allocation row was inserted by the install-failure
+          handler alone (only the CL_RETRY_REROUTE path creates new rows)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Bypass code path must never execute post-fix — audit confirmation
+  <em>Real-world:</em> the bypass was the legacy "continuity over starvation" rule. After
+  the fix, no routing pass in any scenario should write cooldown_bypassed = TRUE. A
+  flat audit query across all post-deploy routing passes should show this column
+  consistently NULL.
+
+  <span class="kw">Given</span> the fix is deployed
+  <span class="kw">When</span>  any routing pass executes (BFP, P41 timeout, decline, install-failure,
+        any scenario at all)
+  <span class="kw">Then</span>  the routing_audit_log row never sets cooldown_bypassed = TRUE
+  <span class="kw">And</span>   cooldown_bypass_reason is never written
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (negative — flat audit over a 24h post-deploy window)</strong> —
+        SELECT COUNT(*) FROM demand_allocation_service.routing_audit_log
+        WHERE created_at &gt;= &lt;deploy timestamp&gt;
+          AND (cooldown_bypassed = TRUE OR cooldown_bypass_reason IS NOT NULL)
+        → expect COUNT = 0
+    • <strong>Code-presence check</strong> — grep DAS deployed JAR for the
+        literal "SINGLE_CSP_ZONE_CONTINUITY"
+        → expect 0 matches (string is dead code, removed)</pre></div>
+
+  <h3>Regression</h3>
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Multi-CSP zone reroute behaviour preserved
+  <em>Real-world:</em> the most common case today. Install-failure in a zone with
+  multiple CSPs → reroute. Must continue to work. The only difference is that the
+  failed CSP is now permanently excluded via P195 in addition to the 24h P51.
+
+  <span class="kw">Given</span> a multi-CSP zone with csp_A and csp_B both eligible pre-failure
+  <span class="kw">When</span>  csp_A marks INSTALLATION_FAILED
+  <span class="kw">Then</span>  the connection routes to csp_B (or the next eligible CSP)
+  <span class="kw">And</span>   total time-to-rerouted-state is comparable to today's baseline
+
+  <span class="kw">Verify:</span>
+    • Same positive check as LOGIC-2
+    • <strong>Latency comparison</strong> — measure pre-deploy and post-deploy
+        time from INSTALLATION_FAILED → new allocation row (ACCEPTED state)
+        on a controlled multi-CSP test → expect no material regression
+        (within noise of normal routing latency variance)</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): CL T3 retry transition unchanged
+  <em>Real-world:</em> this gap is DAS-side. CL's own state-machine response to
+  INSTALLATION_FAILED (T3: PENDING_INSTALL → REQUESTED) must fire exactly as today.
+
+  <span class="kw">Given</span> csp_A marks INSTALLATION_FAILED
+  <span class="kw">When</span>  CL processes the event
+  <span class="kw">Then</span>  T3 fires (PENDING_INSTALL → REQUESTED)
+  <span class="kw">And</span>   retry_count increments
+  <span class="kw">And</span>   CL emits CL_RETRY_REROUTE to DAS
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (CL side)</strong> — csp_connection_lifecycle_service.connection_event_history
+        WHERE connection_id = &lt;test connection_id&gt;
+          AND event_type IN ('INSTALLATION_FAILED','CL_RETRY_REROUTE')
+        → expect both rows, with previous_state → resulting_state transitions
+          identical to the pre-deploy baseline
+    • <strong>DB (CL side)</strong> — csp_connection_lifecycle_service.connections
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect retry_count incremented by exactly 1 per failure</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Decline path continues to fire both P51 + P195 (no double-fire)
+  <em>Real-world:</em> the decline path at AllocationServiceImpl:67-73 must continue to
+  call both addDeclineCooldown AND incrementAssignmentCount on a decline. This fix
+  does not change the decline path, but a careless refactor could.
+
+  <span class="kw">Given</span> csp_A explicitly declines an assignment (pre-accept)
+  <span class="kw">When</span>  the decline handler runs
+  <span class="kw">Then</span>  both the P51 cooldown AND the P195 counter are written for csp_A
+  <span class="kw">And</span>   the counter increments by exactly 1 — not 2
+
+  <span class="kw">Verify:</span>
+    • Same positive checks as LOGIC-5
+    • <strong>DB (negative — single increment per decline)</strong> —
+        → expect assignment_count_per_csp -&gt;&gt; 'csp_A' = '1' (not '2')</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): P41 timeout path P195 increment still wired (for when BUG-02 is fixed)
+  <em>Real-world:</em> the P41 acceptance-timeout sweep at BatchTriggerServiceImpl:45-48
+  already calls both addDeclineCooldown AND incrementAssignmentCount. It doesn't
+  execute today (scheduler down per BUG-02). When BUG-02 is closed, P41 timeout
+  must continue to fire both exclusions — this gap must not break that wiring.
+
+  <span class="kw">Given</span> the DAS scheduler is restored (BUG-02 closed)
+  <span class="kw">And</span>   csp_A fails to respond within the P41 acceptance window
+  <span class="kw">When</span>  the P41 timeout sweep fires
+  <span class="kw">Then</span>  both P51 cooldown AND P195 counter are written for csp_A
+  <span class="kw">And</span>   subsequent routing excludes csp_A from this connection
+
+  <span class="kw">Verify:</span>
+    • <strong>Static code check</strong> — confirm BatchTriggerServiceImpl
+        still calls both addDeclineCooldown and incrementAssignmentCount on
+        the P41 timeout path (no removal as a side-effect of this gap)
+    • <strong>Once BUG-02 is closed</strong> — same DB positive checks as
+        LOGIC-1 / LOGIC-2, with P41 timeout as the trigger</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Routing audit log column shape preserved
+  <em>Real-world:</em> cooldown_bypassed and cooldown_bypass_reason go from "sometimes
+  populated" to "always NULL going forward". The columns themselves stay — historical
+  reads must continue to work. A migration that drops the column would break
+  dashboards and historical investigation.
+
+  <span class="kw">Given</span> the fix is deployed
+  <span class="kw">When</span>  any audit log read runs (dashboard, CLI query, log-collector)
+  <span class="kw">Then</span>  cooldown_bypassed column still exists in the schema
+  <span class="kw">And</span>   reads on historical rows (created before deploy) return
+        the pre-deploy values intact
+  <span class="kw">And</span>   reads on new rows return NULL for the bypass columns
+
+  <span class="kw">Verify:</span>
+    • <strong>DB schema</strong> — \d demand_allocation_service.routing_audit_log
+        → expect cooldown_bypassed (boolean) and cooldown_bypass_reason (text)
+          columns still present
+    • <strong>Historical row check</strong> — sample 10 routing_audit_log rows
+        from BEFORE the deploy timestamp
+        → expect cooldown_bypassed and cooldown_bypass_reason values unchanged
+          from pre-deploy
+    • <strong>Post-deploy row check</strong> — sample 10 routing_audit_log rows
+        from AFTER the deploy timestamp
+        → expect cooldown_bypassed IS NULL on all</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): TAS install-candidate INSTALLATION_REPORTED_FAILED transition unchanged
+  <em>Real-world:</em> this gap is DAS-only. The TAS-side state transition on install
+  failure (and the GAP-03 sub-reason fields on the wire) must remain untouched.
+
+  <span class="kw">Given</span> csp_A marks INSTALLATION_FAILED
+  <span class="kw">When</span>  TAS processes the EsInstallReportedFailed event
+  <span class="kw">Then</span>  the install candidate transitions to INSTALLATION_REPORTED_FAILED
+  <span class="kw">And</span>   the EsInstallReportedFailed outbox payload still carries the 4
+        GAP-03 sub-reason fields (failure_reason, failure_subreason_code,
+        failure_subreason_source, failure_subreason_confidence)
+
+  <span class="kw">Verify:</span>
+    • <strong>DB (TAS side)</strong> — csp_tas_service.install_execution_candidates
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect current_state = 'INSTALLATION_REPORTED_FAILED'
+    • <strong>DB (TAS outbox)</strong> — csp_tas_service.outbox_record
+        WHERE record_type LIKE '%EsInstallReportedFailed%'
+          AND payload::text LIKE '%' || &lt;connection_id&gt; || '%'
+        → expect the 4 GAP-03 fields present in payload</pre></div>
+
+  <div class="gherkin regression"><pre><span class="kw">REGRESSION-7</span> (A6 row 7): P51 cooldown duration (24h) and existing semantics unchanged
+  <em>Real-world:</em> this gap is additive on P51 — we now also fire P195. P51 itself
+  (its duration, its semantics, its trigger paths) is not touched.
+
+  <span class="kw">Given</span> any of the three trigger paths fire (decline, P41 timeout, install-failure)
+  <span class="kw">When</span>  the cooldown is applied
+  <span class="kw">Then</span>  the P51 cooldown duration is 24h (p51AssignmentCooldownHours unchanged)
+  <span class="kw">And</span>   the cooldown stamp is on decline_cooldown_csp_ids exactly as today
+
+  <span class="kw">Verify:</span>
+    • <strong>Config check</strong> — DemandAllocationParameters.p51AssignmentCooldownHours
+        → expect default = 24 (unchanged)
+    • <strong>DB</strong> — demand_allocation_service.connection_allocations
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect decline_cooldown_csp_ids carries csp_A with timestamp
+          that equates to "now + 24h" (existing format)</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1, 2, 3 (delta) + the headline single-CSP-zone behaviour</td><td>5 logic lines</td><td>LOGIC-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>—</td><td>N/A (no computation — counter increment is +1)</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..4 (idempotency, full exhaustion, race, dead-bypass audit)</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 rows 1–7</td><td>7 guards</td><td>REGRESSION-1..7</td><td>All covered</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A6, A8, B5) filled</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" on every class</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A6 guard has a matching B5 REGRESSION block</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Negative checks present on every Verify block where a "must not" exists</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes" has sign-off Received</td><td class="check">Pending (D&amp;A OS owner)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code evidence (verified 2026-06-08):</strong>
+    <ul>
+      <li><strong>The gap — install-failure handler does not increment P195:</strong> <code>services/csp-demand-allocation-service/.../application/impl/InboundEventProcessingServiceImpl.java</code> lines 410-466, specifically the block at 451-454 that calls <code>addDeclineCooldown</code> but not <code>incrementAssignmentCount</code></li>
+      <li><strong>The bypass — single-CSP fallback "continuity over starvation":</strong> <code>services/csp-demand-allocation-service/.../application/impl/RoutingEngineServiceImpl.java</code> lines 108-135, the block that re-includes a P51-cooled CSP when <code>allExclusionsAreP51 &amp;&amp; p51OnlyCsps.size() == 1</code></li>
+      <li><strong>P195 default in code:</strong> <code>services/csp-demand-allocation-service/.../infrastructure/config/DemandAllocationParameters.java</code> lines 98-100 — <code>p195SameConnectionReassignLimit = 3</code> (target: <code>1</code>)</li>
+      <li><strong>P195 default in OS:</strong> <code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> L572 — currently <code>2</code> (target: <code>1</code>)</li>
+      <li><strong>Reference — decline path already calls both helpers:</strong> <code>AllocationServiceImpl.java:67-73</code> (decline path) + helper bodies <code>addDeclineCooldown</code> line 175 and <code>incrementAssignmentCount</code> line 220</li>
+      <li><strong>Reference — P41 timeout path already calls both helpers:</strong> <code>BatchTriggerServiceImpl.java:45-48</code> (currently inert in prod per BUG-02)</li>
+      <li><strong>QA evidence (2026-06-08):</strong> <code>confirm_p195_gap.js</code> against QA → 8 install-failure CL_RETRY_REROUTE rows in the last 6 hours, all with <code>assignment_count_per_csp = {}</code> (counter never moves on install-failure)</li>
+      <li><strong>OS reference — D&amp;A OS:</strong> §P51 (L566 — assignment cooldown), §P195 (L572 — same-connection reassign cap), §FM-DAO-12 (same-connection ping-pong failure mode), §B-FLW-02 (continuity over starvation — to be removed from the operational invariant set)</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-08</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Three-change plan: (1) install-failure handler increments P195 counter (the missing call); (2) single-CSP fallback bypass in <code>RoutingEngineServiceImpl</code> removed entirely; (3) P195 default set to <code>1</code> globally in code + OS. Verified against QA: 8 install-failure CL_RETRY_REROUTE rows in the last 6 hours all show <code>assignment_count_per_csp = {}</code>. Acceptance criteria authored with explicit negative-Verify on every block — failed CSP must NOT be in candidate pool of next routing pass, bypass column must NOT be set, counter must NOT over-increment. Customer rebook path (LOGIC-4) makes the per-connection semantics explicit.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+</body>
+</html>

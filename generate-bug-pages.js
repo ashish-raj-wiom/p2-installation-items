@@ -110,6 +110,7 @@ const GAPS = [
   { id: 'gap-02', num: 'GAP-02', short: 'Change team member (install)' },
   { id: 'gap-03', num: 'GAP-03', short: 'Failure sub-reason (OS-aligned)' },
   { id: 'gap-04', num: 'GAP-04', short: 'DAS single-CSP zone events' },
+  { id: 'gap-05', num: 'GAP-05', short: 'No repeat allocation after install-failure' },
 ];
 
 // ----------------------------------------------------------------------------
@@ -1248,7 +1249,7 @@ function buildIndexPage() {
     <p class="lede">Each item below is a standalone document, hosted as its own page. Bugs follow the test-case format (original spec + expected-vs-observed + code evidence). Gap specs follow the Wiom Change Spec Template v1.0 at Light tier.</p>
     <div class="meta-row">
       <div><strong>Owner:</strong> Ashish Raj</div>
-      <div><strong>Date:</strong> 2026-06-04</div>
+      <div><strong>Date:</strong> 2026-06-08</div>
       <div><strong>Items:</strong> ${BUGS.length} bugs · ${GAPS.length} gaps</div>
     </div>
   </header>
