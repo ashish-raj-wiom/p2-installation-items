@@ -146,7 +146,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-01</div>
+  <div class="eyebrow">Wiom · Change Spec · v1.5 · PM deliverable · GAP-01</div>
   <h1>Bifurcate booking cancellations by source (customer vs system)</h1>
   <p class="lede">CL already carries the actor-tag (<code>deactivationSource</code>) on its outbound signal, but TAS's install <code>ClDeactivationInitiated</code> record deserializes only 4 of 14 fields. The bifurcation field is dropped at the HTTP boundary; every cancellation lands in <code>CANCELLED_BY_UPSTREAM</code>. Fix is in TAS: extend the DTO, branch on <code>deactivationSource</code>. No CL OS amendment; no new terminal states.</p>
   <div class="meta-row">
@@ -189,7 +189,7 @@
     <tr><td>Change title</td><td>Bifurcate booking cancellations by source (customer vs system)</td></tr>
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft → For tech review</td></tr>
-    <tr><td>Version</td><td>v1.4 (2026-06-04)</td></tr>
+    <tr><td>Version</td><td>v1.5 (2026-06-09)</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td><code>installation-flow-execution-spec-yaml/.../es-connection-installation-service-preinst-prd.yaml</code> v2.5 — both terminal states (<code>CANCELLED_BY_CUSTOMER</code>, <code>CANCELLED_BY_UPSTREAM</code>) and both workflow methods (<code>cancelByCustomer</code>, <code>cancelByUpstream</code>) already in spec + code.</td></tr>
   </table>
   <hr class="sect-end">
@@ -333,26 +333,13 @@
           the ACTUAL upstream cause (e.g. 'p74_timeout', 'support_cancelled')
           — NOT the hard-coded literal "DEACTIVATION"</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> A booking with multiple active install tasks → all get cancelled together
-  <em>Real-world:</em> a single connection sometimes has more than one active install task
-  (e.g. after a retry). The cancel must clean up all of them.
-
-  <span class="kw">Given</span> a cancellation arrives
-  <span class="kw">And</span>   the connection has multiple active install candidates
-  <span class="kw">When</span>  the handler processes the event
-  <span class="kw">Then</span>  ALL active candidates are cancelled (existing behaviour: the loop over activeCandidates)
-  <span class="kw">And</span>   each cancel uses the branch chosen by deactivationSource (uniform across all candidates)
-
-  <span class="kw">Verify:</span>
-    • <strong>DB</strong> — csp_tas_service.install_execution_candidates
-        WHERE connection_id = &lt;test connection_id&gt;
-        → expect ALL rows that were active (non-terminal) before the cancel
-          are now in CANCELLED_BY_CUSTOMER or CANCELLED_BY_UPSTREAM
-          (uniform: all in the same terminal per the source branch)
-    • <strong>DB</strong> — csp_tas_service.install_state_transition_log
-        WHERE connection_id = &lt;test connection_id&gt;
-        AND created_at &gt; &lt;cancellation arrival timestamp&gt;
-        → expect exactly N new rows, where N = number of previously-active candidates</pre></div>
+  <!-- LOGIC-3 removed in v1.5: scenario can't actually occur. The TAS install state
+       machine guarantees at most one active candidate per connection at any time. On
+       retry, the prior candidate is moved to a terminal state (CANCELLED_BY_UPSTREAM or
+       INSTALLATION_REPORTED_FAILED) before the new candidate is created — so
+       findActiveByConnectionId(connectionId, TERMINAL_STATES) returns either 0 or 1
+       row, never N&gt;1. The handler's loop over activeCandidates remains as
+       defence-in-depth in the code but the scenario isn't reachable in production. -->
 
   <div class="gherkin"><pre><span class="kw">LOGIC-4 (defensive):</span> Missing or unrecognised cancel source → default to "cancelled upstream"
   <em>Real-world:</em> a guard. If CL ever emits without a source tag (bug, legacy producer,
@@ -655,7 +642,7 @@
   <table class="coverage">
     <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
     <tbody>
-      <tr><td class="cls">Business logic</td><td>A5 rows 1–4 + CT notification path</td><td>5 deltas</td><td>LOGIC-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1–4 + CT notification path</td><td>4 deltas (LOGIC-3 removed v1.5 — unreachable scenario)</td><td>LOGIC-1, 2, 4, 5</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>—</td><td>N/A (no computation)</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Use / edge</td><td>EDGE-1..5</td><td>5 edges</td><td>EDGE-1..5</td><td>All covered</td></tr>
@@ -700,6 +687,7 @@
       <tr><td>v1.2</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (LOGIC-2, EDGE-5)</td><td>LOGIC-2 Real-world line reframed — system-cancel is overwhelmingly delay-driven (Wiom timeout, support cancellation), not Exit / Enforcement (which are CSP-relationship events, not booking events). Added <strong>EDGE-5</strong>: when a previous CSP marked install-failed on the same connection and the connection was re-routed to a new CSP, an incoming cancellation only affects the new CSP's active candidate — the previous CSP's terminal record stays intact. Verified in code: <code>findActiveByConnectionId(connectionId, TERMINAL_STATES)</code> excludes terminal-state candidates by query definition.</td><td>Pending</td></tr>
       <tr><td>v1.3</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (LOGIC-5, EDGE-5, REGRESSION-7)</td><td>Corrected the CleverTap framing across all three blocks. CleverTap is <strong>NOT</strong> the channel the apps subscribe to — app removal and CT event are two parallel, independent outcomes (neither causes the other). Added Technician app to scope wherever a technician would be assigned. Both outcomes (app removal + CT event) now explicitly apply to <strong>both</strong> the customer-cancel branch (REGRESSION-7) and the system-cancel branch (LOGIC-5).</td><td>Pending</td></tr>
       <tr><td>v1.4</td><td>2026-06-04</td><td>Ashish Raj</td><td>B5 (all 16 ACs)</td><td>Added a <strong>Verify:</strong> block to every LOGIC / EDGE / REGRESSION acceptance criterion. Each block now names the exact surface to inspect — DB table (with concrete column / filter), outbox record (status + payload check), CleverTap dashboard, or app surface (CSP app + Technician app endpoint or manual open). Verified table names against code: <code>csp_tas_service.install_execution_candidates</code> and <code>csp_tas_service.install_state_transition_log</code> (both confirmed via @Table annotations). CleverTap publisher is greenfield in this GAP — verification noted as "to be verified once wired" where applicable.</td><td>Pending</td></tr>
+      <tr><td>v1.5</td><td>2026-06-09</td><td>Ashish Raj</td><td>B5 (LOGIC-3), B5.1 coverage matrix</td><td><strong>Removed LOGIC-3</strong> ("multiple active install tasks → all cancelled together"). PM-noted invariant: the TAS install state machine guarantees at most one active candidate per connection at a time. On retry, the prior candidate is moved to a terminal state (CANCELLED_BY_UPSTREAM or INSTALLATION_REPORTED_FAILED) <em>before</em> the new candidate is created — so <code>findActiveByConnectionId(connectionId, TERMINAL_STATES)</code> can return at most 1 row. The scenario LOGIC-3 was testing is unreachable in production. The handler's loop over <code>activeCandidates</code> remains in code as defence-in-depth but is no longer a PM-spec'd test case. Coverage matrix Business-logic row updated: 4 deltas / LOGIC-1, 2, 4, 5 (all covered). Verified live during testing 2026-06-09: GAP-01 LOGIC-1 (customer cancel, candidate 75693ff4 → CANCELLED_BY_CUSTOMER with reason "Delay in installation") and LOGIC-2 (system cancel, candidate 83dbbcd5 → CANCELLED_BY_UPSTREAM with reason "Stuck at ADDRESS_VERIFIED") both passed end-to-end — full bifurcation chain working, reason_code preserved (not hard-coded "DEACTIVATION").</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>
