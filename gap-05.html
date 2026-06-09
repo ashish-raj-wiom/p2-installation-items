@@ -128,7 +128,6 @@
     <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
     <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
     <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
-    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
     <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
   </ol>
   <h2 class="how">Part B — HOW (detailing)</h2>
@@ -146,7 +145,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v1.1 · PM deliverable · GAP-05</div>
+  <div class="eyebrow">Wiom · Change Spec · v1.2 · PM deliverable · GAP-05</div>
   <h1>Prevent re-allocation to same CSP after install failure</h1>
   <p class="lede">Once a CSP marks <code>INSTALLATION_FAILED</code> for a connection, they must never receive that same connection again. Today they can — in single-CSP zones the routing engine's <code>SINGLE_CSP_ZONE_CONTINUITY</code> bypass re-includes the cooled-down CSP for the same connection, and the install-failure handler doesn't increment the per-CSP P195 ping-pong counter so the lifetime cap never fires for this path. Three coordinated changes: increment P195 on install-failure, remove the single-CSP bypass, set P195 = 1 globally. <strong>v1.1 — corrected every Verify block against the actual DAS schema (table is <code>allocation_audit_log</code>, exclusion-reason enum is <code>P195_PING_PONG</code>, bypass column is <code>cooldown_bypassed_for_continuity</code>); restated §A8 per the OS Governance Reference (zero OS amendments — see §A8); flagged a P51 code/OS drift surfaced during audit.</strong></p>
   <div class="meta-row">
@@ -154,7 +153,7 @@
   </div>
   <div class="convention">
     <strong>Tier:</strong>
-    <span class="badge light">Light</span> — A1, A2, A5, A6, A8, B5. Three-file change (two .java + one config). Per OS Governance Reference: zero OS amendments, one parameter change, two execution fixes.
+    <span class="badge light">Light</span> — A1, A2, A5, A8, B5. Three-file change (two .java + one config). Per OS Governance Reference: zero OS amendments, one parameter change, two execution fixes. <em>v1.2 — §A6 and B5 REGRESSION blocks removed by PM decision; B5 scope is LOGIC + EDGE only.</em>
     <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
   </div>
 </header>
@@ -278,23 +277,6 @@ private int p195SameConnectionReassignLimit
   <hr class="sect-end">
 </section>
 
-<section class="spec" id="a6">
-  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
-  <div class="expected"><strong>What is expected:</strong> Adjacent behaviours that must survive untouched. Each line becomes a REGRESSION block in B5.</div>
-  <span class="row-mode req">All rows required</span>
-  <table>
-    <tr><th style="width:6%">#</th><th style="width:38%">Behaviour to protect</th><th>Why it's at risk</th></tr>
-    <tr><td>1</td><td>Multi-CSP zone install-failure reroute</td><td>Today P51 alone is enough to reroute in a multi-CSP zone (the bypass doesn't fire because the eligible pool is not empty). After the fix both P51 and P195 fire on the failed CSP; the connection still reroutes to a different CSP. Must verify the reroute still happens — and that the failed CSP is NOT in the candidate pool of the new routing pass.</td></tr>
-    <tr><td>2</td><td>CL T3 retry transition (PENDING_INSTALL → REQUESTED on INSTALLATION_FAILED)</td><td>This change is downstream of CL. CL's own state-machine behaviour on receipt of INSTALLATION_FAILED must remain identical: T3 fires, retry_count increments, the connection re-enters REQUESTED and emits CL_RETRY_REROUTE to DAS.</td></tr>
-    <tr><td>3</td><td>Decline path P195 increment (existing)</td><td>The decline path at <code>AllocationServiceImpl.java:67-73</code> already calls both <code>addDeclineCooldown</code> AND <code>incrementAssignmentCount</code>. After this fix the install-failure path matches. The decline path itself must continue to fire both — no regression.</td></tr>
-    <tr><td>4</td><td>P41 timeout path P195 increment (existing — for when BUG-02 is closed)</td><td>The P41 timeout sweep at <code>BatchTriggerServiceImpl.java:45-48</code> already calls both <code>addDeclineCooldown</code> AND <code>incrementAssignmentCount</code>. The scheduler is currently down (BUG-02), so this code doesn't execute today, but the wiring must not be broken by the changes in this gap.</td></tr>
-    <tr><td>5</td><td>Allocation audit log column shape (<code>allocation_audit_log</code>, not <code>routing_audit_log</code>)</td><td>The audit log currently writes <code>cooldown_bypassed_for_continuity</code> (boolean, NOT NULL DEFAULT FALSE) and <code>cooldown_bypass_reason</code> (text, nullable) on every routing pass. After the bypass is removed, the boolean is always <code>FALSE</code> on new rows; the reason text is always <code>NULL</code>. The columns themselves must NOT be dropped — historical reads continue to work.</td></tr>
-    <tr><td>6</td><td>TAS install candidate INSTALLATION_REPORTED_FAILED transition</td><td>The TAS-side state transition on install failure (and the parallel CL persistence + GAP-03 sub-reason fields on the wire) must remain untouched. This gap is DAS-only — no TAS or CL DTO change.</td></tr>
-    <tr><td>7</td><td>P51 cooldown duration (24h) and its existing semantics</td><td>P51 continues to fire on all three trigger paths (decline / P41 timeout / install-failure) with its current 24h duration. The change is to <em>also</em> fire P195, not to alter P51.</td></tr>
-  </table>
-  <hr class="sect-end">
-</section>
-
 <section class="spec" id="a8">
   <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
   <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius. Every "Yes" needs a consulted owner and a sign-off status.</div>
@@ -346,7 +328,7 @@ private int p195SameConnectionReassignLimit
 
 <section class="spec" id="b5">
   <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
-  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, computation, invariants, use / edge cases, plus a REGRESSION block for every A6 guard. Plus a coverage matrix that reads "all covered" on every class. <strong>Negative checks are first-class</strong> — every Verify block explicitly asserts what must NOT be present (the failed CSP not in the new candidate pool; the bypass field not set; the counter not over-incremented).</div>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic and use / edge cases. Plus a coverage matrix that reads "all covered" on every class. <strong>Negative checks are first-class</strong> — every Verify block explicitly asserts what must NOT be present (the failed CSP not in the new candidate pool; the bypass field not set; the counter not over-incremented). <em>v1.2 scope:</em> §A6 (Must-Not-Change) and B5 REGRESSION blocks removed by PM decision; B5 is now LOGIC + EDGE only.</div>
 
   <h3>Business logic</h3>
   <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Install failure increments the per-CSP attempt counter for that connection
@@ -618,167 +600,6 @@ private int p195SameConnectionReassignLimit
         literal "SINGLE_CSP_ZONE_CONTINUITY"
         → expect 0 matches (string is dead code, removed)</pre></div>
 
-  <h3>Regression</h3>
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-1</span> (A6 row 1): Multi-CSP zone reroute behaviour preserved
-  <em>Real-world:</em> the most common case today. Install-failure in a zone with
-  multiple CSPs → reroute. Must continue to work. The only difference is that the
-  failed CSP is now permanently excluded via P195 in addition to the 24h P51.
-
-  <span class="kw">Given</span> a multi-CSP zone with csp_A and csp_B both eligible pre-failure
-  <span class="kw">When</span>  csp_A marks INSTALLATION_FAILED
-  <span class="kw">Then</span>  the connection routes to csp_B (or the next eligible CSP)
-  <span class="kw">And</span>   total time-to-rerouted-state is comparable to today's baseline
-
-  <span class="kw">Verify:</span>
-    • Same positive checks as LOGIC-2 (csp_id != csp_A on the new allocation;
-      csp_A is NOT in eligible_set; csp_A IS in details.stages.3b_eligibility.excluded
-      with reasons P51_COOLDOWN + P195_PING_PONG; bypass column = FALSE)
-    • <strong>Latency comparison</strong> — measure pre-deploy and post-deploy
-        time from INSTALLATION_FAILED → new allocation row (ACCEPTED state)
-        on a controlled multi-CSP test → expect no material regression
-        (within noise of normal routing latency variance)</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-2</span> (A6 row 2): CL T3 retry transition unchanged
-  <em>Real-world:</em> this gap is DAS-side. CL's own state-machine response to
-  INSTALLATION_FAILED (T3: PENDING_INSTALL → REQUESTED) must fire exactly as today.
-
-  <span class="kw">Given</span> csp_A marks INSTALLATION_FAILED
-  <span class="kw">When</span>  CL processes the event
-  <span class="kw">Then</span>  T3 fires (PENDING_INSTALL → REQUESTED)
-  <span class="kw">And</span>   retry_count increments
-  <span class="kw">And</span>   CL emits CL_RETRY_REROUTE to DAS
-
-  <span class="kw">Verify:</span>
-    • <strong>DB (CL side)</strong> — public.connection_event_history (CL DB csp_connection_lifecycle_service)
-        WHERE connection_id = &lt;test connection_id&gt;
-          AND event_type IN ('INSTALLATION_FAILED','CL_RETRY_REROUTE')
-        ORDER BY event_timestamp
-        → expect rows with previous_state → resulting_state transitions
-          identical to the pre-deploy baseline
-          (schema-confirmed columns: previous_state, resulting_state, event_type)
-    • <strong>DB (CL side)</strong> — public.connections (CL DB csp_connection_lifecycle_service)
-        WHERE connection_id = &lt;test connection_id&gt;
-        → expect retry_count incremented by exactly 1 per failure</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-3</span> (A6 row 3): Decline path continues to fire both P51 + P195 (no double-fire)
-  <em>Real-world:</em> the decline path at AllocationServiceImpl:67-73 must continue to
-  call both addDeclineCooldown AND incrementAssignmentCount on a decline. This fix
-  does not change the decline path, but a careless refactor could.
-
-  <span class="kw">Given</span> csp_A explicitly declines an assignment (pre-accept)
-  <span class="kw">When</span>  the decline handler runs
-  <span class="kw">Then</span>  both the P51 cooldown AND the P195 counter are written for csp_A
-  <span class="kw">And</span>   the counter increments by exactly 1 — not 2
-
-  <span class="kw">Verify:</span>
-    • Same positive checks as LOGIC-5 (both helpers fire on
-      public.connection_allocations)
-    • <strong>DB (negative — single increment per decline)</strong> —
-        → expect assignment_count_per_csp -&gt;&gt; 'csp_A' = '1' (not '2')</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-4</span> (A6 row 4): P41 timeout path P195 increment still wired (for when BUG-02 is fixed)
-  <em>Real-world:</em> the P41 acceptance-timeout sweep at BatchTriggerServiceImpl:45-48
-  already calls both addDeclineCooldown AND incrementAssignmentCount. It doesn't
-  execute today (scheduler down per BUG-02). When BUG-02 is closed, P41 timeout
-  must continue to fire both exclusions — this gap must not break that wiring.
-
-  <span class="kw">Given</span> the DAS scheduler is restored (BUG-02 closed)
-  <span class="kw">And</span>   csp_A fails to respond within the P41 acceptance window
-  <span class="kw">When</span>  the P41 timeout sweep fires
-  <span class="kw">Then</span>  both P51 cooldown AND P195 counter are written for csp_A
-  <span class="kw">And</span>   subsequent routing excludes csp_A from this connection
-
-  <span class="kw">Verify:</span>
-    • <strong>Static code check</strong> — confirm BatchTriggerServiceImpl.java
-        lines 46 + 48 still call both AllocationServiceImpl.addDeclineCooldown
-        and AllocationServiceImpl.incrementAssignmentCount on the P41 timeout
-        path (no removal as a side-effect of this gap)
-    • <strong>Once BUG-02 is closed</strong> — same DB positive checks as
-        LOGIC-1 / LOGIC-2 (on public.connection_allocations), with P41 timeout
-        as the trigger instead of install-failure</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-5</span> (A6 row 5): Allocation audit log column shape preserved
-  <em>Real-world:</em> cooldown_bypassed_for_continuity (boolean) and cooldown_bypass_reason
-  (text) go from "sometimes set" to "always default value going forward". The columns
-  themselves stay — historical reads must continue to work. A migration that drops
-  either column would break dashboards and historical investigation.
-
-  <span class="kw">Given</span> the fix is deployed
-  <span class="kw">When</span>  any audit log read runs (dashboard, CLI query, log-collector)
-  <span class="kw">Then</span>  cooldown_bypassed_for_continuity column still exists in the schema
-  <span class="kw">And</span>   reads on historical rows (created before deploy) return
-        the pre-deploy values intact
-  <span class="kw">And</span>   reads on new rows return FALSE on the boolean and NULL on the
-        reason text (the column is NOT NULL DEFAULT FALSE — it can never be NULL)
-
-  <span class="kw">Verify:</span>
-    • <strong>DB schema</strong> — SELECT column_name, data_type, is_nullable
-        FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'allocation_audit_log'
-          AND column_name IN ('cooldown_bypassed_for_continuity', 'cooldown_bypass_reason')
-        → expect both columns present
-        → cooldown_bypassed_for_continuity: boolean, NOT NULL, default FALSE
-        → cooldown_bypass_reason: character varying, NULL
-    • <strong>Historical row check</strong> — sample 10 rows from
-        public.allocation_audit_log WHERE created_at &lt; &lt;deploy timestamp&gt;
-        → expect both columns' values unchanged from pre-deploy
-    • <strong>Post-deploy row check</strong> — sample 10 rows WHERE created_at &gt;=
-        &lt;deploy timestamp&gt;
-        → expect cooldown_bypassed_for_continuity = FALSE on all
-        → expect cooldown_bypass_reason IS NULL on all</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-6</span> (A6 row 6): TAS install-candidate INSTALLATION_REPORTED_FAILED transition unchanged
-  <em>Real-world:</em> this gap is DAS-only. The TAS-side state transition on install
-  failure (and the GAP-03 sub-reason fields on the wire) must remain untouched.
-
-  <span class="kw">Given</span> csp_A marks INSTALLATION_FAILED
-  <span class="kw">When</span>  TAS processes the EsInstallReportedFailed event
-  <span class="kw">Then</span>  the install candidate transitions to INSTALLATION_REPORTED_FAILED
-  <span class="kw">And</span>   the EsInstallReportedFailed outbox payload still carries the 4
-        GAP-03 sub-reason fields (failure_reason, failure_subreason_code,
-        failure_subreason_source, failure_subreason_confidence)
-
-  <span class="kw">Verify:</span>
-    • <strong>DB (TAS side)</strong> — public.install_execution_candidates (TAS DB csp_tas_service)
-        WHERE connection_id = &lt;test connection_id&gt;
-        → expect current_state = 'INSTALLATION_REPORTED_FAILED'
-    • <strong>DB (TAS outbox)</strong> — public.outbox_record (TAS DB csp_tas_service)
-        WHERE record_type LIKE '%EsInstallReportedFailed%'
-          AND payload::text LIKE '%' || &lt;connection_id&gt; || '%'
-        → expect the 4 GAP-03 fields present in payload (failure_reason,
-          failure_subreason_code, failure_subreason_source, failure_subreason_confidence)</pre></div>
-
-  <div class="gherkin regression"><pre><span class="kw">REGRESSION-7</span> (A6 row 7): P51 cooldown duration and existing semantics unchanged
-  <em>Real-world:</em> this gap is additive on P51 — we now also fire P195. P51 itself
-  (its duration, its semantics, its trigger paths) is not touched.
-  <em>v1.1 correction:</em> v1.0 of this AC named "default = 24h" — but the audit revealed
-  that the code default is actually <code>4h</code> (DemandAllocationParameters.java:68,
-  field <code>p51DeclineCooldownHours = 4</code>) while the D&amp;A OS L566 declares <code>24h</code>.
-  That's a 6× code/OS drift that pre-dates GAP-05. The AC must not assert a number
-  this gap doesn't change — only assert that whatever P51 was at deploy time, it
-  stays the same after deploy.
-
-  <span class="kw">Given</span> any of the three trigger paths fire (decline, P41 timeout, install-failure)
-  <span class="kw">When</span>  the cooldown is applied
-  <span class="kw">Then</span>  the P51 cooldown duration is identical to the pre-deploy value
-        (whatever it is — currently 4h in code, 24h in OS)
-  <span class="kw">And</span>   the cooldown stamp is on decline_cooldown_csp_ids exactly as today
-
-  <span class="kw">Verify:</span>
-    • <strong>Config check</strong> — confirm DemandAllocationParameters field name
-        is p51DeclineCooldownHours (not p51AssignmentCooldownHours as v1.0 wrote)
-        → expect default value unchanged from pre-deploy
-        (this AC does NOT bake in a target number; the P51 drift is documented
-        in §A8 as an out-of-scope finding for separate audit)
-    • <strong>DB</strong> — public.connection_allocations (DAS DB)
-        WHERE connection_id = &lt;test connection_id&gt;
-        → expect decline_cooldown_csp_ids carries csp_A as a JSON record
-          {cspId, declinedAt} with declinedAt timestamp matching the live
-          P51 hour-count at deploy time
-    • <strong>Pre/post comparison</strong> — sample 5 decline rows from before
-        and after the deploy; the delta between event time and cooldown expiry
-        must be the same in both windows</pre></div>
-
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
     <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
@@ -787,7 +608,7 @@ private int p195SameConnectionReassignLimit
       <tr><td class="cls">Computation</td><td>—</td><td>N/A (no computation — counter increment is +1)</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Use / edge</td><td>EDGE-1..4 (idempotency, full exhaustion, race, dead-bypass audit)</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
-      <tr><td class="cls">Regression</td><td>A6 rows 1–7</td><td>7 guards</td><td>REGRESSION-1..7</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>§A6 + B5 REGRESSION blocks removed by PM decision in v1.2</td><td>—</td><td>—</td><td>N/A (scope decision)</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -799,9 +620,8 @@ private int p195SameConnectionReassignLimit
     <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
     <tbody>
       <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
-      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A6, A8, B5) filled</td><td class="check">✓</td></tr>
-      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" on every class</td><td class="check">✓</td></tr>
-      <tr><td><span class="badge light">Light</span></td><td>Every A6 guard has a matching B5 REGRESSION block</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A8, B5) filled — §A6 removed by PM decision in v1.2</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" or "N/A (scope decision)" on every class</td><td class="check">✓</td></tr>
       <tr><td><span class="badge light">Light</span></td><td>Negative checks present on every Verify block where a "must not" exists</td><td class="check">✓</td></tr>
       <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes" has sign-off Received</td><td class="check">Pending (D&amp;A OS owner)</td></tr>
     </tbody>
@@ -829,6 +649,7 @@ private int p195SameConnectionReassignLimit
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
       <tr><td>v1.0</td><td>2026-06-08</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Three-change plan: (1) install-failure handler increments P195 counter (the missing call); (2) single-CSP fallback bypass in <code>RoutingEngineServiceImpl</code> removed entirely; (3) P195 default set to <code>1</code> globally in code + OS. Verified against QA: 8 install-failure CL_RETRY_REROUTE rows in the last 6 hours all show <code>assignment_count_per_csp = {}</code>. Acceptance criteria authored with explicit negative-Verify on every block — failed CSP must NOT be in candidate pool of next routing pass, bypass column must NOT be set, counter must NOT over-increment. Customer rebook path (LOGIC-4) makes the per-connection semantics explicit.</td><td>Pending</td></tr>
+      <tr><td>v1.2</td><td>2026-06-09</td><td>Ashish Raj</td><td>§A6 removed · B5 REGRESSION blocks removed · B5 description, coverage matrix, completeness checklist, TOC, convention block, eyebrow / tier line updated</td><td><strong>Scope narrowed by PM decision: B5 is now LOGIC + EDGE only.</strong> §A6 (Must-Not-Change — Regression Guard) deleted in full; all seven B5 REGRESSION blocks deleted (multi-CSP reroute parity, CL T3 transition, decline path parity, P41 timeout wiring, audit-log column shape, TAS transition, P51 cooldown duration). Coverage matrix Regression row now marked "N/A (scope decision)". Completeness checklist no longer references A6/REGRESSION mapping. The structural scope decision is called out in the eyebrow line and the B5 expected-description block so a reader doesn't read this as missing-by-accident.</td><td>Pending</td></tr>
       <tr><td>v1.1</td><td>2026-06-09</td><td>Ashish Raj</td><td>QC, A2, A5 hint, A6 row 5, A8 (full), B5 LOGIC-1..3 / EDGE-2 / EDGE-4 / REGRESSION-1 / REGRESSION-2 / REGRESSION-4..7, Code-evidence block</td><td><strong>Three corrections.</strong> <em>(i) Schema fidelity.</em> Tech review + self-audit caught seven Verify blocks asserting on the wrong table / column / enum names. Re-ran a live schema dump (<code>gap05_v1_audit.js</code>) and rewrote every affected block: audit table is <code>allocation_audit_log</code> (not <code>routing_audit_log</code>); bypass column is <code>cooldown_bypassed_for_continuity</code> NOT NULL DEFAULT FALSE (assert <code>= FALSE</code>, not <code>IS NULL</code>); exclusion list lives at <code>details -&gt; 'stages' -&gt; '3b_eligibility' -&gt; 'excluded'</code> (not a top-level column); enum is <code>P195_PING_PONG</code> (not <code>P195_SAME_CONNECTION_REASSIGN_LIMIT</code>); no <code>result_state</code> column — failure inferred from <code>selected_csp_id IS NULL AND failure_flag = 'LOOP_EXHAUSTED'</code>; schema prefix is <code>public.</code>, not the service name. <em>(ii) Governance routing.</em> Re-ran the three changes through the OS Governance Reference Q1–Q3 rubric. v1.0 had bundled all three as "OS amendment"; v1.1 splits them correctly: zero amendments (the bypass is NOT in the OS — its label <code>B-FLW-02</code> does not appear in the locked file; it violates INV-DAO-02, INV-DAO-15, TRD-DAO-02; removal is code-OS realignment, not an amendment), one parameter change (P195 default), two execution fixes. <em>(iii) P51 drift surfaced.</em> Audit caught a 6× code/OS drift on P51 hour-count — code = 4h, OS = 24h, field name in code is <code>p51DeclineCooldownHours</code> not <code>p51AssignmentCooldownHours</code>. REGRESSION-7 reworded to not bake a number; drift flagged in §A8 as out-of-scope. Also flagged OS Single-Provider Continuity Mode (capacity-cap reduction) as apparently unimplemented in code — likely what engineering meant to build when they wrote the cooldown bypass. Out-of-scope for GAP-05 but recommended as a follow-up gap.</td><td>Pending</td></tr>
     </tbody>
   </table>
