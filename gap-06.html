@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-06 — P74 install-timeout sweep + cascade + CSP-app communication · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  .row-mode-note { font-size: 12.5px; color: var(--muted); margin-left: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-06</div>
+  <h1>P74 install-timeout sweep + TAS cascade + CSP-app communication</h1>
+  <p class="lede">CL OS L456 declares P74 = 72h max in <code>PENDING_INSTALL</code> before system-triggered <code>INSTALLATION_FAILED</code>. The sweep batch exists in code (<code>SchedulingServiceImpl.processInstallTimeoutBatch</code>); no scheduler fires it. When it does fire, the TAS-side cascade doesn't close the active install candidate — leaving it orphan in a non-terminal state. And the CSP needs proactive notification (pre-warning + removal) so a missed-install doesn't disappear from their app without warning. Three coordinated changes: wire the CL P74 sweep, close the TAS candidate via Option 1 (CL emits a system-source event → TAS terminates → existing TAS outbound flows back to CL), and add the CSP-app pre-warning + removal notification surface (content TBD by design).</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering + Design &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Light</span> — A1, A2, A5, A8, B5. Three changes: (1) wire CL scheduler for P74 sweep, (2) emit system-source install-timeout event from CL → TAS closes candidate → existing flow resumes, (3) CSP-app pre-warning + removal notifications.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>Three wirings. <strong>(1)</strong> CL scheduler fires <code>processInstallTimeoutBatch()</code> on a recurring cadence (15-min default). <strong>(2)</strong> When the sweep finds a stuck connection, CL emits a new outbound event <code>ClSystemInstallTimeout</code> to TAS; TAS handler closes the active candidate to <code>INSTALLATION_REPORTED_FAILED</code> with <code>failure_reason=TIMEOUT_P74</code>, <code>failure_subreason_code=CSP_NO_SHOW</code>, <code>failure_subreason_source=SYSTEM</code>, <code>failure_subreason_confidence=HIGH</code>; TAS then emits the existing <code>EsInstallReportedFailed</code> downstream, which CL receives and runs the standard T3 transition (<code>PENDING_INSTALL → REQUESTED</code>). <strong>(3)</strong> CSP-app gets two notifications — a pre-warning at design-decided threshold (likely ~60h post-PENDING_INSTALL entry, content TBD) and a removal notification at 72h fire.</dd>
+    <dt>What triggered it?</dt>    <dd>Live evidence in QA: <strong>1,090 connections currently stuck in <code>PENDING_INSTALL</code> &gt; 72h</strong> (1,067 &gt; 7d, 784 &gt; 30d). <strong>373 TAS install candidates stuck active &gt; 72h</strong> in non-terminal states like <code>AWAITING_SLOT_PROPOSAL</code> (218), <code>AWAITING_CUSTOMER_OTP</code> (18), <code>FEE_COLLECTION_PENDING</code> (19). OS-prescribed P74 transitions per FM-CLO-02 + GAP-03 EDGE-1 are not firing.</dd>
+    <dt>Blast radius</dt>          <dd>CL service: scheduler config + new outbound event class + sweep refactor to publish-instead-of-direct-call. TAS service: new inbound handler that closes the candidate and emits the existing <code>EsInstallReportedFailed</code>. CSP App: two new notification events to consume (pre-warning + removal). No DB migration. No Customer App change.</dd>
+    <dt>Reversible?</dt>           <dd>Yes — emissions can be feature-flagged. Rollback = stop scheduling the sweep.</dd>
+    <dt>Money / PII / migration?</dt><dd>No / No / No. Going-forward only; the 373 stuck candidates can be cleaned up by the sweep on first run after deploy (or by a one-time manual nudge via the existing <code>POST /process-install-timeout</code> endpoint).</dd>
+    <dt>OS impact / sign-off?</dt> <dd>No OS amendments. CL OS already declares P74 + the canonical failure payload (L456, L633, L919). GAP-03 EDGE-1 (shipped) already specs the OS-aligned subreason payload for system-driven failures. ESR registration check needed for the new <code>ClSystemInstallTimeout</code> event class.</dd>
+    <dt>Tier</dt>                  <dd>Light</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why this exists, what's needed, who owns each piece.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and a link to the feature's original PRD / OS.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>P74 install-timeout sweep + TAS cascade + CSP-app communication</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft → For tech + design review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-06-10)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td><code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> §5.4 L456 (P74 = T_install_window = 72h), L633 (CSP_NO_SHOW → D&amp;A OS LOW_CONVERSION_PATTERN_DETECTED), L755 (FM-CLO-02 stuck-in-PENDING_INSTALL), L919-L922 (TIMEOUT_P74 enum + CSP_NO_SHOW subreason), L1465 (P74 timer starts on PENDING_INSTALL entry). GAP-03 EDGE-1 (already shipped) declares the OS-aligned payload for system-driven failures.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short problem statement. Observable trigger, who is affected, cost of leaving it.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>Three connected gaps. <strong>(1) Scheduler unwired.</strong> CL OS L456 declares P74's 72h backstop. <code>SchedulingServiceImpl.processInstallTimeoutBatch()</code> exists and correctly constructs the synthetic event with the OS-prescribed metadata. But no scheduler fires it — same root cause as <a href="./bug-01.html">BUG-01</a> (<code>AWS_SCHEDULER_ENABLED: false</code>, <code>scheduleRecurring(...)</code> never called). <strong>(2) TAS cascade missing.</strong> If the sweep did fire, CL's current handler runs T3 internally and emits <code>CL_STATE_CHANGED</code> to TAS. TAS's existing handler at <code>InboundEventProcessingServiceImpl.java:241</code> only acts on T11/T12 transitions (<code>UPSTREAM_RETRY_TRIGGERS = Set.of("T11","T12")</code>) — T3 lands in the "no action required" branch. The active install candidate stays orphan. <strong>(3) CSP-app communication absent.</strong> When the booking is removed, the CSP currently gets zero signal explaining why. Design WIP for pre-warning + removal notifications.</td></tr>
+    <tr><td>Who experiences it?</td><td><strong>Customer</strong>: connection sits indefinitely in <code>PENDING_INSTALL</code> with no resolution. <strong>CSP</strong>: booking either lingers in CSP-app for weeks despite never being completed, OR (post-fix) disappears suddenly with no warning unless the communication piece ships alongside. <strong>Quality OS</strong>: <code>CSP_NO_SHOW</code> pattern detection signal never fires per CL OS L633 — feeds <code>LOW_CONVERSION_PATTERN_DETECTED</code> per BDN-DA-01 silently broken. <strong>Live QA evidence (2026-06-10):</strong> 1,090 connections stuck in <code>PENDING_INSTALL</code> &gt; 72h (1,067 &gt; 7d, 784 &gt; 30d). 373 orphan TAS install candidates &gt; 72h in non-terminal states.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>OS-prescribed system-source install-failure path silently absent. Customer waits indefinitely; CSP gets no signal; Quality / D&amp;A pattern-detection blind. This is the "no invisible failure" anti-pattern (INV-DAO-13 in spirit; FM-CLO-02 in letter).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes → before → after → why</em>.</div>
+  <span class="row-mode req">All rows required</span>
+  <table class="delta">
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>CL scheduler — fire <code>processInstallTimeoutBatch()</code> on a recurring cadence (tech-call on HOW)</td>
+        <td>Sweep method exists at <code>SchedulingServiceImpl.java:53</code>. <code>InternalTaskController:30</code> exposes <code>POST /process-install-timeout</code>. Nothing schedules either. <code>AWS_SCHEDULER_ENABLED: false</code> in <code>application-prod.yml:18</code> + <code>application-qa.yml:21</code>. No <code>scheduleRecurring(...)</code> call anywhere.</td>
+        <td>Sweep fires on a recurring cadence (default 15 min — granularity is acceptable; finer is fine). PM is calling out the requirement; HOW (AWS EventBridge vs external cron vs alternative) is tech's call. Same shared infrastructure as <a href="./bug-01.html">BUG-01</a>.</td>
+        <td>Per CL OS L456 + FM-CLO-02, the 72h backstop is a constitutional requirement, not a "if we have time" item.</td>
+      </tr>
+      <tr>
+        <td>CL outbound event — new <code>ClSystemInstallTimeout</code></td>
+        <td>Sweep directly calls <code>handleInstallationFailed</code> on CL itself (no TAS round-trip). T3 fires but TAS never hears about the system-source failure — only sees a generic <code>CL_STATE_CHANGED</code> with no failure metadata.</td>
+        <td>Sweep instead publishes outbound <code>ClSystemInstallTimeout(connection_id, csp_id, timestamp, failure_reason=TIMEOUT_P74, failure_subreason_code=CSP_NO_SHOW, failure_subreason_source=SYSTEM, failure_subreason_confidence=HIGH)</code>. Routed to TAS service inbound (TAS owns the install-candidate state machine — that's where the closure must happen).</td>
+        <td>Matches the OS-prescribed payload taxonomy (CL OS L919, L633, GAP-03 EDGE-1). Keeps TAS as the canonical owner of <code>install_execution_candidates</code> state transitions — same as the CSP-reported flow.</td>
+      </tr>
+      <tr>
+        <td>TAS inbound handler — close orphan candidate on <code>ClSystemInstallTimeout</code></td>
+        <td>TAS does nothing on system-driven P74 timeouts. 373 candidates currently orphan in QA &gt; 72h.</td>
+        <td>TAS handler: find the active candidate for the connection. If found, transition to <code>INSTALLATION_REPORTED_FAILED</code> with the same payload metadata. Emit the existing <code>EsInstallReportedFailed</code> outbound (no new outbound class needed — same one CSP-reported failures use). If no active candidate (already terminal, idempotency case), no-op.</td>
+        <td>Reuses 100% of the existing CSP-reported failure cascade end-to-end. The only difference from a CSP-submitted failure is the trigger source — same payload, same downstream consumers, same terminal state.</td>
+      </tr>
+      <tr>
+        <td>CL inbound — process the existing <code>EsInstallReportedFailed</code> when source is SYSTEM</td>
+        <td>CL already handles <code>EsInstallReportedFailed</code>. The handler doesn't distinguish CSP-reported vs SYSTEM-source today — fires T3 either way. That's correct.</td>
+        <td>No change required. The standard T3 transition handles both sources identically. (This row exists in the delta to make explicit that the existing path is reused — the sweep refactor in row 2 hands off via the TAS → CL chain rather than going direct.)</td>
+        <td>No double-handling, no race. Single canonical path through the system regardless of failure source.</td>
+      </tr>
+      <tr>
+        <td>CSP-app — pre-warning notification at design-determined threshold</td>
+        <td>CSP sees the booking in their app. No signal that it's approaching auto-removal.</td>
+        <td>At a design-determined threshold (likely ~60h post-<code>PENDING_INSTALL</code> entry; exact timing + content owned by design), a notification fires to CSP App: "Booking X is approaching auto-removal — complete the install or report a failure." Channel (in-app banner vs push vs both) owned by design.</td>
+        <td>Avoids the "booking just disappeared" UX. Gives the CSP a window to act before the system declares <code>CSP_NO_SHOW</code>.</td>
+      </tr>
+      <tr>
+        <td>CSP-app — removal notification at 72h fire</td>
+        <td>If the booking ever did get removed, CSP gets no notification.</td>
+        <td>When the P74 sweep fires for a connection, in addition to the chain above, a removal notification fires to CSP App: "Booking X has been removed — install was not completed within 72h." Content owned by design.</td>
+        <td>Closes the loop. CSP sees what happened and why.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>Implementation choice for tech (Option 1 vs Option 2):</strong> the spec describes <em>Option 1</em> — CL emits <code>ClSystemInstallTimeout</code>; TAS closes the candidate and emits the existing <code>EsInstallReportedFailed</code>; CL processes that via its existing handler. <em>Option 2</em> would be: TAS reads <code>T3 + payload.source_os=SYSTEM</code> from the existing <code>CL_STATE_CHANGED</code> stream and acts on it without a new event class (saves the new outbound but requires TAS to learn a second protocol vs the CSP-reported path). Both produce the same OS-mandated outcomes. PM preference is Option 1 — preserves "one canonical flow, only the trigger differs." Tech may overrule if Option 2 is materially simpler given existing code.</div>
+  <div class="hint"><strong>Pre-warning timing + content (design WIP):</strong> The 60h pre-warning threshold is a placeholder. Design owns the final number and notification content. Two natural decisions: (a) <strong>One warning or escalating?</strong> Single notif at e.g. 60h, OR a series (e.g. 48h + 60h + 70h). (b) <strong>Channel:</strong> in-app banner only, push notification only, or both. PM expects design to land these before B5 sign-off.</div>
+  <div class="hint"><strong>Out of scope:</strong> Wiring the AWS EventBridge / IaC for the scheduler (cross-service infra gap shared with <a href="./bug-01.html">BUG-01</a> and <a href="./bug-02.html">BUG-02</a> — tech's responsibility, not scoped per-spec). Customer App notification on the same event (this gap is CSP-app-only; if the customer needs notification too, that's a separate Customer App spec). One-time backfill / cleanup of the 373 orphan candidates currently in QA (running the sweep after deploy resolves them naturally; explicit backfill not required).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius. Every "Yes" needs a consulted owner and a sign-off status.</div>
+  <span class="row-mode req">All rows required</span>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Notes</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>CL OS</td><td>No</td><td>P74 + FM-CLO-02 + TIMEOUT_P74 enum already specced (L456, L755, L919). v1.0 of this spec wires what the OS already declares — no amendment.</td><td>CL OS owner (informational)</td><td>—</td></tr>
+      <tr><td>TAS / Installation Flow OS</td><td>No</td><td>The <code>INSTALLATION_REPORTED_FAILED</code> terminal already exists. <code>failure_subreason_code = CSP_NO_SHOW</code> already in the enum (CL OS L578, L922, L1071 + ESR registration). v1.0 of this spec wires the SYSTEM-source path to use the same terminal — no new states, no amendment.</td><td>Installation Flow OS owner</td><td>—</td></tr>
+      <tr><td>Quality OS</td><td>No</td><td>BDN-CL-02 pattern detection consumes <code>failure_subreason_code = CSP_NO_SHOW</code> events. Currently silently broken because the events never fire. Post-fix, Quality OS will start receiving them — that's restoration of the OS-prescribed signal, not a contract change.</td><td>Quality OS owner (informational — restoration of expected signal)</td><td>—</td></tr>
+      <tr><td>D&amp;A OS</td><td>No</td><td>Per CL OS L633: <code>CSP_NO_SHOW</code> → feeds <code>LOW_CONVERSION_PATTERN_DETECTED</code>. Same restoration story as Quality OS.</td><td>D&amp;A OS owner (informational)</td><td>—</td></tr>
+      <tr><td>ESR (Event Schema Registry)</td><td>Verify</td><td>Confirm the new <code>ClSystemInstallTimeout</code> event class is registered with the canonical payload shape: <code>(event_id, connection_id, csp_id, timestamp, failure_reason, failure_subreason_code, failure_subreason_source, failure_subreason_confidence)</code>. If Option 2 is chosen (no new event), this row becomes "No impact."</td><td>ESR owner</td><td>Pending — verification</td></tr>
+      <tr><td>CSP App spec</td><td>Yes</td><td>Two new notification event consumers (pre-warning + removal). Content/timing/channel owned by design. PM declares the WHAT; design declares the HOW + COPY.</td><td>Design + CSP-app PM</td><td>Pending — design landing</td></tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>Relationship with BUG-01 and BUG-02:</strong> All three items share the same AWS EventBridge / scheduler infrastructure gap. BUG-01 wires P75 / P76 / P77 / P78. BUG-02 wires P191. GAP-06 wires P74. Tech should ship the scheduler infrastructure once and register all five batches together — the per-spec scope is "PM declares the requirement," not "PM dictates the AWS topology."</div>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Verification layer for engineering build and test. Light tier keeps only B5.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic and use / edge cases. Plus a coverage matrix that reads "all covered" or "N/A" on every class. <strong>Negative checks are first-class</strong> — every Verify block explicitly asserts what must NOT be present (orphan candidate not in non-terminal; sweep not double-firing; notification not duplicated). <em>v1.0 scope:</em> §A6 (Must-Not-Change) and B5 REGRESSION blocks intentionally omitted per the gap-05 v1.2 convention.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Stuck connection &gt; 72h → sweep fires → emits ClSystemInstallTimeout
+  <em>Real-world:</em> CSP took the booking, never finished the install. 72h elapses. The
+  CL sweep finds it, declares CSP_NO_SHOW, and emits the system-source event for TAS.
+
+  <span class="kw">Given</span> a connection in csp_connection_lifecycle_service.public.connections
+        with current_state = 'PENDING_INSTALL'
+        AND state_timestamp &lt; now() - INTERVAL '72 hours'
+  <span class="kw">When</span>  the P74 sweep runs (per the wired scheduler cadence)
+  <span class="kw">Then</span>  CL publishes a ClSystemInstallTimeout outbound event
+        with payload carrying the OS-prescribed metadata
+  <span class="kw">And</span>   the event lands in the CL outbox via the existing @TransactionalEventListener wiring
+  <span class="kw">And</span>   the event is delivered to TAS service (no HTTP 400)
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS / CL outbox</strong> — public.outbox_record (CL DB csp_connection_lifecycle_service)
+        WHERE record_type LIKE '%ClSystemInstallTimeout%'
+          AND payload::text LIKE '%' || &lt;test connection_id&gt; || '%'
+          AND created_at &gt; &lt;sweep firing timestamp&gt;
+        → expect exactly 1 row, status = 'COMPLETED'
+    • <strong>Payload field check</strong> — same row's payload
+        → expect failure_reason = 'TIMEOUT_P74'
+        → expect failure_subreason_code = 'CSP_NO_SHOW'
+        → expect failure_subreason_source = 'SYSTEM'
+        → expect failure_subreason_confidence = 'HIGH'
+        → expect csp_id matches the CSP currently assigned to this connection
+    • <strong>Service logs (CL)</strong> — grep for "P74 install timeout batch: processed N"
+        where N &gt;= 1 for the sweep run containing this connection_id</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> TAS handler closes the orphan candidate to INSTALLATION_REPORTED_FAILED
+  <em>Real-world:</em> the OS-canonical terminal. Same as if the CSP had submitted the
+  failure via app — same fields, same downstream consumers, same dashboard buckets.
+
+  <span class="kw">Given</span> ClSystemInstallTimeout arrives at TAS for connection &lt;test connection_id&gt;
+  <span class="kw">And</span>   the connection has an active (non-terminal) install candidate
+  <span class="kw">When</span>  TAS handler processes the event
+  <span class="kw">Then</span>  the candidate transitions to INSTALLATION_REPORTED_FAILED
+  <span class="kw">And</span>   the candidate row carries the payload metadata: failure_reason,
+        failure_subreason_code, failure_subreason_source, failure_subreason_confidence
+  <span class="kw">And</span>   TAS emits the existing EsInstallReportedFailed outbound event
+
+  <span class="kw">Verify:</span>
+    • <strong>TAS candidate (positive)</strong> — public.install_execution_candidates (TAS DB csp_tas_service)
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect current_state = 'INSTALLATION_REPORTED_FAILED'
+        → expect failure_reason = 'TIMEOUT_P74'
+        → expect failure_subreason_code = 'CSP_NO_SHOW'
+        → expect failure_subreason_source = 'SYSTEM'
+        → expect failure_subreason_confidence = 'HIGH'
+    • <strong>TAS transition log</strong> — public.install_state_transition_log
+        WHERE execution_candidate_id = &lt;active candidate id&gt;
+        ORDER BY occurred_at DESC LIMIT 1
+        → expect to_state = 'INSTALLATION_REPORTED_FAILED'
+        → expect actor_type = 'OS_SIGNAL' (or similar — verify against the existing TAS convention)
+    • <strong>TAS outbox (negative for late-arrivals)</strong> — public.outbox_record (TAS DB)
+        WHERE record_type LIKE '%EsInstallReportedFailed%'
+          AND payload::text LIKE '%' || &lt;test connection_id&gt; || '%'
+        → expect exactly 1 row (not 2 — no double-emit even if TAS retries)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> CL receives EsInstallReportedFailed and runs the standard T3 transition
+  <em>Real-world:</em> the cascade closes the loop. Connection goes back to REQUESTED
+  for D&amp;A retry — same path as a CSP-reported install failure.
+
+  <span class="kw">Given</span> EsInstallReportedFailed arrives at CL for &lt;test connection_id&gt;
+  <span class="kw">And</span>   the connection is in current_state = 'PENDING_INSTALL'
+  <span class="kw">When</span>  CL handleInstallationFailed processes the event
+  <span class="kw">Then</span>  CL fires T3: PENDING_INSTALL → REQUESTED
+  <span class="kw">And</span>   retry_count increments
+  <span class="kw">And</span>   CL emits CL_STATE_CHANGED to DAS for retry-reroute
+
+  <span class="kw">Verify:</span>
+    • <strong>CL state</strong> — public.connections (CL DB)
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect current_state = 'REQUESTED' (or downstream of retry)
+        → expect retry_count incremented by exactly 1
+    • <strong>CL event history</strong> — public.connection_event_history
+        WHERE connection_id = &lt;test connection_id&gt;
+          AND event_type = 'INSTALLATION_FAILED'
+          AND source_os = 'SYSTEM'
+        → expect 1 row, previous_state = 'PENDING_INSTALL', resulting_state = 'REQUESTED'
+    • <strong>Downstream (D&amp;A side)</strong> — DAS allocation_audit_log eventually
+        shows a new CL_RETRY_REROUTE entry for this connection (with the failed
+        CSP now in the P51 cooldown list, per GAP-05 LOGIC-1 behaviour)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> CSP-app pre-warning fires at design-determined threshold
+  <em>Real-world:</em> CSP sees an in-app banner OR push notification (design-decided
+  channel) telling them their booking is approaching auto-removal. They still have
+  time to complete the install or report a failure.
+
+  <span class="kw">Given</span> a connection in PENDING_INSTALL with state_timestamp &lt; now() - INTERVAL '60 hours'
+        (60h is a placeholder — design owns the final threshold)
+  <span class="kw">And</span>   no pre-warning has already been sent for this connection
+  <span class="kw">When</span>  the pre-warning sweep evaluates this connection
+  <span class="kw">Then</span>  a pre-warning notification fires to the CSP App for the assigned CSP
+  <span class="kw">And</span>   the notification carries: connection_id, time_remaining, suggested action
+
+  <span class="kw">Verify:</span>
+    • <strong>CSP-app event</strong> — wherever CSP-app notifications are recorded
+        (CleverTap publisher outbox, push notification log, or in-app feed table —
+         exact surface owned by design)
+        → expect exactly 1 pre-warning record per connection for this run
+        → payload includes the 3 fields above
+    • <strong>Idempotency</strong> — a second sweep run within the 60-72h window
+        does NOT fire a second pre-warning for the same connection
+        (track via outbox idempotency key, or a flag on the connection row,
+         or a separate sent-notification table — implementation owned by tech)
+    • <strong>Content + channel (design TBD)</strong> — exact wording + UI surface
+        marked verifiable once design lands</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> CSP-app removal notification at 72h fire
+  <em>Real-world:</em> alongside the P74 transition and candidate closure, the CSP gets
+  a final notification: "Booking X has been removed."
+
+  <span class="kw">Given</span> a connection that the P74 sweep is firing on (state_timestamp &gt; 72h)
+  <span class="kw">When</span>  the sweep emits ClSystemInstallTimeout
+  <span class="kw">Then</span>  a removal notification ALSO fires to the CSP App
+        (either as a sibling event from the sweep, OR derived by CSP-app from
+         the same ClSystemInstallTimeout — implementation owned by tech)
+  <span class="kw">And</span>   the booking disappears from the CSP App's active-list view
+
+  <span class="kw">Verify:</span>
+    • <strong>CSP-app event</strong> — notification record for the removal fires once per
+        connection per sweep firing
+    • <strong>CSP App active-list view</strong> — open the app for the test CSP OR
+        call the partner-facing active-bookings API
+        → the removed connection_id is NOT in the response
+    • <strong>Negative</strong> — no removal notification fires for connections that
+        have not actually been removed (e.g. those still in the warning window
+        between 60-72h)</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Sweep cadence boundary — connection ages just past 72h
+  <em>Real-world:</em> with a 15-min sweep cadence, a connection that crosses 72h
+  precisely between sweeps fires on the next run. Up to 15-min lag is acceptable.
+
+  <span class="kw">Given</span> a connection whose state_timestamp puts it at exactly 72h:00m:00s
+        (it just crossed the threshold)
+  <span class="kw">When</span>  the next sweep run executes
+  <span class="kw">Then</span>  the sweep finds and processes this connection
+  <span class="kw">And</span>   the total lag (state_timestamp + 72h) → (sweep fire time) is &lt; 15 min
+
+  <span class="kw">Verify:</span>
+    • <strong>Lag metric</strong> — for the first sweep firing per deploy, measure
+        the median lag from "72h after state_timestamp" to "ClSystemInstallTimeout
+        outbox row created_at" → expect &lt; 15 min on a 15-min cadence</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Candidate already terminal when sweep fires (race / idempotency)
+  <em>Real-world:</em> the CSP submits an install-complete or install-failure event right
+  as the sweep is processing. TAS already closed the candidate. ClSystemInstallTimeout
+  arrives late — must be a no-op, not a spurious transition.
+
+  <span class="kw">Given</span> ClSystemInstallTimeout arrives at TAS for &lt;test connection_id&gt;
+  <span class="kw">And</span>   the install candidate is already in a terminal state
+        (INSTALLATION_REPORTED_FAILED, INSTALLATION_COMPLETED, CANCELLED_BY_*)
+  <span class="kw">When</span>  TAS handler processes the event
+  <span class="kw">Then</span>  the handler is a no-op
+  <span class="kw">And</span>   no spurious state transition is written
+  <span class="kw">And</span>   no second EsInstallReportedFailed is emitted
+
+  <span class="kw">Verify:</span>
+    • <strong>TAS candidate (negative)</strong> — public.install_execution_candidates
+        WHERE connection_id = &lt;test connection_id&gt;
+        → expect current_state unchanged from pre-event value
+        → expect updated_at unchanged (no spurious write)
+    • <strong>TAS transition log (negative)</strong> — public.install_state_transition_log
+        WHERE execution_candidate_id = &lt;candidate id&gt;
+          AND occurred_at &gt; &lt;event arrival timestamp&gt;
+        → expect 0 new rows
+    • <strong>TAS outbox (negative)</strong> — no new EsInstallReportedFailed row
+        emitted for this connection in the relevant window</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Duplicate ClSystemInstallTimeout delivery (broker retry)
+  <em>Real-world:</em> message broker delivers the same event twice. TAS handler must
+  process exactly once.
+
+  <span class="kw">Given</span> the same ClSystemInstallTimeout event (same event_id) is delivered twice
+        to TAS for &lt;test connection_id&gt;
+  <span class="kw">When</span>  TAS processes both deliveries
+  <span class="kw">Then</span>  exactly one transition occurs
+  <span class="kw">And</span>   exactly one EsInstallReportedFailed is emitted
+
+  <span class="kw">Verify:</span>
+    • <strong>TAS transition log</strong> — expect exactly 1 transition row
+        for the candidate in the relevant window
+    • <strong>TAS outbox</strong> — exactly 1 EsInstallReportedFailed row,
+        not 2 — relies on TAS's existing idempotency guard
+    • <strong>CSP-app notification</strong> — exactly 1 removal notification
+        fires, not 2 (idempotency on the CSP-app receiver side)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> CSP completes install just before P74 cutoff
+  <em>Real-world:</em> CSP submits CUSTOMER_INSTALLATION_CONFIRMED right at 71h:50m.
+  The connection transitions to ACTIVE before the next sweep run. Sweep must not
+  touch already-active connections.
+
+  <span class="kw">Given</span> a connection that transitions out of PENDING_INSTALL
+        (e.g. to ACTIVE on customer confirmation, or back to REQUESTED on CSP failure)
+        before the next sweep run
+  <span class="kw">When</span>  the sweep runs
+  <span class="kw">Then</span>  this connection is NOT found by the sweep's query
+        (the query filters on current_state = 'PENDING_INSTALL')
+  <span class="kw">And</span>   no ClSystemInstallTimeout fires for this connection
+
+  <span class="kw">Verify:</span>
+    • <strong>CL outbox (negative)</strong> — no ClSystemInstallTimeout for &lt;test connection_id&gt;
+        after the connection moved out of PENDING_INSTALL
+    • <strong>Connection state</strong> — public.connections
+        → confirm current_state moved out of PENDING_INSTALL before the sweep run</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1, 2, 3 (sweep + TAS cascade + CL T3) + rows 5, 6 (CSP-app communication)</td><td>5 logic lines</td><td>LOGIC-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>—</td><td>N/A (no computation — boolean state checks)</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..4 (cadence boundary, terminal-race, replay, just-in-time completion)</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>§A6 + B5 REGRESSION blocks omitted by PM convention (per gap-05 v1.2)</td><td>—</td><td>—</td><td>N/A (scope decision)</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A8, B5) filled — §A6 omitted by PM convention</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" or "N/A" on every class</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Negative checks present on every Verify block where a "must not" exists</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes" has sign-off Received</td><td class="check">Pending (ESR registration + design landing)</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Live schema verified for every Verify block (information_schema check)</td><td class="check">✓</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code + schema evidence (verified 2026-06-10):</strong>
+    <ul>
+      <li><strong>Parameter:</strong> <code>services/csp-connection-lifecycle-service/src/main/java/io/wiom/csp/connection_lifecycle/infrastructure/config/ConnectionLifecycleParameters.java:23</code> — <code>p74InstallWindow = Duration.ofHours(72)</code></li>
+      <li><strong>Sweep method:</strong> <code>SchedulingServiceImpl.java:53</code> — <code>processInstallTimeoutBatch()</code> constructs the synthetic <code>InstallationFailed</code> event with the OS-prescribed metadata (<code>TIMEOUT_P74</code>, <code>CSP_NO_SHOW</code>, <code>SYSTEM</code>, <code>HIGH</code>)</li>
+      <li><strong>HTTP endpoint:</strong> <code>InternalTaskController.java:30</code> — <code>POST /process-install-timeout</code> (works via curl today; just not scheduled)</li>
+      <li><strong>CL handler:</strong> <code>InboundEventProcessingServiceImpl.java:371</code> — <code>handleInstallationFailed(InstallationFailed event)</code> already runs the T3 transition correctly</li>
+      <li><strong>TAS handler (gap site):</strong> <code>services/csp-tas-service/src/main/java/io/wiom/csp/tas/install/application/impl/InboundEventProcessingServiceImpl.java:77</code> — <code>UPSTREAM_RETRY_TRIGGERS = Set.of("T11","T12")</code>; line 241 logs "no action required" on T3</li>
+      <li><strong>Scheduler config:</strong> <code>application-prod.yml:18</code> + <code>application-qa.yml:21</code> — <code>AWS_SCHEDULER_ENABLED: false</code></li>
+      <li><strong>OS reference — CL OS L456 / L633 / L755 / L919:</strong> P74 default 72h, CSP_NO_SHOW downstream signal, FM-CLO-02 failure mode, TIMEOUT_P74 enum (system-source only)</li>
+      <li><strong>OS reference — GAP-03 EDGE-1 (already shipped):</strong> declares the OS-aligned payload for system-driven failures (<code>failure_reason=TIMEOUT_P74</code>, <code>failure_subreason_code=CSP_NO_SHOW</code>, <code>failure_subreason_source=SYSTEM</code>)</li>
+      <li><strong>Live evidence (2026-06-10):</strong> 1,090 stuck PENDING_INSTALL &gt; 72h · 373 orphan TAS install candidates &gt; 72h in non-terminal states · 218 of those in <code>AWAITING_SLOT_PROPOSAL</code>, 18 in <code>AWAITING_CUSTOMER_OTP</code>, 19 in <code>FEE_COLLECTION_PENDING</code></li>
+      <li><strong>Sibling gap items:</strong> <a href="./bug-01.html">BUG-01</a> (CL P75/P76/P77 — same scheduler infra) · <a href="./bug-02.html">BUG-02</a> (DAS P191 — same scheduler infra)</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-10</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Three coordinated changes: (1) CL P74 scheduler wired (sweep batch + endpoint + handler all exist; just need to fire on a recurring cadence — HOW is tech's call), (2) TAS cascade via Option 1 (CL emits new <code>ClSystemInstallTimeout</code> → TAS closes candidate to <code>INSTALLATION_REPORTED_FAILED</code> with OS-prescribed metadata → existing <code>EsInstallReportedFailed</code> path resumes), (3) CSP-app pre-warning + removal notifications (timing/channel/content owned by design). Anchor confirmed at <code>PENDING_INSTALL</code> entry per code + FM-CLO-02. Live QA evidence: 1,090 stuck connections &gt; 72h + 373 orphan TAS candidates. All Verify blocks grounded in <code>information_schema.columns</code> check against QA Postgres (2026-06-10). §A6 + B5 REGRESSION omitted per gap-05 v1.2 PM convention. Sibling to BUG-01 (CL P75/P76/P77) and BUG-02 (DAS P191) — shared scheduler infrastructure gap, separate per-parameter spec scope.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+</body>
+</html>

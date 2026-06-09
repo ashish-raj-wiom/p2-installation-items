@@ -110,6 +110,7 @@ const GAPS = [
   { id: 'gap-03', num: 'GAP-03', short: 'Failure sub-reason (OS-aligned)' },
   { id: 'gap-04', num: 'GAP-04', short: 'DAS single-CSP zone events' },
   { id: 'gap-05', num: 'GAP-05', short: 'No repeat allocation after install-failure' },
+  { id: 'gap-06', num: 'GAP-06', short: 'P74 install-timeout sweep + cascade' },
 ];
 
 // ----------------------------------------------------------------------------
