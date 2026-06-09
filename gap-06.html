@@ -128,6 +128,8 @@
     <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
     <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
     <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#workflow"><span class="ix">WF.</span>Workflow — sweep + cascade</a></li>
+    <li><a href="#wired"><span class="ix">WR.</span>What's wired / what's not</a></li>
     <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
   </ol>
   <h2 class="how">Part B — HOW (detailing)</h2>
@@ -247,14 +249,101 @@
       <tr>
         <td>CSP-app — removal notification at 72h fire</td>
         <td>If the booking ever did get removed, CSP gets no notification.</td>
-        <td>When the P74 sweep fires for a connection, in addition to the chain above, a removal notification fires to CSP App: "Booking X has been removed — install was not completed within 72h." Content owned by design.</td>
+        <td>When the P74 sweep fires for a connection, in addition to the chain above, a removal notification fires to CSP App: "Booking X has been removed — install was not completed within 72h." Content owned by design. Delivery mechanism is the Updates-section entry + CleverTap push (rows 7 + 8 below).</td>
         <td>Closes the loop. CSP sees what happened and why.</td>
+      </tr>
+      <tr>
+        <td>Backend — write entry to CSP-app Updates section on overdue trigger</td>
+        <td>No backend write to the in-app Updates feed when a booking goes overdue. CSP has no in-app activity record of the removal.</td>
+        <td>When the P74 sweep fires for a connection (the "going overdue" moment), the backend writes a new entry to the CSP's Updates feed for that booking with the system reason (<code>TIMEOUT_P74</code> / <code>CSP_NO_SHOW</code>). The Updates feed is the in-app activity surface the CSP already reads. The entry includes connection_id, the OS-prescribed reason, and a short description (content owned by design). Same pattern is also used at the pre-warning threshold (~60h, design TBD) so the CSP sees both the warning and the eventual removal in one place.</td>
+        <td>Gives the CSP a durable in-app record of the threshold event. Survives push-notification miss/dismissal. Aligns with the existing CSP-app pattern where state-affecting events land in Updates as the canonical activity log.</td>
+      </tr>
+      <tr>
+        <td>Backend — trigger CleverTap push notification when Updates entry is created</td>
+        <td>No push on this event today. CSP only finds out next time they open the app and notice the booking is gone.</td>
+        <td>Backend creation of the Updates entry (row 7) triggers a CleverTap push notification to the assigned CSP's device. PN payload includes deep-link to the Updates entry; content + template owned by design. Same mechanism for the pre-warning push (different copy). Idempotency: each Updates entry produces exactly one PN (one event = one creation = one PN trigger).</td>
+        <td>Out-of-app surface so the CSP gets the signal without having to be in the app at the moment of the threshold crossing.</td>
       </tr>
     </tbody>
   </table>
   <div class="hint"><strong>Implementation choice for tech (Option 1 vs Option 2):</strong> the spec describes <em>Option 1</em> — CL emits <code>ClSystemInstallTimeout</code>; TAS closes the candidate and emits the existing <code>EsInstallReportedFailed</code>; CL processes that via its existing handler. <em>Option 2</em> would be: TAS reads <code>T3 + payload.source_os=SYSTEM</code> from the existing <code>CL_STATE_CHANGED</code> stream and acts on it without a new event class (saves the new outbound but requires TAS to learn a second protocol vs the CSP-reported path). Both produce the same OS-mandated outcomes. PM preference is Option 1 — preserves "one canonical flow, only the trigger differs." Tech may overrule if Option 2 is materially simpler given existing code.</div>
   <div class="hint"><strong>Pre-warning timing + content (design WIP):</strong> The 60h pre-warning threshold is a placeholder. Design owns the final number and notification content. Two natural decisions: (a) <strong>One warning or escalating?</strong> Single notif at e.g. 60h, OR a series (e.g. 48h + 60h + 70h). (b) <strong>Channel:</strong> in-app banner only, push notification only, or both. PM expects design to land these before B5 sign-off.</div>
   <div class="hint"><strong>Out of scope:</strong> Wiring the AWS EventBridge / IaC for the scheduler (cross-service infra gap shared with <a href="./bug-01.html">BUG-01</a> and <a href="./bug-02.html">BUG-02</a> — tech's responsibility, not scoped per-spec). Customer App notification on the same event (this gap is CSP-app-only; if the customer needs notification too, that's a separate Customer App spec). One-time backfill / cleanup of the 373 orphan candidates currently in QA (running the sweep after deploy resolves them naturally; explicit backfill not required).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="workflow">
+  <h2><span class="num">WF.</span> Workflow — sweep + cascade <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A visual + step-by-step trace of how the P74 sweep cascades end-to-end. Same shape as the workflow section in <a href="./bug-01.html#workflow">BUG-01</a>, tailored for GAP-06's specific flow.</div>
+
+  <h3>State flow — where P74 sits in the CL state machine</h3>
+  <p>The diagram below is the CL state machine, with the P74-driven transition highlighted alongside its sibling transitions. P74 acts as a self-correcting backstop on <code>PENDING_INSTALL</code> — it pushes the connection back to <code>REQUESTED</code> via T3 (the standard install-failure retry path), then D&amp;A retries. If retries exhaust (per P78), T12 escalates to <code>PENDING_DEACTIVATION</code>.</p>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> REQUESTED: CONNECTION_REQUEST
+    REQUESTED --> PENDING_INSTALL: ALLOCATION_ACCEPTED (T1)
+    PENDING_INSTALL --> PENDING_INSTALL: ~60h pre-warning (no state change)
+    PENDING_INSTALL --> REQUESTED: P74 sweep 72h - TIMEOUT_P74 (T3 via TAS cascade)
+    PENDING_INSTALL --> ACTIVE: customer confirmation (T2)
+    PENDING_INSTALL --> REQUESTED: CSP-reported install failure (T3)
+    PENDING_INSTALL --> PENDING_DEACTIVATION: P78 retry exhausted (T12)
+    REQUESTED --> DEACTIVATED: P75 sweep 7d (T9)
+    ACTIVE --> [*]
+  </div>
+
+  <h3>Cross-service cascade — what fires when the sweep finds a stuck connection</h3>
+  <p>The order of operations matters. The cascade reuses the existing CSP-reported failure flow end-to-end — the only difference is the trigger source (system sweep vs CSP app submission).</p>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Sched as Scheduler (15-min)
+    participant CL as CL Service
+    participant TAS as TAS Service
+    participant DAS as DAS Service
+    participant CSP as CSP App
+    participant CT as CleverTap
+
+    Sched->>CL: invoke processInstallTimeoutBatch()
+    CL->>CL: find connections in PENDING_INSTALL > 72h
+
+    Note over CL: For each stuck connection:
+    CL->>TAS: emit ClSystemInstallTimeout<br/>(failure_reason=TIMEOUT_P74,<br/>subreason=CSP_NO_SHOW,<br/>source=SYSTEM, confidence=HIGH)
+    TAS->>TAS: transition candidate to INSTALLATION_REPORTED_FAILED
+    TAS->>CL: emit EsInstallReportedFailed (existing event)
+    CL->>CL: handleInstallationFailed - T3 fires<br/>(PENDING_INSTALL to REQUESTED)
+    CL->>DAS: emit CL_STATE_CHANGED
+    DAS->>DAS: re-route (failed CSP excluded via P51 + P195)
+    CL->>CSP: write Updates feed entry
+    CL->>CT: trigger push notification
+    CT->>CSP: deliver push to assigned CSP device
+  </div>
+
+  <h3>Pre-warning sweep — separate evaluation, no state change</h3>
+  <p>The pre-warning at the ~60h threshold (design-determined) is a separate evaluation. It does NOT transition state — it only writes the Updates entry and fires the push notification. Implementation can be: (a) a second sweep on the same cadence with a different cutoff, or (b) the same sweep with conditional logic on age-band. Either is acceptable; tech picks.</p>
+
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="wired">
+  <h2><span class="num">WR.</span> What's wired, what's not (8 layers) <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Per-layer audit against <code>services/csp-connection-lifecycle-service</code> and <code>services/csp-tas-service</code> source. Same style as <a href="./bug-01.html#wired">BUG-01 layer audit</a>. Layers 1–4 are in place and reachable; the gap sits in layers 5–8.</div>
+
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:24%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Parameter declared</td><td><code>ConnectionLifecycleParameters.java:23</code> — <code>p74InstallWindow = Duration.ofHours(72)</code>. Tier-2 SPR parameter; matches CL OS L456 default.</td></tr>
+      <tr><td>2</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Sweep batch method</td><td><code>SchedulingServiceImpl.java:53</code> — <code>processInstallTimeoutBatch()</code>. Queries <code>connectionRepository.findByStateOlderThan(PENDING_INSTALL, cutoff)</code>. Constructs synthetic <code>InstallationFailed</code> event with the OS-prescribed metadata (<code>TIMEOUT_P74</code>, <code>CSP_NO_SHOW</code>, <code>SYSTEM</code>, <code>HIGH</code>) per <code>FailureSubreasonCode</code> enum.</td></tr>
+      <tr><td>3</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Internal HTTP wrapper</td><td><code>InternalTaskController.java:30</code> — <code>POST /process-install-timeout</code>. <strong>curl against this works today</strong> — can be used as the interim trigger path before the AWS scheduler lands.</td></tr>
+      <tr><td>4</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>CL transition handler + state machine</td><td><code>InboundEventProcessingServiceImpl.java:371</code> — <code>handleInstallationFailed(InstallationFailed event)</code>. Runs T3 (<code>PENDING_INSTALL → REQUESTED</code>), increments retry_count, writes <code>connection_event_history</code>, emits outbound <code>ClConnectionDeactivated</code> / <code>CL_STATE_CHANGED</code>.</td></tr>
+      <tr><td>5</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Service-side scheduler wiring</td><td><strong>Same gap as <a href="./bug-01.html#wired">BUG-01 layers 7-8</a>.</strong> <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> exists as a class in CL but is never called. <code>AWS_SCHEDULER_ENABLED: false</code> in <code>application-prod.yml:18</code> + <code>application-qa.yml:21</code>. No <code>@PostConstruct</code> / <code>CommandLineRunner</code> registers the P74 batch (or P75 / P76 / P77 / P78 — they're siblings on the same scheduler). Once the scheduler is wired, all five sweeps fire together — no per-parameter wiring beyond registering the batch.</td></tr>
+      <tr><td>6</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>CL → TAS outbound event class</td><td>No <code>ClSystemInstallTimeout</code> record class in <code>services/csp-connection-lifecycle-service/.../domain/event/outbound/</code>. New class needed with the OS-prescribed payload (per §A5 row 2). Add an <code>EventSender</code> listener method to schedule to outbox — same pattern as existing CL outbound events (<code>ClConnectionRequested</code>, <code>ClConnectionDeactivated</code>, etc.).</td></tr>
+      <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>TAS inbound handler for system-source install timeout</td><td>TAS does NOT handle T3 transitions today — <code>InboundEventProcessingServiceImpl.java:241</code> only acts on T11/T12 (<code>UPSTREAM_RETRY_TRIGGERS = Set.of("T11","T12")</code>). New inbound endpoint + handler needed for <code>ClSystemInstallTimeout</code>. Handler closes the active candidate to <code>INSTALLATION_REPORTED_FAILED</code> with the payload metadata and emits the existing <code>EsInstallReportedFailed</code> outbound (no new outbound class needed on TAS side).</td></tr>
+      <tr><td>8</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>CSP-app communication (Updates + CleverTap PN)</td><td>Two backend wirings: <strong>(a)</strong> writing an entry to the CSP-app Updates feed when the overdue trigger fires (per §A5 row 7); <strong>(b)</strong> firing a CleverTap push notification when the Updates entry is created (per §A5 row 8). Content + push template owned by design. Same pattern at the pre-warning threshold (~60h, separate evaluation per the workflow above).</td></tr>
+    </tbody>
+  </table>
+
+  <div class="hint"><strong>Interim path that ships value before AWS infra lands:</strong> The <code>InternalTaskController</code> <code>POST /process-install-timeout</code> endpoint already works (layer 3). An external Lambda / GitHub Actions cron / k8s CronJob can <code>curl</code> the endpoint every 15 min and drive the full downstream chain — same idea as the BUG-01 interim path. Once the new outbound + TAS handler ship (layers 6 + 7) and the Updates / CT wiring lands (layer 8), the cascade is end-to-end without waiting for the AWS EventBridge work.</div>
+
   <hr class="sect-end">
 </section>
 
@@ -551,5 +640,11 @@
 
 </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
 </body>
 </html>
