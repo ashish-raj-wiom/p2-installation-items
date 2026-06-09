@@ -204,13 +204,13 @@
   <tbody>
     <tr>
       <td><strong>TC-1.</strong> When an allocation exhausts P50 routing retries (5 attempts), then it lands in <code>UNASSIGNED</code> held state.</td>
-      <td class="expected">DAS writes <code>UNASSIGNED</code> + <code>p50_exhausted_at = now()</code>.</td>
-      <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>.</td>
+      <td class="expected">DAS writes <code>allocation_state = 'UNASSIGNED'</code>, <code>csp_id = NULL</code>, <code>retry_count = 5</code>, and bumps <code>updated_at</code>.</td>
+      <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>. Currently 778 such rows in QA (baseline includes pre-sweep stale ones).</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify (baseline still holds after fix):</strong>
       <ul>
-        <li><strong>DB</strong> — <code>csp_demand_allocation_service.connection_allocations</code> WHERE <code>retry_count &gt;= 5</code> → expect <code>state = 'UNASSIGNED'</code> and <code>p50_exhausted_at IS NOT NULL</code> (existing behaviour preserved)</li>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.public.connection_allocations</code> WHERE <code>retry_count = 5</code> AND <code>allocation_state = 'UNASSIGNED'</code> AND <code>csp_id IS NULL</code> → expect rows present (existing behaviour preserved). Note: schema has no <code>p50_exhausted_at</code> column; <code>updated_at</code> is the time anchor.</li>
       </ul>
     </td></tr>
     <tr>
@@ -221,22 +221,23 @@
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>state = 'UNASSIGNED'</code> AND <code>retry_count &lt; 5</code> → count drops as sweeps run (some get re-routed and move to <code>ASSIGNED</code> → <code>ACCEPTED</code>)</li>
-        <li><strong>DAS service logs</strong> — grep for <code>"Held allocation sweep: re-routing connectionId="</code> → expect entries on each sweep run</li>
-        <li><strong>Outbox</strong> — when re-routing succeeds, <code>outbox_record</code> contains <code>ALLOCATION_ACCEPTED</code> events, status = 'DELIVERED'</li>
-        <li><strong>Cross-service</strong> — CL side: <code>connections</code> with these <code>connection_id</code>s transition <code>REQUESTED → PENDING_INSTALL</code> (CL T1 fires)</li>
+        <li><strong>DB (baseline pre-sweep)</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>updated_at &lt; now() - interval '24 hours'</code> → today: 230 rows in prod (oldest &gt; 24h). After sweep wires: count drops as held rows get re-attempted.</li>
+        <li><strong>DB (positive)</strong> — same table WHERE <code>allocation_state IN ('ACCEPTED','ASSIGNED')</code> AND <code>updated_at &gt; &lt;deploy timestamp&gt;</code> AND <code>previous_csp_id IS NOT NULL</code> → expect rows present (re-routing successes).</li>
+        <li><strong>DAS service logs</strong> — grep for <code>"Held allocation sweep"</code> entries → expect log lines on each sweep run.</li>
+        <li><strong>Outbox</strong> — when re-routing succeeds, <code>outbox_record</code> contains records ending in <code>AllocationAccepted</code>, status = <code>'COMPLETED'</code>.</li>
+        <li><strong>Cross-service</strong> — CL side: <code>connections</code> with these <code>connection_id</code>s transition <code>REQUESTED → PENDING_INSTALL</code> (CL T1 fires).</li>
       </ul>
     </td></tr>
     <tr>
-      <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded.</td>
-      <td class="expected">DAS writes <code>routing_failure_count++</code> on the allocation row. After sustained failure, allocation eventually transitions to expired.</td>
-      <td class="observed">Counter never advances; rows sit indefinitely.</td>
+      <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded in the audit log and the row's <code>retry_count</code> advances.</td>
+      <td class="expected">DAS writes a new <code>allocation_audit_log</code> row with <code>allocation_event_type = 'CL_RETRY_REROUTE'</code> (or the held-sweep equivalent), <code>selected_csp_id IS NULL</code>, <code>failure_flag = 'LOOP_EXHAUSTED'</code>. On <code>connection_allocations</code>, <code>retry_count</code> advances on each failed re-attempt; once <code>retry_count = P50</code> (5), the row is held permanently per the OS-sanctioned service-vacuum rule.</td>
+      <td class="observed">No audit rows for held-sweep retries (sweep never fires). 230 rows in QA have <code>retry_count</code> stuck below P50 with <code>updated_at &gt; 24h ago</code>.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_allocations.routing_failure_count</code> increments per failed re-route attempt</li>
-        <li><strong>DB</strong> — once a row reaches the failure threshold, expect terminal transition (existing rule preserved post-sweep wiring)</li>
+        <li><strong>DB</strong> — <code>allocation_audit_log</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> AND <code>selected_csp_id IS NULL</code> AND <code>failure_flag = 'LOOP_EXHAUSTED'</code> → expect rows present (one per failed sweep re-attempt). Note: there is no <code>routing_failure_count</code> column on <code>connection_allocations</code>; the audit log is the failure record.</li>
+        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>retry_count = 5</code> → these are the OS-sanctioned permanent-hold rows. No further sweep action expected; count should be small and stable.</li>
       </ul>
     </td></tr>
     <tr>

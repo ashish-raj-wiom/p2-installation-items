@@ -27,7 +27,6 @@ const BUGS = [
       { id: 'cases', label: 'Test cases' },
       { id: 'workflow', label: 'Workflow per parameter' },
       { id: 'wired', label: "What's wired / what's not" },
-      { id: 'tas-cofix', label: 'TAS co-fix (T12)' },
       { id: 'evidence', label: 'Code evidence' },
     ],
     hasMermaid: true,
@@ -322,9 +321,10 @@ const BUG_BODY = {
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>csp_connection_lifecycle_service.connection_state_transition_log</code> WHERE <code>transition_type = 'T9'</code> AND <code>source = 'SYSTEM'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows for stale REQUESTED candidates</li>
-        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'REQUESTED'</code> AND <code>created_at &lt; now() - interval '7 days'</code> → expect 0 rows after the sweep runs</li>
-        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'DELIVERED' → row per deactivated candidate</li>
+        <li><strong>DB</strong> — <code>csp_connection_lifecycle_service.public.connection_event_history</code> WHERE <code>event_type = 'REQUEST_EXPIRED'</code> AND <code>source_os = 'CL_OS'</code> AND <code>previous_state = 'REQUESTED'</code> AND <code>resulting_state = 'DEACTIVATED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows for stale REQUESTED candidates</li>
+        <li><strong>DB (positive)</strong> — <code>connections</code> WHERE <code>current_state = 'DEACTIVATED'</code> AND <code>deactivation_reason = 'REQUEST_EXPIRED'</code> AND <code>updated_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB (negative)</strong> — <code>connections</code> WHERE <code>current_state = 'REQUESTED'</code> AND <code>created_at &lt; now() - interval '7 days'</code> → expect 0 rows after the sweep runs</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'COMPLETED' → row per deactivated candidate</li>
       </ul>
     </td></tr>
     <tr>
@@ -335,9 +335,10 @@ const BUG_BODY = {
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_state_transition_log</code> WHERE <code>transition_type = 'T7'</code> AND <code>reason = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
-        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'PAUSED'</code> AND <code>p76_timer_start &lt; now() - interval '90 days'</code> → expect count drops as sweeps run</li>
-        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClDeactivationInitiated</code> AND status = 'DELIVERED' → row per row transitioned</li>
+        <li><strong>DB</strong> — <code>connection_event_history</code> WHERE <code>event_type = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>source_os = 'CL_OS'</code> AND <code>previous_state = 'PAUSED'</code> AND <code>resulting_state = 'PENDING_DEACTIVATION'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB (positive)</strong> — <code>connections</code> WHERE <code>current_state = 'PENDING_DEACTIVATION'</code> AND <code>deactivation_reason = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>updated_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB (negative)</strong> — <code>connections</code> WHERE <code>current_state = 'PAUSED'</code> AND <code>p76_timer_start &lt; now() - interval '90 days'</code> → expect count drops as sweeps run</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClDeactivationInitiated</code> AND status = 'COMPLETED' → row per row transitioned</li>
         <li><strong>Custody OS</strong> — corresponding device records transition <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> (proves the fanout reached downstream)</li>
       </ul>
     </td></tr>
@@ -349,9 +350,10 @@ const BUG_BODY = {
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_state_transition_log</code> WHERE <code>transition_type = 'T8'</code> AND <code>reason = 'DEACTIVATION_COMPLETE'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
-        <li><strong>DB</strong> — <code>connections</code> WHERE <code>current_state = 'PENDING_DEACTIVATION'</code> AND <code>state_timestamp &lt; now() - interval '45 days'</code> → expect count drops as sweeps run</li>
-        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'DELIVERED' → row per finalised candidate</li>
+        <li><strong>DB</strong> — <code>connection_event_history</code> WHERE <code>event_type = 'DEACTIVATION_COMPLETE'</code> AND <code>source_os = 'CL_OS'</code> AND <code>previous_state = 'PENDING_DEACTIVATION'</code> AND <code>resulting_state = 'DEACTIVATED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB (positive)</strong> — <code>connections</code> WHERE <code>current_state = 'DEACTIVATED'</code> AND <code>deactivated_at &gt; &lt;deploy timestamp&gt;</code> → expect rows whose prior state was <code>PENDING_DEACTIVATION</code> present</li>
+        <li><strong>DB (negative)</strong> — <code>connections</code> WHERE <code>current_state = 'PENDING_DEACTIVATION'</code> AND <code>state_timestamp &lt; now() - interval '45 days'</code> → expect count drops as sweeps run</li>
+        <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'COMPLETED' → row per finalised candidate</li>
       </ul>
     </td></tr>
     <tr>
@@ -415,7 +417,7 @@ stateDiagram-v2
     <tr><td>1</td><td><span class="pill ok">Wired</span></td><td>State machine (T7, T8, T9 transitions)</td><td><code>domain/service/ConnectionStateMachine.java</code>, <code>ConnectionGuards.java</code></td></tr>
     <tr><td>2</td><td><span class="pill ok">Wired</span></td><td>Sweep batch methods</td><td><code>application/impl/SchedulingServiceImpl.java</code>: <code>processRequestExpiryBatch</code> (P75, L30), <code>processPauseExpiryBatch</code> (P76, L72), <code>processDeactivationTimeoutBatch</code> (P77, L94). Each queries <code>findByStateOlderThan(state, cutoff)</code> + invokes the right handler.</td></tr>
     <tr><td>3</td><td><span class="pill ok">Wired</span></td><td>Internal HTTP wrappers</td><td><code>api/InternalTaskController.java</code>: <code>POST /process-request-expiry</code> · <code>/process-pause-expiry</code> · <code>/process-deactivation-timeout</code>. <strong><code>curl</code> against these works today.</strong></td></tr>
-    <tr><td>4</td><td><span class="pill ok">Wired</span></td><td>Transition handlers</td><td><code>InboundEventProcessingServiceImpl.handleRequestExpired</code> / <code>handlePauseDurationExceeded</code> / <code>handleDeactivationComplete</code> — write state, write transition log, emit outbound event.</td></tr>
+    <tr><td>4</td><td><span class="pill ok">Wired</span></td><td>Transition handlers</td><td><code>InboundEventProcessingServiceImpl.handleRequestExpired</code> / <code>handlePauseDurationExceeded</code> / <code>handleDeactivationComplete</code> — update <code>connections</code> row state, append to <code>connection_event_history</code>, emit outbound event.</td></tr>
     <tr><td>5</td><td><span class="pill ok">Wired</span></td><td>Outbound event emission</td><td>Producer records for <code>CL_DEACTIVATION_INITIATED</code> and <code>CL_CONNECTION_DEACTIVATED</code> + outbox dispatch — identical path to any manually-driven CL transition today.</td></tr>
     <tr><td>6</td><td><span class="pill ok">Wired</span></td><td>Downstream consumers</td><td>Custody OS: <code>handleClDeactivationInitiated</code> (<code>InboundEventController.java:19</code>, processor <code>InboundEventProcessingServiceImpl.java:40-87</code> does the <code>DEPLOYED → CUSTOMER_RECOVERY_PENDING</code> write). D&amp;A OS: <code>InboundEventController.java:168, 207</code>. Capacity OS: <code>InboundEventController.java:270</code>. <strong>All three sit idle waiting for events that never come.</strong></td></tr>
     <tr><td>7</td><td><span class="pill bug">Missing</span></td><td>Service-side scheduler wiring</td><td><code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> exists as a class but is <strong>never called</strong>. Grep across the whole service returns ONE match — the method definition itself. No <code>@PostConstruct</code> / <code>CommandLineRunner</code> / <code>ApplicationRunner</code> in <code>ConnectionLifecycleApplication.java</code> registers the five sweep batches. The scheduler abstraction also defensively short-circuits when the flag is off (<code>EventBridgeTaskScheduler.java:65</code> — <code>log.info("Scheduler disabled, skipping scheduleRecurring: {}"); return;</code>).</td></tr>
@@ -427,33 +429,13 @@ stateDiagram-v2
   <strong>Interim path that ships value before AWS infra lands:</strong> the <code>InternalTaskController</code> POST endpoints already work (layer 3). An external Lambda / GitHub Actions cron / k8s CronJob can <code>curl</code> the four endpoints every 15 min and drive the full downstream chain (Custody router recovery, Capacity reclaim, D&amp;A allocation release) without waiting for the AWS EventBridge workflow to be built. Same business outcome, different transport. Worth proposing to tech as a stop-gap.
 </div>
 
-<h2 id="tas-cofix">TAS co-fix — handle the <code>T12</code> retry-exhaustion transition</h2>
-<p>When CL emits <code>CL_STATE_CHANGED</code> with <code>transitionType=T12</code> (the retry-exhaustion transition, <code>PENDING_INSTALL → PENDING_DEACTIVATION</code>), TAS today doesn't handle it. The <code>UPSTREAM_RETRY_TRIGGERS</code> set in <code>ClStateChangedHandler.java</code> only contains <code>T11</code>; <code>T12</code> is missing. Without this co-fix, retried-and-exhausted connections orphan TAS install candidates. Independent of the scheduler wiring above, but engineering should ship them together so the orphan symptom doesn't surface when the sweeps start firing.</p>
-<table class="tc-table">
-  <thead><tr><th>Acceptance criterion</th><th>Expected per spec</th><th>Observed in prod</th></tr></thead>
-  <tbody>
-    <tr>
-      <td><strong>TC-5.</strong> When CL emits <code>T12</code>, then TAS closes any open install candidate for that connection.</td>
-      <td class="expected">TAS marks candidate <code>CANCELLED_BY_UPSTREAM</code> reason <code>RETRY_EXHAUSTED</code>.</td>
-      <td class="observed">Handler logs "no action required"; candidate stays OPEN. Tech must add T12 to the trigger set.</td>
-    </tr>
-    <tr class="tc-verify"><td colspan="3">
-      <strong class="v-label">Verify after fix:</strong>
-      <ul>
-        <li><strong>Code</strong> — <code>csp-tas-service/.../ClStateChangedHandler.java</code> → <code>UPSTREAM_RETRY_TRIGGERS</code> set contains both <code>T11</code> and <code>T12</code></li>
-        <li><strong>TAS DB</strong> — <code>csp_tas_service.install_execution_candidates</code> for connections that hit P78 retry exhaustion → <code>current_state = 'CANCELLED_BY_UPSTREAM'</code>, reason = <code>'RETRY_EXHAUSTED'</code></li>
-        <li><strong>TAS DB</strong> — <code>install_state_transition_log</code> → transition row with <code>trigger_source = 'CL_STATE_CHANGED'</code> and <code>transition_type = 'T12'</code></li>
-      </ul>
-    </td></tr>
-  </tbody>
-</table>
-
 <h2 id="evidence">Code evidence</h2>
 <ul>
-  <li><strong>Scheduler config:</strong> <code>services/csp-connection-lifecycle-service/.../application-prod.yml:18</code> (<code>AWS_SCHEDULER_ENABLED: false</code>).</li>
-  <li><strong>Scheduler hook (unwired):</strong> <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> — defined, never called.</li>
-  <li><strong>Sweep batches (correct, reachable):</strong> <code>SchedulingServiceImpl</code> (the four batch methods) &middot; <code>InternalTaskController</code> (their endpoints).</li>
-  <li><strong>TAS T12 co-fix site:</strong> <code>services/csp-tas-service/.../ClStateChangedHandler.java</code> — <code>UPSTREAM_RETRY_TRIGGERS</code> set.</li>
+  <li><strong>Scheduler config:</strong> <code>services/csp-connection-lifecycle-service/src/main/resources/application-prod.yml:18</code> (<code>AWS_SCHEDULER_ENABLED: false</code>) &middot; <code>application-qa.yml:21</code> (same).</li>
+  <li><strong>Scheduler hook (unwired):</strong> <code>EventBridgeTaskScheduler.scheduleRecurring(...)</code> — defined, never called from <code>ConnectionLifecycleApplication.java</code>.</li>
+  <li><strong>Sweep batches (correct, reachable):</strong> <code>SchedulingServiceImpl</code> — <code>processRequestExpiryBatch</code>, <code>processPauseExpiryBatch</code>, <code>processDeactivationTimeoutBatch</code> &middot; <code>InternalTaskController</code> (their endpoints).</li>
+  <li><strong>State machine:</strong> <code>ConnectionStateMachine.java</code> defines T7, T8, T9, T11, T12 transitions (code-level labels).</li>
+  <li><strong>Transition persistence:</strong> single table — <code>connection_event_history</code> in the CL schema (no separate <code>connection_state_transition_log</code> table exists).</li>
 </ul>
 `,
 
@@ -474,13 +456,13 @@ stateDiagram-v2
   <tbody>
     <tr>
       <td><strong>TC-1.</strong> When an allocation exhausts P50 routing retries (5 attempts), then it lands in <code>UNASSIGNED</code> held state.</td>
-      <td class="expected">DAS writes <code>UNASSIGNED</code> + <code>p50_exhausted_at = now()</code>.</td>
-      <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>.</td>
+      <td class="expected">DAS writes <code>allocation_state = 'UNASSIGNED'</code>, <code>csp_id = NULL</code>, <code>retry_count = 5</code>, and bumps <code>updated_at</code>.</td>
+      <td class="observed">This step works correctly in code — allocations do land in <code>UNASSIGNED</code>. Currently 778 such rows in QA (baseline includes pre-sweep stale ones).</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify (baseline still holds after fix):</strong>
       <ul>
-        <li><strong>DB</strong> — <code>csp_demand_allocation_service.connection_allocations</code> WHERE <code>retry_count &gt;= 5</code> → expect <code>state = 'UNASSIGNED'</code> and <code>p50_exhausted_at IS NOT NULL</code> (existing behaviour preserved)</li>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.public.connection_allocations</code> WHERE <code>retry_count = 5</code> AND <code>allocation_state = 'UNASSIGNED'</code> AND <code>csp_id IS NULL</code> → expect rows present (existing behaviour preserved). Note: schema has no <code>p50_exhausted_at</code> column; <code>updated_at</code> is the time anchor.</li>
       </ul>
     </td></tr>
     <tr>
@@ -491,22 +473,23 @@ stateDiagram-v2
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>state = 'UNASSIGNED'</code> AND <code>retry_count &lt; 5</code> → count drops as sweeps run (some get re-routed and move to <code>ASSIGNED</code> → <code>ACCEPTED</code>)</li>
-        <li><strong>DAS service logs</strong> — grep for <code>"Held allocation sweep: re-routing connectionId="</code> → expect entries on each sweep run</li>
-        <li><strong>Outbox</strong> — when re-routing succeeds, <code>outbox_record</code> contains <code>ALLOCATION_ACCEPTED</code> events, status = 'DELIVERED'</li>
-        <li><strong>Cross-service</strong> — CL side: <code>connections</code> with these <code>connection_id</code>s transition <code>REQUESTED → PENDING_INSTALL</code> (CL T1 fires)</li>
+        <li><strong>DB (baseline pre-sweep)</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>updated_at &lt; now() - interval '24 hours'</code> → today: 230 rows in prod (oldest &gt; 24h). After sweep wires: count drops as held rows get re-attempted.</li>
+        <li><strong>DB (positive)</strong> — same table WHERE <code>allocation_state IN ('ACCEPTED','ASSIGNED')</code> AND <code>updated_at &gt; &lt;deploy timestamp&gt;</code> AND <code>previous_csp_id IS NOT NULL</code> → expect rows present (re-routing successes).</li>
+        <li><strong>DAS service logs</strong> — grep for <code>"Held allocation sweep"</code> entries → expect log lines on each sweep run.</li>
+        <li><strong>Outbox</strong> — when re-routing succeeds, <code>outbox_record</code> contains records ending in <code>AllocationAccepted</code>, status = <code>'COMPLETED'</code>.</li>
+        <li><strong>Cross-service</strong> — CL side: <code>connections</code> with these <code>connection_id</code>s transition <code>REQUESTED → PENDING_INSTALL</code> (CL T1 fires).</li>
       </ul>
     </td></tr>
     <tr>
-      <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded.</td>
-      <td class="expected">DAS writes <code>routing_failure_count++</code> on the allocation row. After sustained failure, allocation eventually transitions to expired.</td>
-      <td class="observed">Counter never advances; rows sit indefinitely.</td>
+      <td><strong>TC-3.</strong> When a P191 sweep finds no eligible CSPs after re-attempt, then routing-failure is recorded in the audit log and the row's <code>retry_count</code> advances.</td>
+      <td class="expected">DAS writes a new <code>allocation_audit_log</code> row with <code>allocation_event_type = 'CL_RETRY_REROUTE'</code> (or the held-sweep equivalent), <code>selected_csp_id IS NULL</code>, <code>failure_flag = 'LOOP_EXHAUSTED'</code>. On <code>connection_allocations</code>, <code>retry_count</code> advances on each failed re-attempt; once <code>retry_count = P50</code> (5), the row is held permanently per the OS-sanctioned service-vacuum rule.</td>
+      <td class="observed">No audit rows for held-sweep retries (sweep never fires). 230 rows in QA have <code>retry_count</code> stuck below P50 with <code>updated_at &gt; 24h ago</code>.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_allocations.routing_failure_count</code> increments per failed re-route attempt</li>
-        <li><strong>DB</strong> — once a row reaches the failure threshold, expect terminal transition (existing rule preserved post-sweep wiring)</li>
+        <li><strong>DB</strong> — <code>allocation_audit_log</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> AND <code>selected_csp_id IS NULL</code> AND <code>failure_flag = 'LOOP_EXHAUSTED'</code> → expect rows present (one per failed sweep re-attempt). Note: there is no <code>routing_failure_count</code> column on <code>connection_allocations</code>; the audit log is the failure record.</li>
+        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>retry_count = 5</code> → these are the OS-sanctioned permanent-hold rows. No further sweep action expected; count should be small and stable.</li>
       </ul>
     </td></tr>
     <tr>
