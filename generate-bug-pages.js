@@ -315,13 +315,13 @@ const BUG_BODY = {
   <tbody>
     <tr>
       <td><strong>TC-1.</strong> When a connection sits in <code>REQUESTED</code> for &gt; P75 (7d), then the P75 sweep transitions it to <code>DEACTIVATED</code> via T9.</td>
-      <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>transition_type = T9</code>, source = SYSTEM, <code>new_state = DEACTIVATED</code>.</td>
+      <td class="expected">CL persists <code>connection_event_history</code> row with <code>event_type = 'REQUEST_EXPIRED'</code>, <code>source_os = 'SYSTEM'</code>, <code>previous_state = 'REQUESTED'</code>, <code>resulting_state = 'DEACTIVATED'</code>; <code>connections.deactivation_reason = 'REQUEST_EXPIRED'</code>; emits outbound <code>ClConnectionDeactivated</code>.</td>
       <td class="observed">No T9 transitions emitted in 90d. Stale <code>REQUESTED</code> rows accumulate indefinitely.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>csp_connection_lifecycle_service.public.connection_event_history</code> WHERE <code>event_type = 'REQUEST_EXPIRED'</code> AND <code>source_os = 'CL_OS'</code> AND <code>previous_state = 'REQUESTED'</code> AND <code>resulting_state = 'DEACTIVATED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows for stale REQUESTED candidates</li>
+        <li><strong>DB</strong> — <code>csp_connection_lifecycle_service.public.connection_event_history</code> WHERE <code>event_type = 'REQUEST_EXPIRED'</code> AND <code>source_os = 'SYSTEM'</code> AND <code>previous_state = 'REQUESTED'</code> AND <code>resulting_state = 'DEACTIVATED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows for stale REQUESTED candidates</li>
         <li><strong>DB (positive)</strong> — <code>connections</code> WHERE <code>current_state = 'DEACTIVATED'</code> AND <code>deactivation_reason = 'REQUEST_EXPIRED'</code> AND <code>updated_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
         <li><strong>DB (negative)</strong> — <code>connections</code> WHERE <code>current_state = 'REQUESTED'</code> AND <code>created_at &lt; now() - interval '7 days'</code> → expect 0 rows after the sweep runs</li>
         <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'COMPLETED' → row per deactivated candidate</li>
@@ -335,7 +335,7 @@ const BUG_BODY = {
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_event_history</code> WHERE <code>event_type = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>source_os = 'CL_OS'</code> AND <code>previous_state = 'PAUSED'</code> AND <code>resulting_state = 'PENDING_DEACTIVATION'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB</strong> — <code>connection_event_history</code> WHERE <code>event_type = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>source_os = 'SYSTEM'</code> AND <code>previous_state = 'PAUSED'</code> AND <code>resulting_state = 'PENDING_DEACTIVATION'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
         <li><strong>DB (positive)</strong> — <code>connections</code> WHERE <code>current_state = 'PENDING_DEACTIVATION'</code> AND <code>deactivation_reason = 'PAUSE_DURATION_EXCEEDED'</code> AND <code>updated_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
         <li><strong>DB (negative)</strong> — <code>connections</code> WHERE <code>current_state = 'PAUSED'</code> AND <code>p76_timer_start &lt; now() - interval '90 days'</code> → expect count drops as sweeps run</li>
         <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClDeactivationInitiated</code> AND status = 'COMPLETED' → row per row transitioned</li>
@@ -344,13 +344,13 @@ const BUG_BODY = {
     </td></tr>
     <tr>
       <td><strong>TC-3.</strong> When a connection sits in <code>PENDING_DEACTIVATION</code> for &gt; P77 (45d), then the P77 sweep transitions it to <code>DEACTIVATED</code> via <code>DEACTIVATION_COMPLETE</code>.</td>
-      <td class="expected">CL emits <code>CL_STATE_CHANGED</code> with <code>new_state = DEACTIVATED</code>, source = SYSTEM.</td>
+      <td class="expected">CL persists <code>connection_event_history</code> row with <code>event_type = 'DEACTIVATION_COMPLETE'</code>, <code>source_os = 'SYSTEM'</code>, <code>previous_state = 'PENDING_DEACTIVATION'</code>, <code>resulting_state = 'DEACTIVATED'</code>; emits outbound <code>ClConnectionDeactivated</code>.</td>
       <td class="observed">No such transitions. Stale <code>PENDING_DEACTIVATION</code> rows accumulate.</td>
     </tr>
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify after fix:</strong>
       <ul>
-        <li><strong>DB</strong> — <code>connection_event_history</code> WHERE <code>event_type = 'DEACTIVATION_COMPLETE'</code> AND <code>source_os = 'CL_OS'</code> AND <code>previous_state = 'PENDING_DEACTIVATION'</code> AND <code>resulting_state = 'DEACTIVATED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
+        <li><strong>DB</strong> — <code>connection_event_history</code> WHERE <code>event_type = 'DEACTIVATION_COMPLETE'</code> AND <code>source_os = 'SYSTEM'</code> AND <code>previous_state = 'PENDING_DEACTIVATION'</code> AND <code>resulting_state = 'DEACTIVATED'</code> AND <code>created_at &gt; &lt;deploy timestamp&gt;</code> → expect rows present</li>
         <li><strong>DB (positive)</strong> — <code>connections</code> WHERE <code>current_state = 'DEACTIVATED'</code> AND <code>deactivated_at &gt; &lt;deploy timestamp&gt;</code> → expect rows whose prior state was <code>PENDING_DEACTIVATION</code> present</li>
         <li><strong>DB (negative)</strong> — <code>connections</code> WHERE <code>current_state = 'PENDING_DEACTIVATION'</code> AND <code>state_timestamp &lt; now() - interval '45 days'</code> → expect count drops as sweeps run</li>
         <li><strong>Outbox</strong> — <code>outbox_record</code> WHERE record_type ends in <code>ClConnectionDeactivated</code> AND status = 'COMPLETED' → row per finalised candidate</li>
@@ -462,7 +462,8 @@ stateDiagram-v2
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify (baseline still holds after fix):</strong>
       <ul>
-        <li><strong>DB</strong> — <code>csp_demand_allocation_service.public.connection_allocations</code> WHERE <code>retry_count = 5</code> AND <code>allocation_state = 'UNASSIGNED'</code> AND <code>csp_id IS NULL</code> → expect rows present (existing behaviour preserved). Note: schema has no <code>p50_exhausted_at</code> column; <code>updated_at</code> is the time anchor.</li>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.public.connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>csp_id IS NULL</code> → expect rows present (existing behaviour preserved — the held state itself is reached). Note: schema has no <code>p50_exhausted_at</code> column; <code>updated_at</code> is the time anchor.</li>
+        <li><strong>Live evidence (pre-fix)</strong> — same table grouped by <code>retry_count</code>: today the distribution is clamped (most rows at <code>retry_count = 0</code> or <code>1</code>) because the held-allocation sweep never advances the counter. Once the P191 sweep fires, expect <code>retry_count</code> values to spread upward over time as held rows get re-attempted.</li>
       </ul>
     </td></tr>
     <tr>
@@ -489,7 +490,7 @@ stateDiagram-v2
       <strong class="v-label">Verify after fix:</strong>
       <ul>
         <li><strong>DB</strong> — <code>allocation_audit_log</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> AND <code>selected_csp_id IS NULL</code> AND <code>failure_flag = 'LOOP_EXHAUSTED'</code> → expect rows present (one per failed sweep re-attempt). Note: there is no <code>routing_failure_count</code> column on <code>connection_allocations</code>; the audit log is the failure record.</li>
-        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>retry_count = 5</code> → these are the OS-sanctioned permanent-hold rows. No further sweep action expected; count should be small and stable.</li>
+        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>retry_count = (SELECT p50 default from config)</code> → once the sweep has been running for some time, expect a small population at the P50 cap (these are the OS-sanctioned permanent-hold rows; sweep won't act on them further). Today this count is 0 because the sweep doesn't fire — that confirms the bug premise.</li>
       </ul>
     </td></tr>
     <tr>

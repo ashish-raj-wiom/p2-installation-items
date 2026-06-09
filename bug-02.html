@@ -210,7 +210,8 @@
     <tr class="tc-verify"><td colspan="3">
       <strong class="v-label">Verify (baseline still holds after fix):</strong>
       <ul>
-        <li><strong>DB</strong> — <code>csp_demand_allocation_service.public.connection_allocations</code> WHERE <code>retry_count = 5</code> AND <code>allocation_state = 'UNASSIGNED'</code> AND <code>csp_id IS NULL</code> → expect rows present (existing behaviour preserved). Note: schema has no <code>p50_exhausted_at</code> column; <code>updated_at</code> is the time anchor.</li>
+        <li><strong>DB</strong> — <code>csp_demand_allocation_service.public.connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>csp_id IS NULL</code> → expect rows present (existing behaviour preserved — the held state itself is reached). Note: schema has no <code>p50_exhausted_at</code> column; <code>updated_at</code> is the time anchor.</li>
+        <li><strong>Live evidence (pre-fix)</strong> — same table grouped by <code>retry_count</code>: today the distribution is clamped (most rows at <code>retry_count = 0</code> or <code>1</code>) because the held-allocation sweep never advances the counter. Once the P191 sweep fires, expect <code>retry_count</code> values to spread upward over time as held rows get re-attempted.</li>
       </ul>
     </td></tr>
     <tr>
@@ -237,7 +238,7 @@
       <strong class="v-label">Verify after fix:</strong>
       <ul>
         <li><strong>DB</strong> — <code>allocation_audit_log</code> WHERE <code>created_at &gt; &lt;deploy timestamp&gt;</code> AND <code>selected_csp_id IS NULL</code> AND <code>failure_flag = 'LOOP_EXHAUSTED'</code> → expect rows present (one per failed sweep re-attempt). Note: there is no <code>routing_failure_count</code> column on <code>connection_allocations</code>; the audit log is the failure record.</li>
-        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>retry_count = 5</code> → these are the OS-sanctioned permanent-hold rows. No further sweep action expected; count should be small and stable.</li>
+        <li><strong>DB</strong> — <code>connection_allocations</code> WHERE <code>allocation_state = 'UNASSIGNED'</code> AND <code>retry_count = (SELECT p50 default from config)</code> → once the sweep has been running for some time, expect a small population at the P50 cap (these are the OS-sanctioned permanent-hold rows; sweep won't act on them further). Today this count is 0 because the sweep doesn't fire — that confirms the bug premise.</li>
       </ul>
     </td></tr>
     <tr>
