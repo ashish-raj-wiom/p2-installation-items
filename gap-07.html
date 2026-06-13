@@ -322,7 +322,8 @@ sequenceDiagram
     DAS->>DAS: allocation_state = ASSIGNED to ACCEPTED, set acceptance_timestamp
     DAS->>CL: AllocationAccepted (EXISTING event, unchanged shape)
     CL->>CL: T1 fires - connections.current_state REQUESTED to PENDING_INSTALL
-    Note over CL: This is the customer's first visible state change since the booking arrived.<br/>Pre-fix this happened ~0s after routing; now it happens at slot-proposal time.
+    Note over CL: Customer's first visible state change since booking arrived
+    Note over CL: Pre-fix - happened ~0s after routing. Now - happens at slot-proposal time
     CL->>DAS: ClStateChanged (T1) [existing downstream]
   </div>
 
@@ -337,12 +338,15 @@ sequenceDiagram
     Note over Sched,DAS: ASSIGNED has aged >= P41 (2h)
     Sched->>DAS: trigger allocation timeout sweep for connection_id
     DAS->>DAS: validate state == ASSIGNED (still)
-    DAS->>TAS: ClSystemAcceptanceTimeout (NEW event)<br/>failure_reason=TIMEOUT_P41, source=SYSTEM
-    TAS->>TAS: candidate -> CANCELLED_BY_UPSTREAM<br/>reason_code=TIMEOUT_P41
+    DAS->>TAS: ClSystemAcceptanceTimeout (NEW event)
+    Note over DAS,TAS: failure_reason=TIMEOUT_P41, source=SYSTEM
+    TAS->>TAS: candidate to CANCELLED_BY_UPSTREAM (reason TIMEOUT_P41)
     TAS->>DAS: EsInstallCancelledByUpstream (EXISTING event)
-    DAS->>DAS: allocation_state = ASSIGNED to UNASSIGNED<br/>add P51 cooldown for timed-out CSP<br/>NOT incrementing P195 (per FM-DAO-02)
+    DAS->>DAS: allocation_state ASSIGNED to UNASSIGNED, P51 cooldown added
+    Note over DAS: P195 NOT incremented (per FM-DAO-02)
     DAS->>DAS: run routing pipeline again (re-route)
-    Note over DAS: If reroute succeeds: ASSIGNED with new CSP (loop restart).<br/>If fails: stays UNASSIGNED.
+    Note over DAS: If reroute succeeds - ASSIGNED with new CSP (loop restart)
+    Note over DAS: If fails - stays UNASSIGNED
   </div>
 
   <p>CL is uninvolved in the P41 cascade. It stayed in <code>REQUESTED</code> throughout the entire ASSIGNED window and remains in <code>REQUESTED</code> after the timeout. From CL's perspective, "looking for a provider" continues seamlessly.</p>
