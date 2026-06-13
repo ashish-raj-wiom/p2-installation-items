@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-07 — Anchor DAS acceptance on slot proposal · remove auto-accept · wire P41 · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 30px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#workflow"><span class="ix">WF.</span>Workflow — happy path + P41 cascade</a></li>
+    <li><a href="#wired"><span class="ix">WR.</span>What's wired / what's not</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-07</div>
+  <h1>Anchor DAS acceptance on CSP slot proposal · remove auto-accept · wire P41</h1>
+  <p class="lede">DAS today auto-accepts every allocation atomically (BUG-03's <code>markAutoAccepted</code>) — collapsing <code>UNASSIGNED → ASSIGNED → ACCEPTED</code> into a single step. This violates the D&amp;A OS state machine (L170: <em>"ASSIGNED → ACCEPTED is CSP-initiated"</em>) and silently disables P41 (the 2h acceptance window timer never has anything to time out because the state is ASSIGNED for ~0 seconds). This spec restores OS-canonical behaviour: DAS persists in <code>ASSIGNED</code> after routing, TAS creates a candidate, the CSP proposes a slot via the existing <code>/proposeSlot</code> endpoint, and that slot proposal triggers the <code>ASSIGNED → ACCEPTED</code> transition. P41 fires if no slot is proposed within 2h, using the GAP-06 one-canonical-flow cascade. CL stays in <code>REQUESTED</code> throughout DAS-`ASSIGNED` and only transitions to <code>PENDING_INSTALL</code> when the (existing) <code>AllocationAccepted</code> event lands — after the slot proposal.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Light</span> — A1, A2, A5, A8, B5 + Workflow + Wired-layers. Three connected changes: (1) remove DAS auto-accept, (2) new <code>AllocationAssigned</code> event from DAS at the ASSIGNED moment, (3) wire DAS to consume the existing <code>EsInstallSlotSelected</code> as the acceptance trigger, plus wiring P41 (acceptance timeout sweep) with the GAP-06 cascade pattern.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>Three coordinated changes. <strong>(1) Stop auto-accepting</strong> — remove <code>AllocationServiceImpl.markAutoAccepted</code> from the routing flow; allocation persists in <code>ASSIGNED</code> after CSP selection. <strong>(2) New outbound event <code>AllocationAssigned</code></strong> from DAS at the ASSIGNED moment — payload identical to today's <code>AllocationAccepted</code>; TAS subscribes to this instead of <code>AllocationAccepted</code> to create the install candidate. <strong>(3) New inbound handler on DAS for <code>EsInstallSlotSelected</code></strong> (existing TAS outbound event when the CSP proposes a slot at <code>CandidateWorkflowServiceImpl.proposeSlot</code>). On receipt, DAS transitions <code>ASSIGNED → ACCEPTED</code> and emits the existing <code>AllocationAccepted</code> event — CL's T1 handler is unchanged. <strong>Plus: wire the P41 acceptance-timeout sweep</strong> with a GAP-06-style cascade — DAS sweep emits new <code>ClSystemAcceptanceTimeout</code> to TAS, TAS closes candidate, emits existing <code>EsInstallCancelledByUpstream</code>, DAS reverts to <code>UNASSIGNED</code> and re-routes.</dd>
+    <dt>What triggered it?</dt>    <dd>Per D&amp;A OS L170 + L175, <code>ASSIGNED → ACCEPTED</code> is CSP-initiated and P41 governs the wait. BUG-03's atomic write was the workaround that bypassed this. Effect today: P41 is dead code (sweep wired but state is ASSIGNED for ~0 seconds, never times out); the OS-canonical CSP-confirms-via-system-action semantic is replaced by silent auto-accept; INV-DAO-12's distinction between ASSIGNED and ACCEPTED (immediate re-route vs P49 grace period on CSP exit) is unenforceable.</dd>
+    <dt>Blast radius</dt>          <dd>DAS service (state machine, inbound handler, outbound event class, sweep wiring) · TAS service (subscriber switch + new inbound handler) · CL service (zero change — still receives <code>AllocationAccepted</code>, still fires T1). New AWS EventBridge per-connection schedules for P41 (same pattern as P191 from BUG-02). No DB migration. No customer-app change.</dd>
+    <dt>Reversible?</dt>           <dd>Yes — feature-flag the auto-accept removal; rollback = re-enable <code>markAutoAccepted</code> on the routing path. Event-class additions are additive.</dd>
+    <dt>Money / PII / migration?</dt><dd>No / No / No. Going-forward only. Existing <code>ACCEPTED</code>/<code>ACTIVE</code> allocations untouched. In-flight <code>ASSIGNED</code> rows at deploy time get either: re-emit <code>AllocationAssigned</code> to TAS, OR skip if TAS candidate already exists.</dd>
+    <dt>OS impact / sign-off?</dt> <dd>No OS amendments. This is code-OS realignment back to the canonical state machine at D&amp;A OS L149-175. ESR: confirm <code>AllocationAssigned</code> and <code>ClSystemAcceptanceTimeout</code> event classes are registered.</dd>
+    <dt>Tier</dt>                  <dd>Light</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why, what the new flow looks like, what changes service-by-service.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, baseline.</div>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Anchor DAS acceptance on CSP slot proposal · remove auto-accept · wire P41</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft → For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-06-13)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td><code>os/Demand_Allocation_OS_v1_9_1_LOCKED.md</code> §4 state machine (L149-175 — UNASSIGNED → ASSIGNED → ACCEPTED, CSP-initiated acceptance), §5 SPR parameters (L556 — P41 = T_acceptance_window = 2h), §8 invariants (INV-DAO-12 distinguishes ASSIGNED-but-not-ACCEPTED from ACCEPTED — different exit handling), §9 failure modes (FM-DAO-02 acceptance timeout, FM-DAO-08 CSP exits between ASSIGNED and ACCEPTED, FM-DAO-11 explicit decline). Code baseline: <code>AllocationServiceImpl.java:151</code> (the <code>markAutoAccepted</code> call to remove), <code>BatchTriggerServiceImpl.java:31</code> (P41 sweep batch — exists, currently inert), <code>CandidateWorkflowServiceImpl.java:270</code> (<code>proposeSlot</code> — already emits <code>EsInstallSlotSelected</code>).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Observable trigger, who is affected, cost of leaving it.</div>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>Three connected problems. <strong>(1) State-machine collapse.</strong> <code>AllocationServiceImpl.markAutoAccepted</code> sets <code>allocation_state = ACCEPTED</code> in the same transaction as <code>ASSIGNED</code> (BUG-03 / AMENDMENT-02 design). This skips the <code>ASSIGNED</code> state that the OS state machine declares meaningful (L170: ASSIGNED → ACCEPTED is CSP-initiated). <strong>(2) P41 is dead code.</strong> The sweep at <code>BatchTriggerServiceImpl:31</code> queries for <code>ASSIGNED</code> rows older than P41 (2h). Because <code>ASSIGNED</code> lasts ~0 seconds today, the sweep always returns an empty set; P41 has effectively never fired in prod. The OS-mandated FM-DAO-02 (acceptance timeout) and FM-DAO-08 (CSP exits between ASSIGNED and ACCEPTED — immediate re-route) cannot trigger. <strong>(3) Acceptance is silent.</strong> The CSP "accepts" by no signal — they just do it implicitly when routing picks them. CSP App doesn't know to ask "do you want this booking?" because the answer is structurally "yes." This contradicts the OS view at L163: ACCEPTED = "CSP has confirmed acceptance" (an active confirmation), not "CSP was picked by routing."</td></tr>
+    <tr><td>Who experiences it?</td><td><strong>CSPs:</strong> can't decline an allocation before slot proposal (no ASSIGNED state to decline from — FM-DAO-11 cannot fire). <strong>Customers:</strong> get a 2h delay buried in CSP indecision instead of the OS-prescribed re-route after P41 (which would save them up to 2h of waiting on a non-responsive CSP). <strong>Operations:</strong> can't distinguish "CSP was assigned but didn't act" from "CSP accepted but install hasn't started" — both look the same in DAS data. <strong>D&amp;A OS / Quality OS:</strong> never receive the <code>DECLINE_PATTERN</code> signal for acceptance timeouts (per FM-DAO-02) because there are no acceptance timeouts.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>P41 stays inert; the OS-canonical "CSP confirms" semantic stays silent. Every booking gets the auto-accept happy path; bookings with non-responsive CSPs sit in <code>PENDING_INSTALL</code> for up to P74 (72h) instead of being re-routed at P41 (2h) — a 36× delay for the customer.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes → before → after → why</em>.</div>
+  <table class="delta">
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>DAS <code>AllocationServiceImpl</code> — remove the auto-accept call from the routing path</td>
+        <td>After routing picks a CSP, the flow calls <code>markAutoAccepted(allocation, now)</code> (line 151) which sets <code>allocationState = ACCEPTED</code> + <code>acceptance_timestamp = now</code> atomically. Allocation never lingers in <code>ASSIGNED</code>.</td>
+        <td>Routing picks a CSP, persists <code>allocationState = ASSIGNED</code>, sets <code>assigned_at = now</code>. <strong>Does NOT</strong> call <code>markAutoAccepted</code>. <code>acceptance_timestamp</code> stays NULL until real acceptance arrives.</td>
+        <td>Restores the OS-canonical state machine (L170). Makes ASSIGNED a real persisted state with non-zero duration — which is what P41 needs to operate on.</td>
+      </tr>
+      <tr>
+        <td>DAS — new outbound event class <code>AllocationAssigned</code></td>
+        <td>DAS emits <code>AllocationAccepted</code> at the moment of CSP selection (because of auto-accept). TAS consumes that to create the install candidate. CL also consumes it (T1).</td>
+        <td>DAS emits a new event <code>AllocationAssigned</code> at the moment of <code>UNASSIGNED → ASSIGNED</code> transition. Payload identical to <code>AllocationAccepted</code> (event_id, connection_id, csp_id, zone_id, allocation_id, timestamp). <strong>Consumed by TAS only — not CL.</strong></td>
+        <td>Separates the "offered to CSP" semantic from the "CSP accepted" semantic. <code>AllocationAccepted</code> can then keep its OS-canonical meaning ("CSP confirmed").</td>
+      </tr>
+      <tr>
+        <td>TAS — switch subscriber from <code>AllocationAccepted</code> to <code>AllocationAssigned</code></td>
+        <td><code>InboundEventProcessingServiceImpl.process(AllocationAccepted event)</code> at line 95 calls <code>candidateWorkflowService.onAllocationAccepted(...)</code> which creates the install candidate in <code>AWAITING_SLOT_PROPOSAL</code>.</td>
+        <td>Same handler logic, just subscribed to the new <code>AllocationAssigned</code> event. Method can keep the same downstream call (rename internally if desired for clarity). Candidate still lands in <code>AWAITING_SLOT_PROPOSAL</code> — same outcome, slightly earlier in the chain (at the ASSIGNED moment, before any acceptance).</td>
+        <td>TAS creates the task as soon as the CSP has been assigned — same UX as today (CSP sees the booking in their app), but now the system has a way to time out if the CSP doesn't respond.</td>
+      </tr>
+      <tr>
+        <td>DAS — new inbound handler for <code>EsInstallSlotSelected</code></td>
+        <td>DAS has no inbound handler for <code>EsInstallSlotSelected</code>. The event fires today (from <code>CandidateWorkflowServiceImpl.proposeSlot</code> at line 270, emitted as part of the slot-proposal flow) but DAS doesn't listen.</td>
+        <td>New endpoint + handler. On receipt: validate that the connection is in <code>allocation_state = 'ASSIGNED'</code>. If so: transition to <code>ACCEPTED</code>, set <code>acceptance_timestamp = now</code>, cancel any P41 schedule for this connection, then emit the existing <code>AllocationAccepted</code> event for CL to consume.</td>
+        <td>Slot proposal is the OS-canonical CSP-acceptance signal. <code>EsInstallSlotSelected</code> already carries the connection_id + csp_id needed. No new TAS event required.</td>
+      </tr>
+      <tr>
+        <td>CL — zero code change</td>
+        <td>CL receives <code>AllocationAccepted</code> via inbound handler, fires T1 (<code>REQUESTED → PENDING_INSTALL</code>), records <code>connection_event_history</code>.</td>
+        <td><strong>Same handler, same trigger event.</strong> Only difference: <code>AllocationAccepted</code> now arrives ~minutes/hours after the assignment instead of ~0 seconds. CL state stays <code>REQUESTED</code> during the DAS <code>ASSIGNED</code> window.</td>
+        <td>Smallest possible CL footprint. Customer-app shows "Looking for a provider" during DAS <code>ASSIGNED</code> — same UX text as today's UNASSIGNED case (the customer can't tell the difference). Avoids adding a new CL state for this iteration.</td>
+      </tr>
+      <tr>
+        <td>DAS — wire the P41 acceptance-timeout sweep on per-connection schedules (BUG-02 pattern)</td>
+        <td>Sweep batch <code>runAllocationTimeoutSweep</code> exists at <code>BatchTriggerServiceImpl.java:31</code>. Endpoint <code>POST /allocation-timeout-sweep</code> exists. No per-connection AWS schedule is created today (because no allocation ever sits in <code>ASSIGNED</code> long enough to matter, and the AWS scheduler wasn't wired pre-BUG-02).</td>
+        <td>When an allocation transitions to <code>ASSIGNED</code>, DAS creates a per-connection one-time delay AWS schedule with delay = P41 (default 2h). Same pattern as the P191 schedules from BUG-02. When the schedule fires, the dispatcher invokes the timeout sweep for that connection. Schedule is cancelled when the allocation transitions out of <code>ASSIGNED</code> (to <code>ACCEPTED</code>, <code>UNASSIGNED</code>, or <code>DECLINED</code>).</td>
+        <td>Per BUG-02's connection-wise scheduling model. Lets each allocation get its own P41 timer without a global cron.</td>
+      </tr>
+      <tr>
+        <td>DAS — P41 sweep emits <code>ClSystemAcceptanceTimeout</code> (new event) to TAS</td>
+        <td>Sweep iterates over ASSIGNED rows older than P41 and calls a handler internally. No outbound TAS event.</td>
+        <td>For each timed-out row, DAS emits a new outbound event <code>ClSystemAcceptanceTimeout(connection_id, csp_id, timestamp, failure_reason=TIMEOUT_P41, source_os=SYSTEM)</code>. <strong>Does NOT mutate DAS state internally</strong> — the cascade comes back via TAS (GAP-06 pattern).</td>
+        <td>One canonical failure flow — TAS is the canonical owner of install candidate state, so DAS routes the system-driven timeout through TAS just like the CSP-reported install failure path.</td>
+      </tr>
+      <tr>
+        <td>TAS — new inbound handler for <code>ClSystemAcceptanceTimeout</code></td>
+        <td>TAS has no handler for this event.</td>
+        <td>Receives <code>ClSystemAcceptanceTimeout</code>, finds the active candidate for the connection, transitions it to <code>CANCELLED_BY_UPSTREAM</code> with <code>reason_code = TIMEOUT_P41</code>, <code>failure_subreason_source = SYSTEM</code>. Then emits the existing <code>EsInstallCancelledByUpstream</code> outbound — DAS consumes that next.</td>
+        <td>Closes the candidate cleanly through TAS's existing state machine. Reuses the existing <code>CANCELLED_BY_UPSTREAM</code> terminal and the existing <code>EsInstallCancelledByUpstream</code> outbound — no new TAS surface beyond the handler.</td>
+      </tr>
+      <tr>
+        <td>DAS — new inbound handler for <code>EsInstallCancelledByUpstream</code></td>
+        <td>DAS has no handler for this event.</td>
+        <td>On receipt with <code>reason_code = TIMEOUT_P41</code>: validate allocation in <code>ASSIGNED</code>, transition to <code>UNASSIGNED</code>, set <code>previous_csp_id = </code> the timed-out CSP, add a P51 cooldown entry for that CSP (per FM-DAO-02: "P51 cooldown applies for that connection"), <strong>do NOT</strong> increment the P195 counter (per FM-DAO-02: "Timed-out CSP is NOT penalized in this OS"), then trigger routing-engine re-attempt. If reroute succeeds → ASSIGNED with new CSP; if fails → stays UNASSIGNED with the audit log row.</td>
+        <td>Restores the OS-canonical re-routing path on P41 timeout. The "not penalized" detail at FM-DAO-02 is important — distinguishes implicit timeout (CSP didn't act) from active decline (CSP refused), even though both apply P51.</td>
+      </tr>
+      <tr>
+        <td>CL during DAS <code>ASSIGNED</code> — no change</td>
+        <td>CL never sees the <code>ASSIGNED</code> state because auto-accept skips it. CL is in PENDING_INSTALL by the time the human would notice.</td>
+        <td>CL stays in <code>REQUESTED</code> for the duration of DAS <code>ASSIGNED</code> (up to P41 = 2h). When acceptance lands, CL receives <code>AllocationAccepted</code> and fires T1.</td>
+        <td>No new CL state to introduce. Customer-app surfaces "looking for a provider" for both UNASSIGNED and ASSIGNED — visual parity with today's UNASSIGNED experience.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>BUG-03 relationship.</strong> BUG-03 (the atomic ASSIGNED → ACCEPTED write) was an OS-misreading patch driven by the D&amp;A OS pseudocode at L440 (<code>emit ALLOCATION_ACCEPTED</code> right after CSP selection). The pseudocode contradicted the state machine rules at L170 (acceptance is CSP-initiated) and the offer-conversion tracking at L474 (<code>offers_claimed = count(ALLOCATION_ACCEPTED events)</code> — counts true acceptances, not selections). This spec aligns the implementation with the state-machine-canonical reading. <em>No D&amp;A OS amendment required</em> — the state machine was always the truth; the pseudocode was loose.</div>
+  <div class="hint"><strong>P41 sweep cascade — explicit no-loop principle.</strong> Same as GAP-06's P74 fix: DAS does NOT mutate its own state on the system-driven timeout. The cascade goes <em>DAS → TAS → DAS</em>, with TAS owning the candidate closure and DAS resuming routing only when the downstream event echoes back. CL is uninvolved (it stayed in REQUESTED throughout). No double-processing, no echo loop.</div>
+  <div class="hint"><strong>Out of scope:</strong> Customer-app surface that distinguishes "no provider yet" (UNASSIGNED) from "provider assigned, awaiting slot" (ASSIGNED). Both render the same way today — surfacing this requires a separate Customer-app spec. Renaming <code>AllocationAccepted</code> for semantic clarity (we keep the name; only the moment of emit changes).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="workflow">
+  <h2><span class="num">WF.</span> Workflow — happy path + P41 cascade <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A state-flow + sequence diagram showing the new chain end-to-end, with the P41 timeout cascade.</div>
+
+  <h3>DAS allocation state flow (post-fix)</h3>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> UNASSIGNED: connection arrives
+    UNASSIGNED --> ASSIGNED: routing picks CSP (emit AllocationAssigned)
+    ASSIGNED --> ACCEPTED: CSP proposes slot (EsInstallSlotSelected received from TAS)
+    ASSIGNED --> UNASSIGNED: CSP declines (FM-DAO-11)
+    ASSIGNED --> UNASSIGNED: P41 timeout (2h, via TAS cascade)
+    ACCEPTED --> ACTIVE: install complete (downstream)
+    ACCEPTED --> REALLOCATION_PENDING: structural trigger
+  </div>
+
+  <h3>Cross-service sequence — successful slot proposal (happy path)</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant CL
+    participant DAS
+    participant TAS
+    participant CSP as CSP App
+    participant Sched as AWS Scheduler
+
+    CL->>DAS: ClConnectionRequested
+    DAS->>DAS: routing pipeline picks CSP a0a0m0
+    DAS->>DAS: allocation_state = ASSIGNED (NOT auto-accept)
+    DAS->>Sched: create P41 schedule (delay = 2h)
+    DAS->>TAS: AllocationAssigned (NEW event)
+    TAS->>TAS: create candidate AWAITING_SLOT_PROPOSAL
+    Note over CL: CL stays in REQUESTED
+
+    CSP->>TAS: POST /proposeSlot
+    TAS->>TAS: candidate → SLOT_SELECTED → AWAITING_CUSTOMER_SLOT_CONFIRMATION
+    TAS->>DAS: EsInstallSlotSelected (EXISTING event)
+    DAS->>Sched: cancel P41 schedule
+    DAS->>DAS: allocation_state = ACCEPTED
+    DAS->>CL: AllocationAccepted (EXISTING event, unchanged)
+    CL->>CL: T1 - REQUESTED to PENDING_INSTALL
+  </div>
+
+  <h3>Cross-service sequence — P41 timeout (CSP doesn't propose slot)</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Sched as AWS Scheduler
+    participant DAS
+    participant TAS
+
+    Note over Sched,DAS: ASSIGNED has aged >= P41 (2h)
+    Sched->>DAS: trigger allocation timeout sweep for connection_id
+    DAS->>DAS: validate state == ASSIGNED (still)
+    DAS->>TAS: ClSystemAcceptanceTimeout (NEW event)<br/>failure_reason=TIMEOUT_P41, source=SYSTEM
+    TAS->>TAS: candidate -> CANCELLED_BY_UPSTREAM<br/>reason_code=TIMEOUT_P41
+    TAS->>DAS: EsInstallCancelledByUpstream (EXISTING event)
+    DAS->>DAS: allocation_state = ASSIGNED to UNASSIGNED<br/>add P51 cooldown for timed-out CSP<br/>NOT incrementing P195 (per FM-DAO-02)
+    DAS->>DAS: run routing pipeline again (re-route)
+    Note over DAS: If reroute succeeds: ASSIGNED with new CSP (loop restart).<br/>If fails: stays UNASSIGNED.
+  </div>
+
+  <p>CL is uninvolved in the P41 cascade. It stayed in <code>REQUESTED</code> throughout the entire ASSIGNED window and remains in <code>REQUESTED</code> after the timeout. From CL's perspective, "looking for a provider" continues seamlessly.</p>
+
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="wired">
+  <h2><span class="num">WR.</span> What's wired, what's not (8 layers) <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Per-layer audit — same pattern as <a href="./bug-01.html#wired">BUG-01</a> / <a href="./gap-06.html#wired">GAP-06</a>.</div>
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:24%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>DAS allocation state enum + state machine</td><td><code>AllocationState.java</code> declares ASSIGNED, ACCEPTED, DECLINED. <code>AllocationStateMachine.java</code> at <code>TRANSITIONS</code> map declares <code>ASSIGNED → {ACCEPTED, DECLINED, UNASSIGNED}</code> as valid. All transitions ready to use.</td></tr>
+      <tr><td>2</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>TAS install candidate states + slot-proposal handler</td><td><code>CandidateState.java</code> declares AWAITING_SLOT_PROPOSAL → SLOT_SELECTED → AWAITING_CUSTOMER_SLOT_CONFIRMATION. <code>CandidateWorkflowServiceImpl.proposeSlot</code> at line 270 already emits <code>EsInstallSlotSelected</code>.</td></tr>
+      <tr><td>3</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>DAS P41 sweep batch method</td><td><code>BatchTriggerServiceImpl.runAllocationTimeoutSweep</code> at line 31. Queries for ASSIGNED rows older than P41. Currently inert because ASSIGNED state has ~0 duration.</td></tr>
+      <tr><td>4</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>DAS AWS scheduler infra (post-BUG-02)</td><td><code>EventBridgeTaskScheduler</code> class shipped via BUG-02. Connection-wise scheduling model proven working for P191. Same infra reusable for P41.</td></tr>
+      <tr><td>5</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Remove DAS auto-accept call</td><td>One change in <code>AllocationServiceImpl</code>: stop calling <code>markAutoAccepted(allocation, now)</code> at line 151. The static helper at line 209 can remain (used nowhere else) or be deleted.</td></tr>
+      <tr><td>6</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>New DAS outbound event <code>AllocationAssigned</code></td><td>No <code>AllocationAssigned</code> record class in DAS outbound package. New class needed with payload mirroring <code>AllocationAccepted</code>. Add <code>EventSender</code> listener method. Emit at the moment the routing engine sets state = ASSIGNED.</td></tr>
+      <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>TAS subscriber switch + DAS handler for <code>EsInstallSlotSelected</code></td><td>TAS: change <code>InboundEventProcessingServiceImpl.process(AllocationAccepted)</code> at line 95 to listen for <code>AllocationAssigned</code> instead. DAS: new inbound endpoint + handler for <code>EsInstallSlotSelected</code> — transitions ASSIGNED → ACCEPTED, emits the existing <code>AllocationAccepted</code> for CL.</td></tr>
+      <tr><td>8</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>P41 cascade — new <code>ClSystemAcceptanceTimeout</code> event + DAS sweep wiring + TAS inbound handler</td><td>DAS: per-connection EventBridge schedule on ASSIGNED transition (delay = P41). On fire: emit new outbound <code>ClSystemAcceptanceTimeout</code> (NOT internally mutate). TAS: new inbound handler closes candidate to CANCELLED_BY_UPSTREAM, emits existing <code>EsInstallCancelledByUpstream</code>. DAS: new inbound handler on <code>EsInstallCancelledByUpstream</code> reverts to UNASSIGNED + re-routes (with P51 cooldown but no P195 increment per FM-DAO-02).</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius.</div>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Notes</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>D&amp;A OS</td><td>No amendment</td><td>Code-OS realignment back to L170 ("ASSIGNED → ACCEPTED is CSP-initiated") and L175 (P41 is the acceptance window). The pseudocode at L440 (which BUG-03 read literally) is loose but not authoritative. State machine + offer-conversion tracking (L474) + INV-DAO-12 + FM-DAO-02/11 all already assume the post-fix behaviour. Recommend marking the L440 pseudocode as illustrative-only in the next OS revision; no contract change.</td><td>D&amp;A OS owner (informational)</td><td>—</td></tr>
+      <tr><td>Installation Flow OS / TAS</td><td>No amendment</td><td>AWAITING_SLOT_PROPOSAL terminal + <code>EsInstallSlotSelected</code> emit already exist. CANCELLED_BY_UPSTREAM terminal with <code>reason_code = TIMEOUT_P41</code> follows the same pattern as the existing TIMEOUT_P74 path (GAP-03 EDGE-1).</td><td>Installation Flow OS owner</td><td>—</td></tr>
+      <tr><td>CL OS</td><td>No</td><td>CL still receives <code>AllocationAccepted</code> and fires T1 — unchanged. CL stays in REQUESTED during DAS-ASSIGNED — this aligns with the OS view that REQUESTED is "awaiting routing outcome," and the user-facing semantic is the same as today's UNASSIGNED case.</td><td>—</td><td>—</td></tr>
+      <tr><td>Quality OS / D&amp;A pattern detection</td><td>No</td><td>P41 timeout cascade now actually fires → restoration of the <code>DECLINE_PATTERN</code> signal per FM-DAO-02 (acceptance timeout case). Quality OS pattern detection was always supposed to see this but never did because P41 was inert. Restoration, not contract change.</td><td>—</td><td>—</td></tr>
+      <tr><td>ESR (Event Schema Registry)</td><td>Verify</td><td>Register two new event classes: <code>AllocationAssigned</code> (DAS-emitted, TAS-consumed) and <code>ClSystemAcceptanceTimeout</code> (DAS-emitted, TAS-consumed). Both payloads documented in §A5.</td><td>ESR owner</td><td>Pending — registration</td></tr>
+      <tr><td>Customer App spec</td><td>No</td><td>CL stays in REQUESTED throughout the new ASSIGNED window. Customer App's existing "looking for a provider" copy and behaviour for REQUESTED handles both UNASSIGNED and ASSIGNED with no UI change. (A future spec could add a distinguishing state, but not in scope here.)</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Verification layer for engineering build and test. LOGIC + EDGE only (per the gap-05 v1.2 convention).</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic and use / edge cases. Negative checks first-class on every block. §A6 (Must-Not-Change) and REGRESSION blocks omitted per gap-05 v1.2 PM convention.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Happy path — DAS persists ASSIGNED, TAS creates candidate, slot proposal triggers ACCEPTED, CL fires T1
+  <em>Real-world:</em> normal booking. CSP gets allocated, picks a slot promptly.
+
+  <span class="kw">Given</span> a fresh CONNECTION_REQUEST arrives at CL
+  <span class="kw">When</span>  DAS routing picks CSP &lt;csp_X&gt;
+  <span class="kw">Then</span>  the connection_allocations row reaches allocation_state = 'ASSIGNED' (NOT 'ACCEPTED')
+  <span class="kw">And</span>   acceptance_timestamp IS NULL
+  <span class="kw">And</span>   DAS emits AllocationAssigned (new event, NOT AllocationAccepted yet)
+  <span class="kw">And</span>   TAS creates an install candidate in AWAITING_SLOT_PROPOSAL for &lt;csp_X&gt;
+  <span class="kw">And</span>   CL.connections.current_state stays = 'REQUESTED'
+  <span class="kw">And</span>   an AWS schedule is created with delay = P41 (2h)
+
+  <span class="kw">When</span>  CSP submits a slot via POST /proposeSlot
+  <span class="kw">Then</span>  TAS transitions candidate to SLOT_SELECTED → AWAITING_CUSTOMER_SLOT_CONFIRMATION
+  <span class="kw">And</span>   TAS emits EsInstallSlotSelected (existing event)
+  <span class="kw">And</span>   DAS receives EsInstallSlotSelected
+  <span class="kw">And</span>   connection_allocations transitions allocation_state = 'ASSIGNED' → 'ACCEPTED'
+  <span class="kw">And</span>   acceptance_timestamp = the slot-proposal moment
+  <span class="kw">And</span>   DAS cancels the P41 schedule for this connection
+  <span class="kw">And</span>   DAS emits AllocationAccepted (existing event, unchanged shape)
+  <span class="kw">And</span>   CL receives AllocationAccepted and fires T1
+  <span class="kw">And</span>   CL.connections.current_state = 'PENDING_INSTALL'
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — public.connection_allocations (DAS DB)
+        WHERE connection_id = &lt;test connection_id&gt;
+        After ASSIGNED: expect allocation_state = 'ASSIGNED', csp_id = &lt;csp_X&gt;,
+                      acceptance_timestamp IS NULL, assigned_at IS NOT NULL
+        After slot:    expect allocation_state = 'ACCEPTED', acceptance_timestamp matches slot moment
+    • <strong>TAS DB</strong> — public.install_execution_candidates (TAS DB)
+        After AllocationAssigned: expect current_state = 'AWAITING_SLOT_PROPOSAL', csp_id = &lt;csp_X&gt;
+        After slot: expect current_state IN ('SLOT_SELECTED', 'AWAITING_CUSTOMER_SLOT_CONFIRMATION')
+    • <strong>CL DB</strong> — public.connections (CL DB)
+        Throughout DAS-ASSIGNED window: expect current_state = 'REQUESTED'
+        After AllocationAccepted: expect current_state = 'PENDING_INSTALL'
+    • <strong>DAS outbox</strong> — public.outbox_record
+        WHERE payload references &lt;test connection_id&gt;
+        → expect 1 AllocationAssigned row (status COMPLETED)
+        → expect 1 AllocationAccepted row (status COMPLETED) emitted AFTER the slot proposal,
+          NOT at the time of initial routing
+    • <strong>Negative</strong> — no markAutoAccepted log line, no allocation_state = 'ACCEPTED'
+        before EsInstallSlotSelected was processed</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> P41 timeout — CSP doesn't propose slot within 2h
+  <em>Real-world:</em> CSP gets assigned but doesn't act. P41 sweep should reroute.
+
+  <span class="kw">Given</span> a connection_allocations row in allocation_state = 'ASSIGNED'
+        with assigned_at &lt; NOW() - INTERVAL '2 hours'
+  <span class="kw">And</span>   no EsInstallSlotSelected has arrived for this connection
+  <span class="kw">When</span>  the P41 AWS schedule fires
+  <span class="kw">Then</span>  DAS emits ClSystemAcceptanceTimeout to TAS
+        with payload: connection_id, csp_id, failure_reason=TIMEOUT_P41, source_os=SYSTEM
+  <span class="kw">And</span>   TAS closes the candidate to CANCELLED_BY_UPSTREAM
+        with reason_code=TIMEOUT_P41, failure_subreason_source=SYSTEM
+  <span class="kw">And</span>   TAS emits EsInstallCancelledByUpstream (existing event)
+  <span class="kw">And</span>   DAS receives EsInstallCancelledByUpstream
+  <span class="kw">And</span>   connection_allocations transitions 'ASSIGNED' → 'UNASSIGNED'
+        with previous_csp_id = the timed-out CSP
+        AND decline_cooldown_csp_ids gets a P51 entry for the timed-out CSP
+        AND assignment_count_per_csp is UNCHANGED (per FM-DAO-02 "Timed-out CSP is NOT penalized")
+  <span class="kw">And</span>   DAS re-runs routing engine; if eligible CSP exists → ASSIGNED again with new CSP
+  <span class="kw">And</span>   CL stays in REQUESTED throughout (no transition)
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS outbox</strong> — expect ClSystemAcceptanceTimeout row (status COMPLETED)
+    • <strong>TAS DB</strong> — install_execution_candidates row for connection
+        → current_state = 'CANCELLED_BY_UPSTREAM'
+        → reason_code = 'TIMEOUT_P41'
+        → failure_subreason_source = 'SYSTEM'
+    • <strong>TAS outbox</strong> — expect EsInstallCancelledByUpstream row (status COMPLETED)
+    • <strong>DAS DB (positive)</strong> — connection_allocations
+        → previous_csp_id = timed-out CSP
+        → decline_cooldown_csp_ids contains an entry for timed-out CSP
+    • <strong>DAS DB (negative — P195 NOT incremented)</strong> —
+        → assignment_count_per_csp DOES NOT contain a counter for the timed-out CSP
+          (per FM-DAO-02, timeout doesn't penalize the CSP at the P195 level)
+    • <strong>CL DB</strong> — connections.current_state stays = 'REQUESTED' throughout</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> CSP exits between ASSIGNED and ACCEPTED — INV-DAO-12 immediate re-route
+  <em>Real-world:</em> CSP exits Wiom while a connection is ASSIGNED to them. Per INV-DAO-12,
+  this gets immediate re-routing (no grace period — CSP hasn't invested yet).
+
+  <span class="kw">Given</span> a connection_allocations row in allocation_state = 'ASSIGNED' for &lt;csp_X&gt;
+  <span class="kw">When</span>  Exit OS notifies that &lt;csp_X&gt; is exiting
+  <span class="kw">Then</span>  DAS re-enters this connection into routing immediately
+  <span class="kw">And</span>   allocation_state transitions 'ASSIGNED' → 'UNASSIGNED'
+  <span class="kw">And</span>   no P49 grace period applies (that's only for ACCEPTED+)
+  <span class="kw">And</span>   no P51 cooldown is added (CSP exit, not decline)
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — allocation_state moves to UNASSIGNED within seconds of exit notification
+    • <strong>DAS DB (negative)</strong> — no REALLOCATION_PENDING state visited
+        (REALLOCATION_PENDING is for ACCEPTED+, not ASSIGNED — INV-DAO-12)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> CSP explicit decline — FM-DAO-11 immediate re-entry without P41 wait
+  <em>Real-world:</em> CSP says "no, I can't take this" via the partner app, before slot proposal.
+
+  <span class="kw">Given</span> a connection_allocations row in 'ASSIGNED' for &lt;csp_X&gt;
+  <span class="kw">When</span>  &lt;csp_X&gt; explicitly declines via the partner app
+        (TAS endpoint that already exists for active decline)
+  <span class="kw">Then</span>  the candidate goes to a CANCELLED_BY_CSP or DECLINED terminal in TAS
+  <span class="kw">And</span>   TAS emits an existing decline event back to DAS
+  <span class="kw">And</span>   DAS transitions allocation_state 'ASSIGNED' → 'DECLINED' → 'UNASSIGNED'
+        (DECLINED is transient per state machine — immediately re-enters routing)
+  <span class="kw">And</span>   P51 cooldown is added for &lt;csp_X&gt; on this connection
+  <span class="kw">And</span>   P195 counter increments for &lt;csp_X&gt; (per existing GAP-05 path — decline IS penalized)
+  <span class="kw">And</span>   the P41 schedule for this connection is cancelled
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — decline_cooldown_csp_ids contains &lt;csp_X&gt;
+        AND assignment_count_per_csp[&lt;csp_X&gt;] = 1 (per GAP-05 LOGIC-1)
+    • Routing should reroute immediately (no P41 wait — saves up to 2h for the customer)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> Slot proposal arrives, but allocation is no longer in ASSIGNED (race / late event)
+  <em>Real-world:</em> CSP submits slot a fraction of a second after P41 fired and the candidate
+  was already closed. EsInstallSlotSelected arrives at DAS late.
+
+  <span class="kw">Given</span> EsInstallSlotSelected arrives at DAS for &lt;connection_id&gt;
+  <span class="kw">And</span>   connection_allocations is NOT in 'ASSIGNED' state (already UNASSIGNED via P41,
+        or already ACCEPTED via earlier processing)
+  <span class="kw">When</span>  the DAS handler processes the event
+  <span class="kw">Then</span>  the handler is a no-op — does NOT transition state
+  <span class="kw">And</span>   no spurious AllocationAccepted is emitted
+  <span class="kw">And</span>   a warning is logged for ops follow-up
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — allocation_state unchanged from pre-event value
+    • <strong>DAS outbox</strong> — no spurious AllocationAccepted event written
+    • <strong>Service logs</strong> — WARN entry for the late EsInstallSlotSelected
+        on this connection_id</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> EsInstallSlotSelected delivered twice (broker replay / idempotency)
+  <em>Real-world:</em> message broker retries. Must not double-accept.
+
+  <span class="kw">Given</span> the same EsInstallSlotSelected event (same event_id) delivered twice to DAS
+  <span class="kw">When</span>  DAS processes both deliveries
+  <span class="kw">Then</span>  exactly one state transition occurs (the second is idempotent no-op)
+  <span class="kw">And</span>   exactly one AllocationAccepted is emitted
+  <span class="kw">And</span>   exactly one P41 schedule cancellation
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS audit / state log</strong> — exactly 1 ASSIGNED → ACCEPTED transition
+    • <strong>DAS outbox</strong> — exactly 1 AllocationAccepted row, not 2</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> P41 schedule fires while the slot-proposal event is in-flight
+  <em>Real-world:</em> ~simultaneous events. The first one to commit wins.
+
+  <span class="kw">Given</span> ASSIGNED is exactly at P41 boundary
+  <span class="kw">And</span>   EsInstallSlotSelected is published just before the P41 timeout fire
+  <span class="kw">When</span>  both events reach DAS
+  <span class="kw">Then</span>  whichever commits first determines the outcome
+        (transaction-isolation guarantees serializability)
+  <span class="kw">And</span>   the loser is treated as a late event (LOGIC-5 path)
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB</strong> — the allocation lands in exactly one terminal post-state
+        (either ACCEPTED via slot proposal, OR UNASSIGNED via timeout — not both)
+    • <strong>Service logs</strong> — the loser is logged as a no-op late event</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> P41 = 0 (test override) — sweep fires immediately
+  <em>Real-world:</em> QA testing pattern (similar to short P75 / P76 / P77 windows
+  we've already used). Sweep must still respect the canonical chain even on tiny windows.
+
+  <span class="kw">Given</span> P41 is set to a small value (e.g. 1 minute) for QA testing
+  <span class="kw">When</span>  an allocation enters ASSIGNED and the schedule fires soon after
+  <span class="kw">Then</span>  the cascade fires identically to a real 2h timeout
+        (ClSystemAcceptanceTimeout → TAS closure → DAS reroute)
+  <span class="kw">And</span>   no special-case logic is required for short windows
+
+  <span class="kw">Verify:</span>
+    • Behaviour identical to LOGIC-2 — just compressed timeline</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> In-flight ACCEPTED rows at deploy time (backwards compatibility)
+  <em>Real-world:</em> when the fix deploys, some allocations are already in ACCEPTED
+  from the pre-fix auto-accept. They should continue normally.
+
+  <span class="kw">Given</span> a connection_allocations row in allocation_state = 'ACCEPTED'
+        with acceptance_timestamp = pre-deploy time (from auto-accept)
+  <span class="kw">When</span>  the fix deploys
+  <span class="kw">Then</span>  the row continues on its existing trajectory (install proceeds)
+  <span class="kw">And</span>   the new ASSIGNED → ACCEPTED transition only applies to NEW allocations
+  <span class="kw">And</span>   no migration / backfill is needed
+
+  <span class="kw">Verify:</span>
+    • Pre-deploy ACCEPTED rows: install / activation continues per existing path
+    • Post-deploy NEW_DEMAND rows: follow the new chain (ASSIGNED → slot → ACCEPTED)</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1-9 (5 happy-path + cascade behaviours)</td><td>5 logic lines</td><td>LOGIC-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>—</td><td>N/A (state transitions, no math)</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..4 (replay, race, short windows, backwards compat)</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>§A6 + B5 REGRESSION blocks omitted per gap-05 v1.2 convention</td><td>—</td><td>—</td><td>N/A (scope decision)</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A8, B5) filled — §A6 omitted by PM convention</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" or "N/A" on every class</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Negative checks present on every Verify block</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Workflow diagrams (state + sequence) present</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Wired-layers table present</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes" has sign-off Received</td><td class="check">Pending (ESR registration)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code + schema evidence (verified 2026-06-13):</strong>
+    <ul>
+      <li><strong>Auto-accept call site:</strong> <code>services/csp-demand-allocation-service/.../application/impl/AllocationServiceImpl.java:151</code> calls <code>markAutoAccepted(allocation, now)</code> (helper at line 209). This is the removal site.</li>
+      <li><strong>DAS state machine:</strong> <code>AllocationStateMachine.java</code> declares <code>ASSIGNED → {ACCEPTED, DECLINED, UNASSIGNED}</code> as valid transitions. No state-machine change needed.</li>
+      <li><strong>TAS slot proposal emit:</strong> <code>CandidateWorkflowServiceImpl.java:270</code> <code>proposeSlot</code> method emits <code>EsInstallSlotSelected</code> as part of the existing workflow.</li>
+      <li><strong>TAS candidate creation handler:</strong> <code>InboundEventProcessingServiceImpl.process(AllocationAccepted)</code> at line 95 currently calls <code>candidateWorkflowService.onAllocationAccepted(...)</code>. Subscription needs to flip to <code>AllocationAssigned</code>.</li>
+      <li><strong>P41 sweep batch (currently inert):</strong> <code>BatchTriggerServiceImpl.runAllocationTimeoutSweep</code> at line 31. Code exists; needs per-connection schedule wiring (BUG-02 pattern).</li>
+      <li><strong>AWS scheduler infra:</strong> <code>EventBridgeTaskScheduler</code> class shipped in BUG-02 — same class can host the P41 per-connection schedules.</li>
+      <li><strong>OS reference — D&amp;A OS:</strong> L149-175 (state machine + transitions), L556 (P41 = 2h Tier-2 SPR), L746 (INV-DAO-12 distinction between ASSIGNED and ACCEPTED on CSP exit), L872 (FM-DAO-02 acceptance timeout), L878 (FM-DAO-08 CSP exits between ASSIGNED and ACCEPTED), L881 (FM-DAO-11 explicit decline).</li>
+      <li><strong>BUG-03 reversal:</strong> the BUG-03 spec at <code>p2-installation-items/bug-03.html</code> documented the atomic write that this GAP reverses. BUG-03 said "AMENDMENT-02 declared acceptance 'automatic on assignment'" — that reading is now treated as incorrect; the state-machine canonical reading is restored.</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-13</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Three coordinated changes: (1) remove DAS auto-accept (<code>AllocationServiceImpl:151</code>), (2) new <code>AllocationAssigned</code> event from DAS for TAS, (3) new DAS inbound handler for the existing <code>EsInstallSlotSelected</code> (TAS already emits it at <code>CandidateWorkflowServiceImpl:270</code>) — triggers <code>ASSIGNED → ACCEPTED</code> and the existing <code>AllocationAccepted</code> for CL. Plus: P41 sweep wired with the GAP-06 one-canonical-flow cascade pattern (DAS sweep → TAS closes candidate → emits <code>EsInstallCancelledByUpstream</code> → DAS re-routes). OS-canonical reading per D&amp;A OS L170 + L175 — no OS amendment, code-OS realignment back to the state machine. Reverses BUG-03's atomic write. CL stays in REQUESTED throughout DAS-ASSIGNED. P195 counter NOT incremented on P41 timeout (per FM-DAO-02). §A6 + REGRESSION omitted per gap-05 v1.2 convention.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
+</body>
+</html>
