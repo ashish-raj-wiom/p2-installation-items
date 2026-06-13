@@ -141,7 +141,7 @@
   </div>
   <div class="convention">
     <strong>Tier:</strong>
-    <span class="badge light">Light</span> — A1, A2, A5, A8, B5 + Workflow + Wired-layers. Three connected changes: (1) remove DAS auto-accept, (2) new <code>AllocationAssigned</code> event from DAS at the ASSIGNED moment, (3) wire DAS to consume the existing <code>EsInstallSlotSelected</code> as the acceptance trigger, plus wiring P41 (acceptance timeout sweep) with the GAP-06 cascade pattern.
+    <span class="badge light">Light</span> — A1, A2, A5, A8, B5 + Workflow + Wired-layers. <strong>Five connected changes:</strong> (1) remove DAS auto-accept, (2) new <code>AllocationAssigned</code> event from DAS at the ASSIGNED moment, (3) TAS-state rename (<code>ACCEPTED → ASSIGNED</code>) + method rename (<code>onAllocationAccepted → onAllocationAssigned</code>) + one-time SQL migration, (4) new DAS inbound handler for the existing <code>EsInstallSlotSelected</code>, (5) wire P41 (acceptance timeout sweep) with the GAP-06 cascade pattern.
     <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
   </div>
 </header>
@@ -150,7 +150,7 @@
   <h2>Quick Check</h2>
   <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
   <dl>
-    <dt>What is changing?</dt>     <dd>Three coordinated changes. <strong>(1) Stop auto-accepting</strong> — remove <code>AllocationServiceImpl.markAutoAccepted</code> from the routing flow; allocation persists in <code>ASSIGNED</code> after CSP selection. <strong>(2) New outbound event <code>AllocationAssigned</code></strong> from DAS at the ASSIGNED moment — payload identical to today's <code>AllocationAccepted</code>; TAS subscribes to this instead of <code>AllocationAccepted</code> to create the install candidate. <strong>(3) New inbound handler on DAS for <code>EsInstallSlotSelected</code></strong> (existing TAS outbound event when the CSP proposes a slot at <code>CandidateWorkflowServiceImpl.proposeSlot</code>). On receipt, DAS transitions <code>ASSIGNED → ACCEPTED</code> and emits the existing <code>AllocationAccepted</code> event — CL's T1 handler is unchanged. <strong>Plus: wire the P41 acceptance-timeout sweep</strong> with a GAP-06-style cascade — DAS sweep emits new <code>ClSystemAcceptanceTimeout</code> to TAS, TAS closes candidate, emits existing <code>EsInstallCancelledByUpstream</code>, DAS reverts to <code>UNASSIGNED</code> and re-routes.</dd>
+    <dt>What is changing?</dt>     <dd>Three coordinated changes. <strong>(1) Stop auto-accepting</strong> — remove <code>AllocationServiceImpl.markAutoAccepted</code> from the routing flow; allocation persists in <code>ASSIGNED</code> after CSP selection. <strong>(2) New outbound event <code>AllocationAssigned</code></strong> from DAS at the ASSIGNED moment — payload identical to today's <code>AllocationAccepted</code>; TAS subscribes to this. <strong>TAS-side renames:</strong> <code>CandidateState.ACCEPTED → CandidateState.ASSIGNED</code> (the first in-flight state of the candidate, renamed to mirror DAS), <code>onAllocationAccepted → onAllocationAssigned</code> (method name matches event), enum docstring updated to reference GAP-07 not AMENDMENT-02. Candidate still auto-advances ASSIGNED → AWAITING_SLOT_PROPOSAL in same transaction (two transition_log rows, same as today). One-time SQL migration: <code>UPDATE install_execution_candidates SET current_state = 'ASSIGNED' WHERE current_state = 'ACCEPTED'</code> (safe — transient state). <strong>(3) New inbound handler on DAS for <code>EsInstallSlotSelected</code></strong> (existing TAS outbound event from <code>CandidateWorkflowServiceImpl.proposeSlot</code>). On receipt, DAS transitions <code>ASSIGNED → ACCEPTED</code> and emits the existing <code>AllocationAccepted</code> event — CL's T1 handler is unchanged. <strong>Plus: wire the P41 acceptance-timeout sweep</strong> with a GAP-06-style cascade — per-connection AWS schedule created on ASSIGNED, cancelled on transition out. DAS sweep emits new <code>ClSystemAcceptanceTimeout</code> to TAS, TAS closes candidate, emits existing <code>EsInstallCancelledByUpstream</code>, DAS reverts to <code>UNASSIGNED</code> and re-routes (P51 added, P195 NOT incremented per FM-DAO-02).</dd>
     <dt>What triggered it?</dt>    <dd>Per D&amp;A OS L170 + L175, <code>ASSIGNED → ACCEPTED</code> is CSP-initiated and P41 governs the wait. BUG-03's atomic write was the workaround that bypassed this. Effect today: P41 is dead code (sweep wired but state is ASSIGNED for ~0 seconds, never times out); the OS-canonical CSP-confirms-via-system-action semantic is replaced by silent auto-accept; INV-DAO-12's distinction between ASSIGNED and ACCEPTED (immediate re-route vs P49 grace period on CSP exit) is unenforceable.</dd>
     <dt>Blast radius</dt>          <dd>DAS service (state machine, inbound handler, outbound event class, sweep wiring) · TAS service (subscriber switch + new inbound handler) · CL service (zero change — still receives <code>AllocationAccepted</code>, still fires T1). New AWS EventBridge per-connection schedules for P41 (same pattern as P191 from BUG-02). No DB migration. No customer-app change.</dd>
     <dt>Reversible?</dt>           <dd>Yes — feature-flag the auto-accept removal; rollback = re-enable <code>markAutoAccepted</code> on the routing path. Event-class additions are additive.</dd>
@@ -213,9 +213,21 @@
       </tr>
       <tr>
         <td>TAS — switch subscriber from <code>AllocationAccepted</code> to <code>AllocationAssigned</code></td>
-        <td><code>InboundEventProcessingServiceImpl.process(AllocationAccepted event)</code> at line 95 calls <code>candidateWorkflowService.onAllocationAccepted(...)</code> which creates the install candidate in <code>AWAITING_SLOT_PROPOSAL</code>.</td>
-        <td>Same handler logic, just subscribed to the new <code>AllocationAssigned</code> event. Method can keep the same downstream call (rename internally if desired for clarity). Candidate still lands in <code>AWAITING_SLOT_PROPOSAL</code> — same outcome, slightly earlier in the chain (at the ASSIGNED moment, before any acceptance).</td>
-        <td>TAS creates the task as soon as the CSP has been assigned — same UX as today (CSP sees the booking in their app), but now the system has a way to time out if the CSP doesn't respond.</td>
+        <td><code>InboundEventProcessingServiceImpl.process(AllocationAccepted event)</code> at line 95 calls <code>candidateWorkflowService.onAllocationAccepted(...)</code>. Handler creates candidate in <code>ACCEPTED</code> state, then auto-advances to <code>AWAITING_SLOT_PROPOSAL</code> in the same transaction (writes two state_transition_log rows).</td>
+        <td>Subscriber changes to <code>AllocationAssigned</code>. Method body keeps the same shape: insert candidate, auto-advance to <code>AWAITING_SLOT_PROPOSAL</code>, write two state_transition_log rows. <strong>But the initial state changes — see next row.</strong></td>
+        <td>TAS creates the task at the ASSIGNED moment (same flow-time as today's auto-accept moment). CSP-app behaviour identical to today — CSP sees the booking in their app on <code>AWAITING_SLOT_PROPOSAL</code>.</td>
+      </tr>
+      <tr>
+        <td>TAS — rename state <code>ACCEPTED</code> → <code>ASSIGNED</code> in <code>CandidateState</code> enum</td>
+        <td><code>CandidateState.java</code> declares <code>ACCEPTED</code> as the first in-flight state (line 19). Docstring (line 5) reads: <em>"AMENDMENT-02: auto-accept on assignment — no pre-accept states."</em> Method docstring (line 119) says: <em>"INSERT candidate in ACCEPTED, auto-advance to AWAITING_SLOT_PROPOSAL."</em></td>
+        <td>Rename enum value <code>ACCEPTED</code> → <code>ASSIGNED</code>. Candidate now creates in <code>ASSIGNED</code> state. Auto-advances to <code>AWAITING_SLOT_PROPOSAL</code> as today. The state-machine transition set, validators, and tests all reference the new name. Enum docstring rewritten to reference GAP-07 (remove the AMENDMENT-02 auto-accept reference). Migration: one-time SQL <code>UPDATE install_execution_candidates SET current_state = 'ASSIGNED' WHERE current_state = 'ACCEPTED'</code> — safe because ACCEPTED is transient today (auto-advances in same transaction; expected count = 0 or tiny).</td>
+        <td>TAS-state name now mirrors DAS-state name semantically: both mean "CSP has been picked but hasn't acted yet." Removes the AMENDMENT-02 reference which is no longer accurate post-GAP-07. Same number of transition_log rows (two per creation). No CSP-app behaviour change.</td>
+      </tr>
+      <tr>
+        <td>TAS — rename method <code>onAllocationAccepted</code> → <code>onAllocationAssigned</code></td>
+        <td><code>CandidateWorkflowService.onAllocationAccepted(allocationId, connectionId, cspId, ...)</code> declared at line 25 of interface. Implementation at <code>CandidateWorkflowServiceImpl:126</code>. Called from <code>InboundEventProcessingServiceImpl:101</code>. Method docstring references AMENDMENT-02 auto-accept.</td>
+        <td>Rename method to <code>onAllocationAssigned</code>. Signature unchanged (parameters same). Update interface declaration, implementation, caller in <code>InboundEventProcessingServiceImpl</code>, all tests, and the method docstring (drop AMENDMENT-02 reference; reference GAP-07).</td>
+        <td>Method name matches the inbound event (<code>AllocationAssigned</code>) it now consumes. Code-OS alignment.</td>
       </tr>
       <tr>
         <td>DAS — new inbound handler for <code>EsInstallSlotSelected</code></td>
@@ -298,11 +310,12 @@ sequenceDiagram
     DAS->>DAS: allocation_state = ASSIGNED (NOT auto-accept)
     DAS->>Sched: create P41 schedule (delay = 2h)
     DAS->>TAS: AllocationAssigned (NEW event)
-    TAS->>TAS: create candidate AWAITING_SLOT_PROPOSAL
-    Note over CL: CL stays in REQUESTED
+    TAS->>TAS: create candidate in ASSIGNED (renamed from ACCEPTED)
+    TAS->>TAS: auto-advance to AWAITING_SLOT_PROPOSAL (same txn)
+    Note over CL: CL stays in REQUESTED throughout
 
     CSP->>TAS: POST /proposeSlot
-    TAS->>TAS: candidate → SLOT_SELECTED → AWAITING_CUSTOMER_SLOT_CONFIRMATION
+    TAS->>TAS: candidate AWAITING_SLOT_PROPOSAL to SLOT_SELECTED to AWAITING_CUSTOMER_SLOT_CONFIRMATION
     TAS->>DAS: EsInstallSlotSelected (EXISTING event)
     DAS->>Sched: cancel P41 schedule
     DAS->>DAS: allocation_state = ACCEPTED
@@ -346,7 +359,7 @@ sequenceDiagram
       <tr><td>4</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>DAS AWS scheduler infra (post-BUG-02)</td><td><code>EventBridgeTaskScheduler</code> class shipped via BUG-02. Connection-wise scheduling model proven working for P191. Same infra reusable for P41.</td></tr>
       <tr><td>5</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Remove DAS auto-accept call</td><td>One change in <code>AllocationServiceImpl</code>: stop calling <code>markAutoAccepted(allocation, now)</code> at line 151. The static helper at line 209 can remain (used nowhere else) or be deleted.</td></tr>
       <tr><td>6</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>New DAS outbound event <code>AllocationAssigned</code></td><td>No <code>AllocationAssigned</code> record class in DAS outbound package. New class needed with payload mirroring <code>AllocationAccepted</code>. Add <code>EventSender</code> listener method. Emit at the moment the routing engine sets state = ASSIGNED.</td></tr>
-      <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>TAS subscriber switch + DAS handler for <code>EsInstallSlotSelected</code></td><td>TAS: change <code>InboundEventProcessingServiceImpl.process(AllocationAccepted)</code> at line 95 to listen for <code>AllocationAssigned</code> instead. DAS: new inbound endpoint + handler for <code>EsInstallSlotSelected</code> — transitions ASSIGNED → ACCEPTED, emits the existing <code>AllocationAccepted</code> for CL.</td></tr>
+      <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>TAS subscriber switch + state/method renames + DAS handler for <code>EsInstallSlotSelected</code></td><td>TAS: <strong>(a)</strong> change <code>InboundEventProcessingServiceImpl.process(AllocationAccepted)</code> at line 95 to listen for <code>AllocationAssigned</code> instead. <strong>(b)</strong> Rename <code>CandidateState.ACCEPTED</code> → <code>CandidateState.ASSIGNED</code> (including state machine validators, tests, enum docstring). <strong>(c)</strong> Rename <code>CandidateWorkflowService.onAllocationAccepted</code> → <code>onAllocationAssigned</code> (interface, impl, callers, tests, docstrings). <strong>(d)</strong> One-time SQL migration: <code>UPDATE install_execution_candidates SET current_state = 'ASSIGNED' WHERE current_state = 'ACCEPTED'</code> (safe — ACCEPTED is transient). <strong>(e)</strong> DAS: new inbound endpoint + handler for <code>EsInstallSlotSelected</code> — transitions DAS-ASSIGNED → DAS-ACCEPTED, emits the existing <code>AllocationAccepted</code> for CL.</td></tr>
       <tr><td>8</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>P41 cascade — new <code>ClSystemAcceptanceTimeout</code> event + DAS sweep wiring + TAS inbound handler</td><td>DAS: per-connection EventBridge schedule on ASSIGNED transition (delay = P41). On fire: emit new outbound <code>ClSystemAcceptanceTimeout</code> (NOT internally mutate). TAS: new inbound handler closes candidate to CANCELLED_BY_UPSTREAM, emits existing <code>EsInstallCancelledByUpstream</code>. DAS: new inbound handler on <code>EsInstallCancelledByUpstream</code> reverts to UNASSIGNED + re-routes (with P51 cooldown but no P195 increment per FM-DAO-02).</td></tr>
     </tbody>
   </table>
@@ -411,9 +424,21 @@ sequenceDiagram
         After ASSIGNED: expect allocation_state = 'ASSIGNED', csp_id = &lt;csp_X&gt;,
                       acceptance_timestamp IS NULL, assigned_at IS NOT NULL
         After slot:    expect allocation_state = 'ACCEPTED', acceptance_timestamp matches slot moment
-    • <strong>TAS DB</strong> — public.install_execution_candidates (TAS DB)
-        After AllocationAssigned: expect current_state = 'AWAITING_SLOT_PROPOSAL', csp_id = &lt;csp_X&gt;
+    • <strong>TAS DB (candidate state)</strong> — public.install_execution_candidates (TAS DB)
+        After AllocationAssigned (post auto-advance): expect current_state = 'AWAITING_SLOT_PROPOSAL', csp_id = &lt;csp_X&gt;
         After slot: expect current_state IN ('SLOT_SELECTED', 'AWAITING_CUSTOMER_SLOT_CONFIRMATION')
+    • <strong>TAS DB (transition log — two rows on creation)</strong> — public.install_state_transition_log
+        WHERE execution_candidate_id = &lt;the new candidate&gt;
+        ORDER BY occurred_at
+        → expect Row 1: from_state = NULL, to_state = 'ASSIGNED' (renamed from ACCEPTED),
+                       reason_code = 'ALLOCATION_ASSIGNED' (was ALLOCATION_ACCEPTED)
+        → expect Row 2: from_state = 'ASSIGNED', to_state = 'AWAITING_SLOT_PROPOSAL',
+                       reason_code = 'AUTO_ADVANCE'
+    • <strong>TAS DB (negative — no rows in old ACCEPTED state)</strong> —
+        public.install_execution_candidates
+        WHERE current_state = 'ACCEPTED'
+          AND created_at &gt; &lt;deploy timestamp&gt;
+        → expect 0 rows (no new candidates use the old name; enum is renamed)
     • <strong>CL DB</strong> — public.connections (CL DB)
         Throughout DAS-ASSIGNED window: expect current_state = 'REQUESTED'
         After AllocationAccepted: expect current_state = 'PENDING_INSTALL'
@@ -559,16 +584,51 @@ sequenceDiagram
   <em>Real-world:</em> when the fix deploys, some allocations are already in ACCEPTED
   from the pre-fix auto-accept. They should continue normally.
 
-  <span class="kw">Given</span> a connection_allocations row in allocation_state = 'ACCEPTED'
+  <span class="kw">Given</span> a DAS connection_allocations row in allocation_state = 'ACCEPTED'
         with acceptance_timestamp = pre-deploy time (from auto-accept)
   <span class="kw">When</span>  the fix deploys
   <span class="kw">Then</span>  the row continues on its existing trajectory (install proceeds)
-  <span class="kw">And</span>   the new ASSIGNED → ACCEPTED transition only applies to NEW allocations
-  <span class="kw">And</span>   no migration / backfill is needed
+  <span class="kw">And</span>   the new DAS-ASSIGNED → DAS-ACCEPTED transition only applies to NEW allocations
+  <span class="kw">And</span>   no DAS migration / backfill is needed
 
   <span class="kw">Verify:</span>
-    • Pre-deploy ACCEPTED rows: install / activation continues per existing path
-    • Post-deploy NEW_DEMAND rows: follow the new chain (ASSIGNED → slot → ACCEPTED)</pre></div>
+    • Pre-deploy DAS-ACCEPTED rows: install / activation continues per existing path
+    • Post-deploy NEW_DEMAND rows: follow the new chain (DAS-ASSIGNED → slot → DAS-ACCEPTED)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-5:</span> TAS enum rename — one-time migration for existing rows
+  <em>Real-world:</em> TAS-side: CandidateState.ACCEPTED is being renamed to ASSIGNED.
+  Existing rows with current_state = 'ACCEPTED' need a one-time SQL update so
+  the JPA enum loader doesn't fail on read.
+
+  <span class="kw">Given</span> existing install_execution_candidates rows
+        WHERE current_state = 'ACCEPTED' as of deploy timestamp
+  <span class="kw">When</span>  the migration SQL runs as part of the deploy
+        (UPDATE ... SET current_state = 'ASSIGNED' WHERE current_state = 'ACCEPTED')
+  <span class="kw">Then</span>  all such rows now show current_state = 'ASSIGNED'
+  <span class="kw">And</span>   the JPA enum loader successfully loads them
+  <span class="kw">And</span>   any in-flight candidates auto-advance to AWAITING_SLOT_PROPOSAL on next access
+        (or stay in ASSIGNED if creation was mid-transaction at deploy)
+  <span class="kw">And</span>   no candidate is stuck or behaves anomalously
+
+  <span class="kw">Verify (before migration runs):</span>
+    • <strong>TAS DB</strong> — public.install_execution_candidates
+        WHERE current_state = 'ACCEPTED'
+        → count expected to be very small (ACCEPTED is transient; auto-advances same
+          transaction). Confirm count before deploy.
+
+  <span class="kw">Verify (after migration runs):</span>
+    • <strong>TAS DB</strong> — public.install_execution_candidates
+        WHERE current_state = 'ACCEPTED'
+        → expect 0 rows
+    • <strong>TAS DB</strong> — public.install_execution_candidates
+        WHERE current_state = 'ASSIGNED'
+        → expect rows that previously held 'ACCEPTED' now show 'ASSIGNED'
+    • <strong>Application startup</strong> — no enum-load errors in service logs
+        ("No enum constant ... ACCEPTED")
+    • <strong>install_state_transition_log</strong> — pre-deploy rows referencing
+        the old 'ACCEPTED' name remain unchanged (history is immutable). New
+        transitions write 'ASSIGNED'. Spot-check: query for both names ever to
+        see the cutover point.</pre></div>
 
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
@@ -577,7 +637,7 @@ sequenceDiagram
       <tr><td class="cls">Business logic</td><td>A5 rows 1-9 (5 happy-path + cascade behaviours)</td><td>5 logic lines</td><td>LOGIC-1..5</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>—</td><td>N/A (state transitions, no math)</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
-      <tr><td class="cls">Use / edge</td><td>EDGE-1..4 (replay, race, short windows, backwards compat)</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..5 (replay, race, short windows, DAS backwards compat, TAS enum migration)</td><td>5 edges</td><td>EDGE-1..5</td><td>All covered</td></tr>
       <tr><td class="cls">Regression</td><td>§A6 + B5 REGRESSION blocks omitted per gap-05 v1.2 convention</td><td>—</td><td>—</td><td>N/A (scope decision)</td></tr>
     </tbody>
   </table>
