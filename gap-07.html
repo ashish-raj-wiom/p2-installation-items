@@ -295,6 +295,53 @@ stateDiagram-v2
     ACCEPTED --> REALLOCATION_PENDING: structural trigger
   </div>
 
+  <h3>CL connection state flow — where PENDING_INSTALL is triggered</h3>
+  <p>CL stays in <code>REQUESTED</code> for as long as DAS is in <code>UNASSIGNED</code> or <code>ASSIGNED</code> (could be 0 seconds to P41 = 2 hours). <strong>The single moment that flips CL into <code>PENDING_INSTALL</code> is when DAS transitions to <code>ACCEPTED</code> and emits <code>AllocationAccepted</code> — which only happens when the CSP proposes a slot via the existing <code>EsInstallSlotSelected</code> chain.</strong> Pre-fix, this T1 transition fired ~0 seconds after routing because of auto-accept. Post-fix, it fires when the CSP acts.</p>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> REQUESTED: customer submits CONNECTION_REQUEST
+
+    state "REQUESTED" as REQ
+    note right of REQ
+      DAS is UNASSIGNED (no CSP) or
+      ASSIGNED (CSP picked, hasn't acted).
+      Customer-app shows
+      "Looking for a provider".
+      Up to P41 = 2 hours.
+    end note
+
+    REQUESTED --> PENDING_INSTALL: T1 - AllocationAccepted received (CSP slot proposal triggered it)
+
+    state "PENDING_INSTALL" as PI
+    note right of PI
+      DAS is ACCEPTED.
+      TAS is past slot proposal -
+      AWAITING_CUSTOMER_SLOT_CONFIRMATION.
+      Customer can now act
+      (confirm slot, etc).
+    end note
+
+    REQUESTED --> DEACTIVATED: P75 sweep 7d (T9, BUG-01)
+    PENDING_INSTALL --> REQUESTED: INSTALLATION_FAILED retry (T3)
+    PENDING_INSTALL --> ACTIVE: CUSTOMER_INSTALLATION_CONFIRMED (T2, install complete)
+    PENDING_INSTALL --> PENDING_DEACTIVATION: P78 retry exhaustion (T12)
+    ACTIVE --> [*]: deactivation chain
+  </div>
+
+  <h3>Where the three OSes sit at each moment — the new alignment</h3>
+  <table>
+    <thead><tr><th style="width:30%">Moment</th><th>CL</th><th>DAS</th><th>TAS</th></tr></thead>
+    <tbody>
+      <tr><td>Just after CONNECTION_REQUEST</td><td><code>REQUESTED</code></td><td>—</td><td>—</td></tr>
+      <tr><td>DAS routing picks CSP (NEW: emit <code>AllocationAssigned</code>)</td><td><code>REQUESTED</code></td><td><code>ASSIGNED</code></td><td>—</td></tr>
+      <tr><td>TAS creates candidate, auto-advances</td><td><code>REQUESTED</code></td><td><code>ASSIGNED</code></td><td><code>AWAITING_SLOT_PROPOSAL</code></td></tr>
+      <tr><td>CSP proposes slot — TAS emits <code>EsInstallSlotSelected</code></td><td><code>REQUESTED</code></td><td><code>ASSIGNED</code></td><td><code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code></td></tr>
+      <tr><td><strong>DAS receives slot event → emits <code>AllocationAccepted</code></strong></td><td><code>REQUESTED</code></td><td><code>ACCEPTED</code></td><td><code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code></td></tr>
+      <tr><td><strong>CL receives <code>AllocationAccepted</code> → fires T1</strong></td><td><strong><code>PENDING_INSTALL</code></strong></td><td><code>ACCEPTED</code></td><td><code>AWAITING_CUSTOMER_SLOT_CONFIRMATION</code></td></tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>Why <code>PENDING_INSTALL</code> matters here.</strong> This is the only CL state change between booking arrival and the customer confirming installation. Today it fires within ~0 seconds (auto-accept). Post-GAP-07 it fires only when the CSP has actually proposed a slot — making <code>PENDING_INSTALL</code> a meaningful "CSP has actually engaged with this booking" milestone rather than a routing-side-effect. Customer-app surfaces tracking <code>PENDING_INSTALL</code> as a "milestone reached" signal now get a truer reading.</div>
+
   <h3>Cross-service sequence — successful slot proposal (happy path)</h3>
   <div class="mermaid">
 sequenceDiagram
