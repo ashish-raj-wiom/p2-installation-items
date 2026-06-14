@@ -663,11 +663,11 @@ sequenceDiagram
 
   <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> Reroute correctness — new CSP must enter ASSIGNED (NOT auto-ACCEPTED) on every reroute path
   <em>Real-world:</em> after a P41 timeout, a CSP decline, OR a CL_RETRY_REROUTE (install failure
-  T3 path), DAS picks a new CSP. The fix from v1.3 says: every reroute must behave like initial
-  routing — persist ASSIGNED only, emit AllocationAssigned (NOT AllocationAccepted), create a new
-  P41 schedule. If only the initial-routing markAutoAccepted call was removed (the v1.2 mistake),
-  BUG-03's auto-accept regression returns on the first reroute. This case verifies all three
-  reroute paths behave identically to initial routing.
+  T3 path), DAS picks a new CSP. Every reroute must behave like initial routing — persist
+  ASSIGNED only, emit AllocationAssigned (NOT AllocationAccepted), create a new P41 schedule.
+  If only the initial-routing markAutoAccepted call was removed, BUG-03's auto-accept regression
+  returns on the first reroute. This case verifies all three reroute paths behave identically
+  to initial routing.
 
   <span class="kw">Given</span> a connection_allocations row that was ASSIGNED to &lt;csp_X&gt;, and is now UNASSIGNED via
         one of three triggers:
