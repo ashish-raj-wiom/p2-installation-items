@@ -125,6 +125,7 @@
   <h2 class="close">Closeout</h2>
   <ol>
     <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
   </ol>
   <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
 </nav>
@@ -874,6 +875,15 @@ sequenceDiagram
   </div>
 </footer>
 
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-13</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Removes DAS auto-accept at all three callsites — initial routing, P41/decline reroute, install-failure retry — and anchors DAS <code>ASSIGNED → ACCEPTED</code> on the existing TAS-emitted <code>EsInstallSlotSelected</code> (CSP slot proposal). New DAS outbound event <code>AllocationAssigned</code> (carries <code>p41_deadline_at</code> for CSP App countdown) emitted at every <code>UNASSIGNED → ASSIGNED</code> transition; TAS switches from the <code>AllocationAccepted</code> subscriber to this new event. <code>AllocationAccepted</code> still fires, but now only on slot proposal — that's when CL fires T1 (<code>REQUESTED → PENDING_INSTALL</code>). New TAS <code>CandidateState.DECLINED</code> terminal (7th terminal, CSP-actor-owned, mirrors DAS transient DECLINED at L171) + new <code>EsInstallDeclined</code> event + new CSP-facing <code>POST /candidates/{id}/decline</code> endpoint for explicit CSP decline before slot proposal (FM-DAO-11 fast-track exit); existing DAS <code>POST /csps/{cspId}/decline</code> endpoint deprecated with a transition bridge that also emits <code>EsInstallDeclined</code> to TAS so old-build clients don't orphan TAS candidates. P41 acceptance-timeout sweep wired with the GAP-06 one-canonical-flow cascade pattern (DAS sweep emits <code>ClSystemAcceptanceTimeout</code> → TAS closes candidate via <code>cancelByUpstream</code> → emits <code>EsInstallCancelledByUpstream</code> → DAS reverts to <code>UNASSIGNED</code> with P51 cooldown and P195 increment per FM-DAO-12, then re-routes); per-connection AWS EventBridge schedule (BUG-02 pattern) keyed by <code>allocation_id</code> so reroutes get distinct schedules. OS-canonical reading per D&amp;A OS L170 + L175 — no OS amendment required, code-OS realignment back to the state machine. Reverses BUG-03's atomic write. CL stays in <code>REQUESTED</code> throughout DAS-ASSIGNED (no new CL state). §A6 + REGRESSION omitted per gap-05 v1.2 convention. DECLINE_PATTERN signal to Quality + Enforcement OS (per FM-DAO-02 / FM-DAO-11 + INV-DAO-15) deferred to a follow-up spec per PM decision.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
 
 </main>
 </div>
