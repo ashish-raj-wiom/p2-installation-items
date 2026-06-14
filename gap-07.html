@@ -150,7 +150,7 @@
   <h2>Quick Check</h2>
   <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
   <dl>
-    <dt>What is changing?</dt>     <dd>Three coordinated changes. <strong>(1) Stop auto-accepting</strong> — remove <code>AllocationServiceImpl.markAutoAccepted</code> from the routing flow; allocation persists in <code>ASSIGNED</code> after CSP selection. <strong>(2) New outbound event <code>AllocationAssigned</code></strong> from DAS at the ASSIGNED moment — payload identical to today's <code>AllocationAccepted</code>; TAS subscribes to this. <strong>TAS-side adjustments:</strong> add <code>CandidateState.ASSIGNED</code> to enum (keep deprecated <code>ACCEPTED</code> for backward compat of pre-deploy rows — <strong>no SQL migration</strong>; new candidates use the new value, old rows keep theirs). Rename <code>onAllocationAccepted → onAllocationAssigned</code>. Candidate still auto-advances ASSIGNED → AWAITING_SLOT_PROPOSAL in same transaction. <strong>(3) New inbound handler on DAS for <code>EsInstallSlotSelected</code></strong> (existing TAS outbound event from <code>CandidateWorkflowServiceImpl.proposeSlot</code>). On receipt: DAS transitions <code>ASSIGNED → ACCEPTED</code>, cancels P41 schedule, and emits the existing <code>AllocationAccepted</code> event. <strong>CL's existing handler then fires T1 (<code>REQUESTED → PENDING_INSTALL</code>) on receipt of <code>AllocationAccepted</code></strong> — so the customer's "Pending install" moment is now triggered by the CSP's slot proposal instead of by silent auto-accept. <strong>Plus: wire the P41 acceptance-timeout sweep</strong> with a GAP-06-style cascade — per-connection AWS schedule created on ASSIGNED, cancelled on transition out. DAS sweep emits new <code>ClSystemAcceptanceTimeout</code> to TAS, TAS closes candidate, emits existing <code>EsInstallCancelledByUpstream</code>, DAS reverts to <code>UNASSIGNED</code> and re-routes (P51 cooldown added, P195 counter incremented per FM-DAO-12 — both declines and retries count toward the ping-pong cap; FM-DAO-02's "not penalized" phrase refers to Exposure Band per INV-DAO-15, not P195).</dd>
+    <dt>What is changing?</dt>     <dd>Three coordinated changes. <strong>(1) Stop auto-accepting</strong> — remove <code>AllocationServiceImpl.markAutoAccepted</code> from the routing flow; allocation persists in <code>ASSIGNED</code> after CSP selection. <strong>(2) New outbound event <code>AllocationAssigned</code></strong> from DAS at the ASSIGNED moment — payload identical to today's <code>AllocationAccepted</code>; TAS subscribes to this. <strong>TAS-side adjustments:</strong> add <code>CandidateState.ASSIGNED</code> to enum (keep deprecated <code>ACCEPTED</code> for backward compat of pre-deploy rows — <strong>no SQL migration</strong>; new candidates use the new value, old rows keep theirs). Rename <code>onAllocationAccepted → onAllocationAssigned</code>. Candidate still auto-advances ASSIGNED → AWAITING_SLOT_PROPOSAL in same transaction. <strong>(3) New inbound handler on DAS for <code>EsInstallSlotSelected</code></strong> (existing TAS outbound event from <code>CandidateWorkflowServiceImpl.proposeSlot</code>). On receipt: DAS transitions <code>ASSIGNED → ACCEPTED</code>, cancels P41 schedule, and emits the existing <code>AllocationAccepted</code> event. <strong>CL's existing handler then fires T1 (<code>REQUESTED → PENDING_INSTALL</code>) on receipt of <code>AllocationAccepted</code></strong> — so the customer's "Pending install" moment is now triggered by the CSP's slot proposal instead of by silent auto-accept. <strong>Plus: wire the P41 acceptance-timeout sweep</strong> with a GAP-06-style cascade — per-connection AWS schedule created on ASSIGNED, cancelled on transition out. DAS sweep emits new <code>ClSystemAcceptanceTimeout</code> to TAS, TAS closes candidate, emits existing <code>EsInstallCancelledByUpstream</code>, DAS reverts to <code>UNASSIGNED</code> and re-routes (P51 cooldown added, P195 counter incremented per FM-DAO-12 — declines and retries count toward the ping-pong cap; FM-DAO-02's "not penalized" phrase refers to Exposure Band per INV-DAO-15, not P195). <strong>Plus a sibling cascade for CSP explicit decline</strong> (FM-DAO-11) — CSP App → new TAS <code>POST /candidates/{id}/decline</code> → new <code>DECLINED</code> terminal → new <code>EsInstallDeclined</code> event → DAS inbound handler reuses existing <code>declineAllocation</code> logic. Two distinct cascades with their own terminals + events so the actor (SYSTEM vs CSP) is encoded structurally, not via reason_code sniffing.</dd>
     <dt>What triggered it?</dt>    <dd>Per D&amp;A OS L170 + L175, <code>ASSIGNED → ACCEPTED</code> is CSP-initiated and P41 governs the wait. BUG-03's atomic write was the workaround that bypassed this. Effect today: P41 is dead code (sweep wired but state is ASSIGNED for ~0 seconds, never times out); the OS-canonical CSP-confirms-via-system-action semantic is replaced by silent auto-accept; INV-DAO-12's distinction between ASSIGNED and ACCEPTED (immediate re-route vs P49 grace period on CSP exit) is unenforceable.</dd>
     <dt>Blast radius</dt>          <dd>DAS service (state machine, inbound handler, outbound event class, sweep wiring) · TAS service (subscriber switch + new inbound handler) · CL service (zero change — still receives <code>AllocationAccepted</code>, still fires T1). New AWS EventBridge per-connection schedules for P41 (same pattern as P191 from BUG-02). No DB migration. No customer-app change.</dd>
     <dt>Reversible?</dt>           <dd>Yes — feature-flag the auto-accept removal; rollback = re-enable <code>markAutoAccepted</code> on the routing path. Event-class additions are additive.</dd>
@@ -262,14 +262,26 @@
       <tr>
         <td>DAS — new inbound handler for <code>EsInstallCancelledByUpstream</code></td>
         <td>DAS has no handler for this event.</td>
-        <td>Single handler covers both P41-timeout and CSP-decline cascades (option-a — reason_code disambiguates). Behaviour on receipt: validate allocation is in <code>ASSIGNED</code> (LOGIC-5 covers stale/race), set <code>previous_csp_id =</code> the ending CSP, then <strong>branch on reason_code prefix</strong>: <strong>(a) <code>TIMEOUT_*</code> (e.g. TIMEOUT_P41 = SYSTEM source)</strong> → ASSIGNED → UNASSIGNED directly. <strong>(b) <code>DECLINED_BY_CSP</code> (CSP source)</strong> → ASSIGNED → DECLINED (transient, same-txn) → UNASSIGNED, mirroring the state-machine path at L171. <strong>Both branches</strong>: add P51 cooldown entry for the ending CSP (per FM-DAO-02 + FM-DAO-11), increment <code>assignment_count_per_csp[csp]</code> by 1 per FM-DAO-12 (P195 ping-pong cap counts <em>"retries, declines, reallocations"</em>), then trigger routing-engine re-attempt. If reroute succeeds → ASSIGNED with new CSP; if fails → stays UNASSIGNED with the audit log row.</td>
-        <td>Restores the OS-canonical re-routing path for both pre-slot exits. <strong>Important misconception correction:</strong> FM-DAO-02 ("timed-out CSP is NOT penalized") and FM-DAO-11 ("declining CSP is NOT penalized") both refer to Exposure Band per INV-DAO-15 — <em>not</em> P195. P195 is FM-DAO-12's per-connection-per-CSP ping-pong cap, a distinct mechanism. Code today (<code>BatchTriggerServiceImpl:48</code>) already increments P195 on P41 timeout — this spec preserves that semantic on the new cascade.</td>
+        <td><strong>P41 timeout cascade only</strong> (CSP decline is a separate event — see next row). On receipt of <code>EsInstallCancelledByUpstream</code> with <code>reason_code = TIMEOUT_P41</code>: validate allocation is in <code>ASSIGNED</code> (LOGIC-4 covers stale/race), set <code>previous_csp_id =</code> the timed-out CSP, transition <code>ASSIGNED → UNASSIGNED</code> directly (no transient DECLINED — system-driven, CSP didn't actively decline), add P51 cooldown entry (FM-DAO-02), increment <code>assignment_count_per_csp[csp]</code> by 1 (FM-DAO-12 — P195 ping-pong cap counts "retries, declines, reallocations"), then trigger routing-engine re-attempt. If reroute succeeds → ASSIGNED with new CSP; if fails → stays UNASSIGNED with the audit log row.</td>
+        <td>Restores the OS-canonical re-routing path on P41 timeout. <strong>Important misconception correction:</strong> FM-DAO-02 ("timed-out CSP is NOT penalized") refers to Exposure Band per INV-DAO-15 — <em>not</em> P195. P195 is FM-DAO-12's per-connection-per-CSP ping-pong cap, a distinct mechanism. Code today (<code>BatchTriggerServiceImpl:48</code>) already increments P195 on P41 timeout — this spec preserves that semantic on the new cascade.</td>
       </tr>
       <tr>
-        <td>TAS — CSP pre-slot decline endpoint → cascade to DAS via existing infra (FM-DAO-11)</td>
-        <td>No CSP-decline-before-slot path exists today. Auto-accept collapses ASSIGNED → ACCEPTED in ~0s, so there's no window for the CSP to refuse. FM-DAO-11's "explicit decline = no P41 wait" advantage is unreachable.</td>
-        <td>Add a CSP-facing TAS endpoint (e.g. <code>POST /candidates/{id}/decline</code>) callable while candidate is in <code>AWAITING_SLOT_PROPOSAL</code>. On call: TAS calls <code>candidateWorkflowService.cancelByUpstream(candidateId, sourceOs="CSP_PRE_SLOT_DECLINE", reasonCode="DECLINED_BY_CSP", ...)</code> → AWAITING_SLOT_PROPOSAL → CANCELLED_BY_UPSTREAM. <strong>Option-a convention:</strong> CSP source is implicit in <code>DECLINED_BY_CSP</code>; no separate <code>failure_subreason_source</code> field. TAS emits the existing <code>EsInstallCancelledByUpstream</code> → DAS inbound handler (same as the P41 row above) branches on reason_code → ASSIGNED → DECLINED (transient) → UNASSIGNED + P51 + P195 + immediate re-route. <strong>Customer wait = seconds, not 2 hours.</strong></td>
-        <td>FM-DAO-11 (L881): "Connection immediately re-enters routing (no P41 wait — this is the advantage of explicit decline over silent timeout, saves up to 2 hours of customer wait)." Reuses the entire cascade infra built for P41 — same TAS terminal (CANCELLED_BY_UPSTREAM), same outbound event (EsInstallCancelledByUpstream), same DAS inbound handler. Only difference: reason_code = DECLINED_BY_CSP instead of TIMEOUT_P41, and DAS branches to the DECLINED transient path.</td>
+        <td>TAS — new <code>CandidateState.DECLINED</code> terminal + state machine transition</td>
+        <td>TAS install candidate enum has 6 terminals (CONNECTION_ACTIVE, INSTALLATION_CANCELLED_ONSITE, INSTALLATION_REPORTED_FAILED, CANCELLED_BY_CUSTOMER, CANCELLED_BY_UPSTREAM, INSTALLATION_EXPIRED). <strong>None of them fits CSP-initiated pre-slot decline.</strong> CANCELLED_BY_UPSTREAM is reserved for system/upstream cancellations (reallocation, routing failure, customer cancel cascading down). INSTALLATION_REPORTED_FAILED is for post-accept install attempts that failed. Pre-AMENDMENT-02, the auto-accept design assumed CSP couldn't decline at this stage — so no terminal was needed.</td>
+        <td>Add new terminal <code>CandidateState.DECLINED</code> (7th terminal), explicitly CSP-owned. Add state machine event <code>DECLINED</code> and transition <code>AWAITING_SLOT_PROPOSAL → DECLINED</code> in <code>InstallationStateMachine.java</code>. Update <code>TERMINAL_STATES</code> set in <code>CandidateWorkflowServiceImpl</code> + <code>InternalTaskController</code> to include DECLINED. <strong>Name chosen to mirror DAS's transient DECLINED state (L171)</strong> — same word, same actor (CSP), aligned semantics across OSes.</td>
+        <td>OS-aligned terminal for CSP-initiated pre-slot termination. Avoids semantic overload of CANCELLED_BY_UPSTREAM (which would falsely attribute the action to "upstream") and of INSTALLATION_REPORTED_FAILED (which would falsely attribute it to "install attempt failed" — no install was ever attempted). Single source of truth for the decline action across DAS + TAS state machines.</td>
+      </tr>
+      <tr>
+        <td>TAS — new <code>CandidateWorkflowService.decline</code> method + new outbound <code>EsInstallDeclined</code> event</td>
+        <td>No method exists for CSP-initiated pre-slot decline. <code>cancelByUpstream</code> is semantically wrong (upstream-only). <code>reportInstallationFailed</code> is semantically wrong (post-accept install attempt). <code>cancelByCustomer</code> is the wrong actor.</td>
+        <td>New method <code>decline(candidateId, actorCspId, reason)</code> on <code>CandidateWorkflowService</code> + impl. Body mirrors <code>reportInstallationFailed</code> structure but: (a) uses <code>InstallationStateMachine.DECLINED</code> event, (b) sets <code>failure_subreason_source = "CSP"</code>, (c) logs transition with <code>ActorType.CSP</code> + <code>actorCspId</code>, (d) emits new outbound <code>EsInstallDeclined(connection_id, csp_id, allocation_id, reason, timestamp)</code> + the existing <code>TasInstallTerminal</code>. New endpoint <code>POST /candidates/{id}/decline</code> on a CSP-facing controller, CSP-authenticated, callable only when candidate state ∈ <code>{AWAITING_SLOT_PROPOSAL}</code>.</td>
+        <td>Parallels the P41 cascade structure (CSP App → TAS → terminal + outbound → DAS inbound) but with the correct CSP-attributed terminal/event. Cleanly distinguishable in TAS audit log + outbox from both upstream cancellations and post-accept failures — analytics and ops can identify decline-driven exits without parsing reason_codes.</td>
+      </tr>
+      <tr>
+        <td>DAS — new inbound handler for <code>EsInstallDeclined</code> → reuse <code>declineAllocation</code> logic</td>
+        <td>DAS exposes <code>POST /csps/{cspId}/decline</code> (<code>AllocationController:41</code>) which calls <code>AllocationServiceImpl.declineAllocation:60</code>. Today that endpoint is the CSP App's entry point for decline — it does the full work in one txn (state ASSIGNED → DECLINED → UNASSIGNED, P51 cooldown, P195 increment, DECLINE_PATTERN emit, immediate reroute) but <strong>does NOT notify TAS</strong> — so a TAS candidate in AWAITING_SLOT_PROPOSAL would be orphaned post-GAP-07.</td>
+        <td>Reverse the call direction: <strong>(a)</strong> CSP App migrates to the new TAS endpoint (above). <strong>(b)</strong> DAS subscribes to <code>EsInstallDeclined</code> with a new inbound handler. Handler calls the existing <code>AllocationServiceImpl.declineAllocation(connectionId, cspId, reasonCode)</code> — zero behaviour change inside DAS (state path + P51 + P195 + DECLINE_PATTERN + reroute all already wired). <strong>(c)</strong> The existing DAS <code>POST /csps/{cspId}/decline</code> endpoint is deprecated (still accepts calls during transition — emits a warning log + processes normally — but CSP App should stop calling it).</td>
+        <td>One canonical decline flow, TAS-first (matches the P41 cascade direction — TAS owns candidate state, DAS reacts). Reuses DAS's existing declineAllocation logic verbatim — no new state mutation code in DAS. The deprecated endpoint stays during transition for backward compatibility, removed in a follow-up once CSP App is updated.</td>
       </tr>
       <tr>
         <td>CL during DAS <code>ASSIGNED</code> — no change</td>
@@ -349,23 +361,28 @@ stateDiagram-v2
   <div class="hint"><strong>Why <code>PENDING_INSTALL</code> matters here.</strong> This is the only CL state change between booking arrival and the customer confirming installation. Today it fires within ~0 seconds (auto-accept). Post-GAP-07 it fires only when the CSP has actually proposed a slot — making <code>PENDING_INSTALL</code> a meaningful "CSP has actually engaged with this booking" milestone rather than a routing-side-effect. Customer-app surfaces tracking <code>PENDING_INSTALL</code> as a "milestone reached" signal now get a truer reading.</div>
 
   <h3>Pre-slot exit asymmetry — P41 timeout vs CSP explicit decline</h3>
-  <p>Two ways an ASSIGNED allocation can exit before slot proposal. Both reuse the same cascade infrastructure (TAS terminal, outbound event, DAS inbound handler) — they disambiguate only via <code>reason_code</code> (option-a convention; SYSTEM vs CSP source is encoded in the reason_code prefix, not in a separate field). <strong>Every cell below is OS-validated</strong> (D&amp;A OS L155-176, FM-DAO-02 L872, FM-DAO-11 L881, FM-DAO-12 L882, INV-DAO-15 L749).</p>
+  <p>Two ways an ASSIGNED allocation can exit before slot proposal — two distinct cascades. They share <em>some</em> downstream effects (P51, P195, re-route) but use <strong>different TAS terminals, methods, and outbound events</strong> because the actor differs (SYSTEM vs CSP). <strong>Every cell below is OS-validated</strong> (D&amp;A OS L155-176, FM-DAO-02 L872, FM-DAO-11 L881, FM-DAO-12 L882, INV-DAO-15 L749).</p>
   <table>
     <thead><tr><th style="width:24%">Concern</th><th>P41 timeout (SYSTEM-driven)</th><th>CSP explicit decline (CSP-driven)</th></tr></thead>
     <tbody>
-      <tr><td><strong>DAS allocation_state path</strong></td><td>ASSIGNED → UNASSIGNED (direct)</td><td>ASSIGNED → DECLINED (transient, same-txn) → UNASSIGNED</td></tr>
+      <tr><td><strong>Entry point</strong></td><td>AWS Scheduler fires P41 schedule (per-connection)</td><td>CSP App → TAS <code>POST /candidates/{id}/decline</code> (NEW)</td></tr>
       <tr><td><strong>TAS candidate state at trigger</strong></td><td><code>AWAITING_SLOT_PROPOSAL</code></td><td><code>AWAITING_SLOT_PROPOSAL</code></td></tr>
-      <tr><td><strong>TAS terminal</strong></td><td><code>CANCELLED_BY_UPSTREAM</code></td><td><code>CANCELLED_BY_UPSTREAM</code> (same — no <code>CANCELLED_BY_CSP</code> enum value exists)</td></tr>
-      <tr><td><strong>TAS reason_code</strong></td><td><code>TIMEOUT_P41</code> (TIMEOUT_* prefix implies SYSTEM source)</td><td><code>DECLINED_BY_CSP</code> (DECLINED_BY_* prefix implies CSP source)</td></tr>
+      <tr><td><strong>TAS method invoked</strong></td><td><code>cancelByUpstream(sourceOs="CL_SYSTEM_ACCEPTANCE_TIMEOUT", reasonCode="TIMEOUT_P41")</code></td><td><code>decline(actorCspId, reason)</code> (NEW method)</td></tr>
+      <tr><td><strong>TAS terminal</strong></td><td><code>CANCELLED_BY_UPSTREAM</code> (existing; upstream-attribution is correct here — system layer killed the candidate)</td><td><code>DECLINED</code> <strong>(NEW terminal — CSP-attributed; mirrors DAS's transient DECLINED state)</strong></td></tr>
+      <tr><td><strong>failure_subreason_source</strong></td><td>SYSTEM</td><td>CSP</td></tr>
+      <tr><td><strong>TAS outbound event</strong></td><td><code>EsInstallCancelledByUpstream</code> (existing)</td><td><code>EsInstallDeclined</code> (NEW)</td></tr>
+      <tr><td><strong>DAS inbound trigger</strong></td><td>New handler on <code>EsInstallCancelledByUpstream</code></td><td>New handler on <code>EsInstallDeclined</code> → reuses existing <code>AllocationServiceImpl.declineAllocation</code> logic</td></tr>
+      <tr><td><strong>DAS allocation_state path</strong></td><td><code>ASSIGNED → UNASSIGNED</code> (direct — system didn't decline, just timed out)</td><td><code>ASSIGNED → DECLINED → UNASSIGNED</code> (transient DECLINED per D&amp;A OS L171)</td></tr>
       <tr><td><strong>P51 cooldown</strong></td><td>✓ added (CSP × connection only — not global)</td><td>✓ added (same)</td></tr>
-      <tr><td><strong>P195 counter</strong></td><td>✓ <strong>incremented</strong> (per FM-DAO-12 — counts "retries, declines, reallocations")</td><td>✓ <strong>incremented</strong> (same — code at <code>BatchTriggerServiceImpl:48</code> + <code>InboundEventProcessingServiceImpl:463</code> already does this)</td></tr>
-      <tr><td><strong>Exposure Band change in Quality OS</strong></td><td>❌ NO change (INV-DAO-15 — "Allocation OS does not penalize, throttle, or change Exposure Band")</td><td>❌ NO change (same)</td></tr>
-      <tr><td><strong>DECLINE_PATTERN signal to Quality + Enforcement OS</strong></td><td>🔜 <code>event_type=TIMEOUT</code> — emit deferred per PM decision; wire later</td><td>🔜 <code>event_type=DECLINE</code> — emit deferred per PM decision; wire later</td></tr>
+      <tr><td><strong>P195 counter</strong></td><td>✓ <strong>incremented</strong> (per FM-DAO-12 — counts "retries, declines, reallocations")</td><td>✓ <strong>incremented</strong> (same — already wired in <code>AllocationServiceImpl.declineAllocation:74</code>)</td></tr>
+      <tr><td><strong>Exposure Band change in Quality OS</strong></td><td>❌ NO change (INV-DAO-15)</td><td>❌ NO change (same)</td></tr>
+      <tr><td><strong>DECLINE_PATTERN signal to Quality + Enforcement OS</strong></td><td>🔜 deferred per PM decision (will be wired in follow-up spec)</td><td>🔜 deferred per PM decision (note: <code>declineAllocation:79</code> already emits this today; will need re-wiring in the new cascade)</td></tr>
       <tr><td><strong>Re-route timing (decision → next ASSIGNED)</strong></td><td>Seconds (after cascade completes)</td><td>Seconds (no P41 wait — that's FM-DAO-11's whole point)</td></tr>
       <tr><td><strong>Customer wait before re-route</strong></td><td>Up to 2h (P41 expiry — the customer already waited)</td><td>Seconds (CSP just acted — explicit decline is fast-track exit)</td></tr>
     </tbody>
   </table>
-  <div class="hint"><strong>Misconception to flag.</strong> Both FM-DAO-02 ("timed-out CSP is NOT penalized in this OS") and FM-DAO-11 ("declining CSP is NOT penalized — INV-DAO-15") refer specifically to <strong>Exposure Band</strong> — i.e. Allocation OS does not change the CSP's routing intensity. P195 is a different mechanism — a per-connection-per-CSP ping-pong cap (FM-DAO-12) — and increments on both paths. Earlier drafts of this spec misread "not penalized" as covering P195 too; this revision corrects that. Code at <code>BatchTriggerServiceImpl:48</code> already increments P195 on P41 timeout, validating the interpretation.</div>
+  <div class="hint"><strong>Why two distinct terminals + events instead of one.</strong> v1.1 of this spec collapsed both paths into <code>CANCELLED_BY_UPSTREAM</code> with reason_code disambiguation (option-a). That was incorrect — <code>CANCELLED_BY_UPSTREAM</code> attributes the action to "upstream" (CL/DAS-driven), but CSP decline is CSP-driven by definition. v1.2 introduces a new <code>DECLINED</code> terminal owned by the CSP actor, mirroring DAS's transient <code>DECLINED</code> state at L171 (same word, same actor, aligned across OSes). Audit log + outbox can distinguish CSP-decline rows from system-timeout rows by event class alone, without parsing reason_codes.</div>
+  <div class="hint"><strong>Misconception to flag (carried from v1.1).</strong> Both FM-DAO-02 ("timed-out CSP is NOT penalized") and FM-DAO-11 ("declining CSP is NOT penalized — INV-DAO-15") refer specifically to <strong>Exposure Band</strong> — Allocation OS does not change the CSP's routing intensity. P195 is a different mechanism — a per-connection-per-CSP ping-pong cap (FM-DAO-12) — and increments on both paths. Code at <code>BatchTriggerServiceImpl:48</code> + <code>AllocationServiceImpl.declineAllocation:74</code> already increments P195 on both paths today, validating the interpretation.</div>
 
   <h3>Cross-service sequence — successful slot proposal (happy path)</h3>
   <div class="mermaid">
@@ -434,12 +451,12 @@ sequenceDiagram
     participant Sched as AWS Scheduler
 
     Note over CSP,TAS: candidate sitting in AWAITING_SLOT_PROPOSAL
-    CSP->>TAS: POST /candidates/{id}/decline (NEW endpoint)
-    TAS->>TAS: cancelByUpstream(reasonCode=DECLINED_BY_CSP)
-    TAS->>TAS: AWAITING_SLOT_PROPOSAL to CANCELLED_BY_UPSTREAM
-    TAS->>DAS: EsInstallCancelledByUpstream (EXISTING event - same as P41)
-    Note over TAS,DAS: reason_code=DECLINED_BY_CSP (CSP source implicit in prefix)
-    DAS->>DAS: reason_code prefix DECLINED_BY_* triggers transient DECLINED path
+    CSP->>TAS: POST /candidates/{id}/decline (NEW endpoint, CSP-authenticated)
+    TAS->>TAS: candidateWorkflowService.decline(actorCspId, reason)
+    TAS->>TAS: AWAITING_SLOT_PROPOSAL to DECLINED (NEW terminal, CSP-owned)
+    Note over TAS: failure_subreason_source=CSP, actorType=CSP
+    TAS->>DAS: EsInstallDeclined (NEW event - distinct from EsInstallCancelledByUpstream)
+    DAS->>DAS: new inbound handler reuses AllocationServiceImpl.declineAllocation
     DAS->>DAS: allocation_state ASSIGNED to DECLINED (transient, same-txn) to UNASSIGNED
     DAS->>DAS: P51 cooldown added, P195 counter incremented (per FM-DAO-12)
     DAS->>Sched: cancel P41 schedule
@@ -448,7 +465,7 @@ sequenceDiagram
     Note over DAS: If reroute succeeds - ASSIGNED with new CSP (loop restart)
     Note over DAS: If fails - stays UNASSIGNED
   </div>
-  <p>The cascade is shape-identical to the P41 timeout (same TAS terminal, same outbound event, same DAS inbound handler) — the <em>only</em> differences are: <strong>(1)</strong> trigger source is a CSP-driven HTTP call instead of an AWS-scheduled fire; <strong>(2)</strong> reason_code carries the <code>DECLINED_BY_*</code> prefix instead of <code>TIMEOUT_*</code>; <strong>(3)</strong> DAS handler takes the transient-DECLINED branch instead of going direct to UNASSIGNED. CL is uninvolved (stays in REQUESTED throughout) — same as the P41 path.</p>
+  <p>The cascade is structurally parallel to the P41 timeout (CSP App → TAS → terminal + outbound → DAS inbound) but uses CSP-attributed pieces: TAS terminal <code>DECLINED</code> (NEW, not CANCELLED_BY_UPSTREAM), outbound <code>EsInstallDeclined</code> (NEW, not EsInstallCancelledByUpstream), TAS method <code>decline</code> (NEW, not cancelByUpstream). DAS reuses the existing <code>AllocationServiceImpl.declineAllocation</code> logic verbatim — no new state mutation code in DAS, just the new inbound handler. CL is uninvolved (stays in REQUESTED throughout) — same as the P41 path. The existing DAS <code>POST /csps/{cspId}/decline</code> endpoint is deprecated and CSP App migrates to the TAS endpoint as the single canonical decline path.</p>
 
   <hr class="sect-end">
 </section>
@@ -466,8 +483,9 @@ sequenceDiagram
       <tr><td>5</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Remove DAS auto-accept call</td><td>One change in <code>AllocationServiceImpl</code>: stop calling <code>markAutoAccepted(allocation, now)</code> at line 151. The static helper at line 209 can remain (used nowhere else) or be deleted.</td></tr>
       <tr><td>6</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>New DAS outbound event <code>AllocationAssigned</code></td><td>No <code>AllocationAssigned</code> record class in DAS outbound package. New class needed with payload mirroring <code>AllocationAccepted</code>. Add <code>EventSender</code> listener method. Emit at the moment the routing engine sets state = ASSIGNED.</td></tr>
       <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>TAS subscriber switch + state addition + method rename + DAS handler for <code>EsInstallSlotSelected</code></td><td>TAS: <strong>(a)</strong> change <code>InboundEventProcessingServiceImpl.process(AllocationAccepted)</code> at line 95 to listen for <code>AllocationAssigned</code> instead. <strong>(b)</strong> Add <code>CandidateState.ASSIGNED</code> to the enum (keep <code>ACCEPTED</code> as deprecated, for backward compat of pre-deploy rows — no SQL migration). New candidates use <code>ASSIGNED</code>. Update state machine validators and tests. <strong>(c)</strong> Rename <code>CandidateWorkflowService.onAllocationAccepted</code> → <code>onAllocationAssigned</code> (interface, impl, callers, tests, docstrings). <strong>(d)</strong> DAS: new inbound endpoint + handler for <code>EsInstallSlotSelected</code> — transitions DAS-ASSIGNED → DAS-ACCEPTED, emits the existing <code>AllocationAccepted</code> for CL. <strong>CL handler unchanged — fires T1 (REQUESTED → PENDING_INSTALL) on receipt of <code>AllocationAccepted</code>, exactly as today.</strong></td></tr>
-      <tr><td>8</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>P41 cascade + CSP-decline cascade — new <code>ClSystemAcceptanceTimeout</code> event + new CSP-decline TAS endpoint + shared DAS inbound handler</td><td>DAS: per-connection EventBridge schedule on ASSIGNED transition (delay = P41). On fire: emit new outbound <code>ClSystemAcceptanceTimeout(reason_code=TIMEOUT_P41)</code> — does NOT internally mutate. TAS: <strong>(a)</strong> new inbound handler for <code>ClSystemAcceptanceTimeout</code> → <code>cancelByUpstream(reasonCode="TIMEOUT_P41")</code>. <strong>(b)</strong> new CSP-facing endpoint <code>POST /candidates/{id}/decline</code> → <code>cancelByUpstream(reasonCode="DECLINED_BY_CSP")</code>. Both paths reuse the existing TAS terminal (CANCELLED_BY_UPSTREAM) and emit the existing <code>EsInstallCancelledByUpstream</code>. DAS: <strong>single</strong> new inbound handler on <code>EsInstallCancelledByUpstream</code> branches on reason_code: TIMEOUT_* → ASSIGNED → UNASSIGNED; DECLINED_BY_CSP → ASSIGNED → DECLINED (transient) → UNASSIGNED. Both branches add P51 cooldown and increment P195 (per FM-DAO-12), then re-route.</td></tr>
-      <tr><td>9</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>P195 increment + P51 cooldown helpers</td><td><code>AllocationServiceImpl.incrementAssignmentCount</code> (L223) and <code>AllocationServiceImpl.addDeclineCooldown</code> are public static helpers. Already called from <code>BatchTriggerServiceImpl:46-48</code> on the current (legacy) P41 sweep and from the install-failure path at <code>InboundEventProcessingServiceImpl:463</code> (GAP-05). New DAS handler reuses both — no new code beyond the call sites.</td></tr>
+      <tr><td>8</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>P41 timeout cascade — new <code>ClSystemAcceptanceTimeout</code> event + DAS sweep wiring + TAS inbound handler + DAS inbound handler</td><td>DAS: per-connection EventBridge schedule on ASSIGNED transition (delay = P41). On fire: emit new outbound <code>ClSystemAcceptanceTimeout(reason_code=TIMEOUT_P41)</code> — does NOT internally mutate. TAS: new inbound handler for <code>ClSystemAcceptanceTimeout</code> → <code>cancelByUpstream(sourceOs="CL_SYSTEM_ACCEPTANCE_TIMEOUT", reasonCode="TIMEOUT_P41")</code> → reuses existing CANCELLED_BY_UPSTREAM terminal + emits existing <code>EsInstallCancelledByUpstream</code>. DAS: new inbound handler on <code>EsInstallCancelledByUpstream</code> reverts ASSIGNED → UNASSIGNED + P51 cooldown + P195 increment + reroute.</td></tr>
+      <tr><td>9</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>CSP-decline cascade — new <code>CandidateState.DECLINED</code> terminal + new <code>EsInstallDeclined</code> event + new TAS method/endpoint + new DAS inbound handler</td><td>TAS: <strong>(a)</strong> add <code>CandidateState.DECLINED</code> to enum (7th terminal) + add to <code>TERMINAL_STATES</code> sets in <code>CandidateWorkflowServiceImpl:89-95</code> + <code>InternalTaskController:45-51</code>. <strong>(b)</strong> add <code>InstallationStateMachine.DECLINED</code> event + transition <code>AWAITING_SLOT_PROPOSAL → DECLINED</code> at line 87-88 + line 154-area. <strong>(c)</strong> new <code>CandidateWorkflowService.decline(candidateId, actorCspId, reason)</code> method (mirrors <code>reportInstallationFailed</code> structure but uses DECLINED event + ActorType.CSP + failure_subreason_source=CSP). <strong>(d)</strong> new outbound event class <code>EsInstallDeclined</code> + listener registration in <code>EventSender</code>. <strong>(e)</strong> new CSP-facing endpoint <code>POST /candidates/{id}/decline</code> in CandidateCommandController. DAS: <strong>(f)</strong> new inbound handler on <code>EsInstallDeclined</code> calls existing <code>AllocationServiceImpl.declineAllocation(connectionId, cspId, reasonCode)</code> verbatim — zero new state-mutation code. <strong>(g)</strong> deprecate existing <code>AllocationController.declineAllocation:41</code> endpoint (mark @Deprecated, log warning on use, remove in follow-up).</td></tr>
+      <tr><td>10</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>P195 increment + P51 cooldown helpers + AllocationServiceImpl.declineAllocation</td><td><code>AllocationServiceImpl.incrementAssignmentCount</code> (L223) and <code>AllocationServiceImpl.addDeclineCooldown</code> are public static helpers. Already called from <code>BatchTriggerServiceImpl:46-48</code> on the current (legacy) P41 sweep, from the install-failure path at <code>InboundEventProcessingServiceImpl:463</code> (GAP-05), and from <code>declineAllocation:71,74</code>. The full <code>declineAllocation:60-93</code> method is reusable verbatim — new DAS inbound handler on EsInstallDeclined just delegates to it.</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -480,10 +498,10 @@ sequenceDiagram
     <thead><tr><th>OS</th><th>Impacted?</th><th>Notes</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
     <tbody>
       <tr><td>D&amp;A OS</td><td>No amendment</td><td>Code-OS realignment back to L170 ("ASSIGNED → ACCEPTED is CSP-initiated") and L175 (P41 is the acceptance window). The pseudocode at L440 (which BUG-03 read literally) is loose but not authoritative. State machine + offer-conversion tracking (L474) + INV-DAO-12 + FM-DAO-02/11 all already assume the post-fix behaviour. Recommend marking the L440 pseudocode as illustrative-only in the next OS revision; no contract change.</td><td>D&amp;A OS owner (informational)</td><td>—</td></tr>
-      <tr><td>Installation Flow OS / TAS</td><td>No amendment</td><td>AWAITING_SLOT_PROPOSAL terminal + <code>EsInstallSlotSelected</code> emit already exist. CANCELLED_BY_UPSTREAM terminal with <code>reason_code = TIMEOUT_P41</code> follows the same pattern as the existing TIMEOUT_P74 path (GAP-03 EDGE-1).</td><td>Installation Flow OS owner</td><td>—</td></tr>
+      <tr><td>Installation Flow OS / TAS</td><td>Verify (enum addition)</td><td>P41 path: AWAITING_SLOT_PROPOSAL + EsInstallSlotSelected emit + CANCELLED_BY_UPSTREAM terminal all exist; just new TAS inbound handler for ClSystemAcceptanceTimeout. <strong>CSP-decline path: adds new <code>CandidateState.DECLINED</code> terminal (7th terminal) + new InstallationStateMachine transition AWAITING_SLOT_PROPOSAL → DECLINED + new EsInstallDeclined outbound event class.</strong> Enum addition is backward-compatible (existing rows unaffected, no SQL migration). New terminal mirrors DAS's transient DECLINED naming for cross-OS consistency. No Installation Flow OS doc amendment needed — pre-AMENDMENT-02 reading already assumed CSP-initiated pre-acceptance termination; AMENDMENT-02's auto-accept simply made that path unreachable.</td><td>Installation Flow OS owner</td><td>Pending — enum addition</td></tr>
       <tr><td>CL OS</td><td>No</td><td>CL still receives <code>AllocationAccepted</code> and fires T1 — unchanged. CL stays in REQUESTED during DAS-ASSIGNED — this aligns with the OS view that REQUESTED is "awaiting routing outcome," and the user-facing semantic is the same as today's UNASSIGNED case.</td><td>—</td><td>—</td></tr>
       <tr><td>Quality OS / D&amp;A pattern detection</td><td>No</td><td>P41 timeout cascade now actually fires → restoration of the <code>DECLINE_PATTERN</code> signal per FM-DAO-02 (acceptance timeout case). Quality OS pattern detection was always supposed to see this but never did because P41 was inert. Restoration, not contract change.</td><td>—</td><td>—</td></tr>
-      <tr><td>ESR (Event Schema Registry)</td><td>Verify</td><td>Register two new event classes: <code>AllocationAssigned</code> (DAS-emitted, TAS-consumed) and <code>ClSystemAcceptanceTimeout</code> (DAS-emitted, TAS-consumed). Both payloads documented in §A5.</td><td>ESR owner</td><td>Pending — registration</td></tr>
+      <tr><td>ESR (Event Schema Registry)</td><td>Verify</td><td>Register three new event classes: <code>AllocationAssigned</code> (DAS-emitted, TAS-consumed), <code>ClSystemAcceptanceTimeout</code> (DAS-emitted, TAS-consumed), and <code>EsInstallDeclined</code> (TAS-emitted, DAS-consumed). All payloads documented in §A5.</td><td>ESR owner</td><td>Pending — registration</td></tr>
       <tr><td>Customer App spec</td><td>No</td><td>CL stays in REQUESTED throughout the new ASSIGNED window. Customer App's existing "looking for a provider" copy and behaviour for REQUESTED handles both UNASSIGNED and ASSIGNED with no UI change. (A future spec could add a distinguishing state, but not in scope here.)</td><td>—</td><td>—</td></tr>
     </tbody>
   </table>
@@ -595,49 +613,40 @@ sequenceDiagram
           does not penalize, throttle, or change Exposure Band on timeout)
     • <strong>CL DB</strong> — connections.current_state stays = 'REQUESTED' throughout</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> CSP exits between ASSIGNED and ACCEPTED — INV-DAO-12 immediate re-route
-  <em>Real-world:</em> CSP exits Wiom while a connection is ASSIGNED to them. Per INV-DAO-12,
-  this gets immediate re-routing (no grace period — CSP hasn't invested yet).
-
-  <span class="kw">Given</span> a connection_allocations row in allocation_state = 'ASSIGNED' for &lt;csp_X&gt;
-  <span class="kw">When</span>  Exit OS notifies that &lt;csp_X&gt; is exiting
-  <span class="kw">Then</span>  DAS re-enters this connection into routing immediately
-  <span class="kw">And</span>   allocation_state transitions 'ASSIGNED' → 'UNASSIGNED'
-  <span class="kw">And</span>   no P49 grace period applies (that's only for ACCEPTED+)
-  <span class="kw">And</span>   no P51 cooldown is added (CSP exit, not decline)
-
-  <span class="kw">Verify:</span>
-    • <strong>DAS DB</strong> — allocation_state moves to UNASSIGNED within seconds of exit notification
-    • <strong>DAS DB (negative)</strong> — no REALLOCATION_PENDING state visited
-        (REALLOCATION_PENDING is for ACCEPTED+, not ASSIGNED — INV-DAO-12)</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> CSP explicit decline — FM-DAO-11 immediate re-entry without P41 wait
-  <em>Real-world:</em> CSP says "no, I can't take this" via the partner app, before slot proposal.
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> CSP explicit decline — FM-DAO-11 immediate re-entry, distinct DECLINED terminal
+  <em>Real-world:</em> CSP taps "Decline" in the partner app before proposing a slot.
+  CSP-initiated termination must NOT land at CANCELLED_BY_UPSTREAM (that terminal is
+  reserved for upstream/system-layer cancellations like reallocation, routing failure).
+  Per the partner OS authority structure, the candidate gets a CSP-owned DECLINED
+  terminal, mirroring DAS's transient DECLINED state at L171.
 
   <span class="kw">Given</span> a connection_allocations row in 'ASSIGNED' for &lt;csp_X&gt;
   <span class="kw">And</span>   the TAS install candidate is in AWAITING_SLOT_PROPOSAL
-  <span class="kw">When</span>  &lt;csp_X&gt; explicitly declines via the partner app
-        (TAS endpoint POST /candidates/{id}/decline — new in this spec)
-  <span class="kw">Then</span>  TAS calls cancelByUpstream(reasonCode="DECLINED_BY_CSP")
-        → candidate transitions AWAITING_SLOT_PROPOSAL → CANCELLED_BY_UPSTREAM
-        (CSP source implicit in DECLINED_BY_CSP — option-a convention; same terminal
-        as P41 but different reason_code — no CANCELLED_BY_CSP enum value exists)
-  <span class="kw">And</span>   TAS emits EsInstallCancelledByUpstream (EXISTING event)
-  <span class="kw">And</span>   DAS receives EsInstallCancelledByUpstream
-  <span class="kw">And</span>   reason_code = DECLINED_BY_CSP → DAS takes the transient-DECLINED branch
-  <span class="kw">And</span>   DAS transitions allocation_state 'ASSIGNED' → 'DECLINED' → 'UNASSIGNED'
-        (DECLINED is transient per D&amp;A OS L171 — immediately re-enters routing)
-  <span class="kw">And</span>   P51 cooldown is added for &lt;csp_X&gt; on this connection
+  <span class="kw">When</span>  &lt;csp_X&gt; calls TAS POST /candidates/{id}/decline (NEW endpoint, CSP-authenticated)
+  <span class="kw">Then</span>  TAS calls candidateWorkflowService.decline(candidateId, actorCspId, reason)
+        → candidate transitions AWAITING_SLOT_PROPOSAL → DECLINED (NEW terminal)
+        — actorType=CSP, failure_subreason_source=CSP, transition logged with the CSP-supplied reason
+  <span class="kw">And</span>   TAS emits EsInstallDeclined (NEW outbound event)
+        — distinct from EsInstallCancelledByUpstream (system) and EsInstallReportedFailed (post-accept)
+  <span class="kw">And</span>   DAS receives EsInstallDeclined via new inbound handler
+  <span class="kw">And</span>   DAS handler reuses the existing AllocationServiceImpl.declineAllocation logic
+  <span class="kw">And</span>   allocation_state transitions 'ASSIGNED' → 'DECLINED' → 'UNASSIGNED'
+        (DECLINED is transient per D&amp;A OS L171 — same-txn step)
+  <span class="kw">And</span>   decline_cooldown_csp_ids gets a P51 entry for &lt;csp_X&gt; on this connection
   <span class="kw">And</span>   assignment_count_per_csp[&lt;csp_X&gt;] increments by 1
         (per FM-DAO-12 — P195 cap counts "retries, declines, reallocations")
   <span class="kw">And</span>   the P41 schedule for this connection is cancelled (allocation no longer in ASSIGNED)
   <span class="kw">And</span>   DAS re-routes immediately (no P41 wait — FM-DAO-11's advantage; saves up to 2h)
+  <span class="kw">And</span>   the existing DAS endpoint POST /csps/{cspId}/decline is deprecated
+        (CSP App migrates to the TAS endpoint as the single canonical decline path)
 
   <span class="kw">Verify:</span>
     • <strong>TAS DB</strong> — install_execution_candidates row for connection
-        → current_state = 'CANCELLED_BY_UPSTREAM'
-        → reason_code = 'DECLINED_BY_CSP'
-    • <strong>TAS outbox</strong> — expect EsInstallCancelledByUpstream row (status COMPLETED)
+        → current_state = 'DECLINED' (the NEW terminal)
+        → failure_subreason_source = 'CSP'
+    • <strong>TAS outbox</strong> — expect EsInstallDeclined row (status COMPLETED).
+        Expect zero EsInstallCancelledByUpstream rows and zero EsInstallReportedFailed rows
+        for this candidate.
     • <strong>DAS DB (positive)</strong> — connection_allocations
         → decline_cooldown_csp_ids contains &lt;csp_X&gt;
         → assignment_count_per_csp[&lt;csp_X&gt;] = prior value + 1
@@ -646,35 +655,7 @@ sequenceDiagram
     • <strong>Timing</strong> — re-route latency (decline_at → next ASSIGNED) should be seconds,
         not minutes (compare against LOGIC-2 where customer waits up to 2h before re-route)</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-4b:</span> DAS shared handler — reason_code branching contract
-  <em>Real-world:</em> the new DAS inbound handler on EsInstallCancelledByUpstream must
-  do exactly the right thing for each reason_code, with no ambiguity. Verifies the
-  option-a convention (SYSTEM/CSP source encoded in reason_code prefix).
-
-  <span class="kw">Given</span> DAS receives EsInstallCancelledByUpstream for &lt;connection_id&gt;
-  <span class="kw">When</span>  reason_code starts with 'TIMEOUT_' (e.g. TIMEOUT_P41)
-  <span class="kw">Then</span>  DAS treats this as SYSTEM-driven exit
-  <span class="kw">And</span>   allocation_state transitions ASSIGNED → UNASSIGNED (direct, no transient DECLINED)
-  <span class="kw">And</span>   P51 cooldown added, P195 counter incremented
-
-  <span class="kw">When</span>  reason_code starts with 'DECLINED_BY_' (e.g. DECLINED_BY_CSP)
-  <span class="kw">Then</span>  DAS treats this as CSP-driven exit
-  <span class="kw">And</span>   allocation_state transitions ASSIGNED → DECLINED (transient, same-txn) → UNASSIGNED
-        (DECLINED is the OS-canonical CSP-decline path per D&amp;A OS L171)
-  <span class="kw">And</span>   P51 cooldown added, P195 counter incremented
-
-  <span class="kw">When</span>  reason_code is anything else (unknown prefix)
-  <span class="kw">Then</span>  the handler logs a WARN and treats as direct UNASSIGNED (defensive default)
-  <span class="kw">And</span>   ops follow-up flag raised
-
-  <span class="kw">Verify:</span>
-    • <strong>State machine</strong> — both paths land at UNASSIGNED (only difference: DECLINED is
-      visited as a transient mid-state in the CSP-driven case)
-    • <strong>Audit log</strong> — allocation_audit_log row records the reason_code so analytics
-      can disambiguate SYSTEM vs CSP source post-facto
-    • <strong>Negative</strong> — no Exposure Band change in Quality OS (INV-DAO-15 for both)</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> Slot proposal arrives, but allocation is no longer in ASSIGNED (race / late event)
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> Slot proposal arrives, but allocation is no longer in ASSIGNED (race / late event)
   <em>Real-world:</em> CSP submits slot a fraction of a second after P41 fired and the candidate
   was already closed. EsInstallSlotSelected arrives at DAS late.
 
@@ -714,7 +695,7 @@ sequenceDiagram
   <span class="kw">When</span>  both events reach DAS
   <span class="kw">Then</span>  whichever commits first determines the outcome
         (transaction-isolation guarantees serializability)
-  <span class="kw">And</span>   the loser is treated as a late event (LOGIC-5 path)
+  <span class="kw">And</span>   the loser is treated as a late event (LOGIC-4 path)
 
   <span class="kw">Verify:</span>
     • <strong>DAS DB</strong> — the allocation lands in exactly one terminal post-state
@@ -788,7 +769,7 @@ sequenceDiagram
   <table class="coverage">
     <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
     <tbody>
-      <tr><td class="cls">Business logic</td><td>A5 rows 1-9 (5 happy-path + cascade behaviours)</td><td>5 logic lines</td><td>LOGIC-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Business logic</td><td>A5 rows (happy-path + P41 cascade + CSP-decline cascade)</td><td>4 logic lines</td><td>LOGIC-1..4</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>—</td><td>N/A (state transitions, no math)</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Use / edge</td><td>EDGE-1..5 (replay, race, short windows, DAS backwards compat, TAS enum migration)</td><td>5 edges</td><td>EDGE-1..5</td><td>All covered</td></tr>
@@ -832,6 +813,7 @@ sequenceDiagram
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
       <tr><td>v1.0</td><td>2026-06-13</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Three coordinated changes: (1) remove DAS auto-accept (<code>AllocationServiceImpl:151</code>), (2) new <code>AllocationAssigned</code> event from DAS for TAS, (3) new DAS inbound handler for the existing <code>EsInstallSlotSelected</code> (TAS already emits it at <code>CandidateWorkflowServiceImpl:270</code>) — triggers <code>ASSIGNED → ACCEPTED</code> and the existing <code>AllocationAccepted</code> for CL. Plus: P41 sweep wired with the GAP-06 one-canonical-flow cascade pattern (DAS sweep → TAS closes candidate → emits <code>EsInstallCancelledByUpstream</code> → DAS re-routes). OS-canonical reading per D&amp;A OS L170 + L175 — no OS amendment, code-OS realignment back to the state machine. Reverses BUG-03's atomic write. CL stays in REQUESTED throughout DAS-ASSIGNED. §A6 + REGRESSION omitted per gap-05 v1.2 convention.</td><td>Pending</td></tr>
+      <tr><td>v1.2</td><td>2026-06-14</td><td>Ashish Raj</td><td>A5 rows 11-13 (rewrite + new), WR rows 8-10, B5 (remove LOGIC-3 + LOGIC-4b, rewrite LOGIC-3), Workflow asymmetry table + CSP-decline sequence diagram, Quick Check, Coverage check</td><td><strong>CSP-decline terminal corrected.</strong> v1.1's option-a (CSP decline → CANCELLED_BY_UPSTREAM) was semantically wrong — that terminal is reserved for system/upstream cancellations. v1.2 introduces a NEW <code>CandidateState.DECLINED</code> terminal (7th terminal), CSP-actor-owned, mirroring DAS's transient DECLINED state at L171. New transition AWAITING_SLOT_PROPOSAL → DECLINED via new InstallationStateMachine event DECLINED. New method <code>CandidateWorkflowService.decline(candidateId, actorCspId, reason)</code>. New outbound event <code>EsInstallDeclined</code> (distinct from EsInstallCancelledByUpstream and EsInstallReportedFailed). <strong>CSP-decline cascade reverses direction.</strong> CSP App now calls TAS first (new POST /candidates/{id}/decline) — TAS owns the candidate state machine. TAS calls decline() → DECLINED terminal → emits EsInstallDeclined → DAS subscribes and delegates to existing AllocationServiceImpl.declineAllocation logic (zero new state mutation code in DAS). Existing DAS POST /csps/{cspId}/decline endpoint deprecated. <strong>Two distinct cascades, not one shared cascade.</strong> P41 path stays at CANCELLED_BY_UPSTREAM via cancelByUpstream + EsInstallCancelledByUpstream (system-attribution is correct for SYSTEM-driven timeout). CSP decline path uses DECLINED + decline + EsInstallDeclined (CSP-attribution correct). DAS now has TWO separate inbound handlers (one per event), not one shared handler with reason_code branching. Option-a's "encode source in reason_code" approach replaced with "encode source via distinct event class" — cleaner separation. <strong>Removed:</strong> LOGIC-3 (CSP-exits-ASSIGNED test) per PM — Exit OS not wired today. LOGIC-4b (DAS shared handler branching test) per PM — no longer applicable with two-event design. <strong>Renumbered:</strong> LOGIC-4 (CSP decline) → LOGIC-3, LOGIC-5 (late slot) → LOGIC-4.</td><td>Pending</td></tr>
       <tr><td>v1.1</td><td>2026-06-14</td><td>Ashish Raj</td><td>A5 rows 9-12, WR row 8, B5 LOGIC-2/4 + new LOGIC-4b, Workflow asymmetry table + new CSP-decline sequence diagram, Quick Check</td><td><strong>P195 correction.</strong> v1.0 said "P195 NOT incremented on P41 timeout per FM-DAO-02." That was a misreading. FM-DAO-02 and FM-DAO-11 both say "CSP is NOT penalized" — this refers to Exposure Band (INV-DAO-15), <em>not</em> P195. P195 is FM-DAO-12's per-connection-per-CSP ping-pong cap, a distinct mechanism. Per FM-DAO-12 L882, P195 counts "retries, declines, reallocations" — so it increments on both P41 timeout AND explicit decline. Code at <code>BatchTriggerServiceImpl:48</code> already does this in the legacy sweep. <strong>CSP-decline cascade fully specified.</strong> v1.0 left LOGIC-4 with hand-wavy terminal/event references ("CANCELLED_BY_CSP or DECLINED"; "an existing decline event") — neither was a real enum value or event name. v1.1 ties the decline path to the same cascade infra as P41: new TAS endpoint <code>POST /candidates/{id}/decline</code> → <code>cancelByUpstream(reasonCode="DECLINED_BY_CSP")</code> → CANCELLED_BY_UPSTREAM terminal → existing EsInstallCancelledByUpstream event. <strong>Option-a source convention.</strong> SYSTEM vs CSP source is encoded in the reason_code prefix (<code>TIMEOUT_*</code> vs <code>DECLINED_BY_*</code>), not in a separate <code>failure_subreason_source</code> field. Lets us reuse the existing <code>cancelByUpstream</code> signature (which doesn't carry that field) and the existing EsInstallCancelledByUpstream event shape. <strong>Added: new A5 row 12 for CSP-decline endpoint, new WR row 9 for existing P195/P51 helpers, new LOGIC-4b for the shared DAS handler's reason_code branching contract, new CSP-decline sequence diagram, asymmetry table in Workflow.</strong> DECLINE_PATTERN signal to Quality+Enforcement OS deferred per PM (marked 🔜 in the asymmetry table; OS L702-703 requires it — to be wired in a follow-up spec).</td><td>Pending</td></tr>
     </tbody>
   </table>
