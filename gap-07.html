@@ -661,7 +661,69 @@ sequenceDiagram
     • <strong>Timing</strong> — re-route latency (decline_at → next ASSIGNED) should be seconds,
         not minutes (compare against LOGIC-2 where customer waits up to 2h before re-route)</pre></div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> Slot proposal arrives, but allocation is no longer in ASSIGNED (race / late event)
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> Reroute correctness — new CSP must enter ASSIGNED (NOT auto-ACCEPTED) on every reroute path
+  <em>Real-world:</em> after a P41 timeout, a CSP decline, OR a CL_RETRY_REROUTE (install failure
+  T3 path), DAS picks a new CSP. The fix from v1.3 says: every reroute must behave like initial
+  routing — persist ASSIGNED only, emit AllocationAssigned (NOT AllocationAccepted), create a new
+  P41 schedule. If only the initial-routing markAutoAccepted call was removed (the v1.2 mistake),
+  BUG-03's auto-accept regression returns on the first reroute. This case verifies all three
+  reroute paths behave identically to initial routing.
+
+  <span class="kw">Given</span> a connection_allocations row that was ASSIGNED to &lt;csp_X&gt;, and is now UNASSIGNED via
+        one of three triggers:
+          (a) P41 timeout cascade (LOGIC-2 path) — system-driven
+          (b) EsInstallDeclined cascade (LOGIC-3 path) — CSP-driven
+          (c) CL_RETRY_REROUTE on install failure (CL_STATE_CHANGED, INSTALL_RETRY_TRIGGER) —
+              post-accept failure, CL fires T3 (PENDING_INSTALL → REQUESTED)
+  <span class="kw">And</span>   the routing engine has at least one eligible CSP &lt;csp_Y&gt; ≠ &lt;csp_X&gt;
+        (or &lt;csp_X&gt; itself if P51 cooldown elapsed AND P195 not exhausted — both valid per FM-DAO-02)
+
+  <span class="kw">When</span>  DAS re-runs routing pipeline and picks &lt;csp_Y&gt;
+  <span class="kw">Then</span>  connection_allocations transitions UNASSIGNED → 'ASSIGNED' for &lt;csp_Y&gt;
+  <span class="kw">And</span>   <strong>acceptance_timestamp stays NULL</strong> (no markAutoAccepted called)
+  <span class="kw">And</span>   assigned_at = the reroute moment
+  <span class="kw">And</span>   DAS emits <strong>AllocationAssigned</strong> for &lt;csp_Y&gt; — NOT AllocationAccepted
+        with payload including p41_deadline_at = assigned_at + P41 (2h)
+  <span class="kw">And</span>   a new per-connection P41 EventBridge schedule is created
+        with allocation_id = &lt;csp_Y&gt;'s new allocation row id
+        (distinct from &lt;csp_X&gt;'s schedule, which was already cancelled on UNASSIGNED transition)
+  <span class="kw">And</span>   TAS receives AllocationAssigned and creates a new install candidate for &lt;csp_Y&gt;
+        in initial state ASSIGNED (renamed from ACCEPTED), auto-advances to AWAITING_SLOT_PROPOSAL
+  <span class="kw">And</span>   CL stays in REQUESTED (no T1 fires until &lt;csp_Y&gt; proposes a slot)
+        — for trigger (c), CL has just fired T3 (PENDING_INSTALL → REQUESTED) and stays there
+  <span class="kw">And</span>   the new candidate has its own deadline_at derived from AllocationAssigned.p41_deadline_at
+        — CSP App countdown shows ~2h, not stale value from previous CSP
+
+  <span class="kw">Verify:</span>
+    • <strong>DAS DB (positive)</strong> — connection_allocations
+        → allocation_state = 'ASSIGNED' (NOT 'ACCEPTED')
+        → csp_id = &lt;csp_Y&gt;
+        → acceptance_timestamp IS NULL
+        → assigned_at IS NOT NULL
+        → previous_csp_id = &lt;csp_X&gt;
+        → allocation_event_type ∈ {TIMEOUT_REROUTE, DECLINE_REROUTE, CL_RETRY_REROUTE}
+    • <strong>DAS outbox (positive)</strong> — expect exactly 1 AllocationAssigned row for &lt;csp_Y&gt; (status COMPLETED)
+    • <strong>DAS outbox (negative)</strong> — no AllocationAccepted row for &lt;csp_Y&gt; at reroute time
+        (this would mean markAutoAccepted regression at one of the 3 callsites)
+    • <strong>DAS logs</strong> — no "markAutoAccepted" log line at the reroute moment
+    • <strong>AWS EventBridge</strong> — new P41 schedule exists keyed by &lt;csp_Y&gt;'s allocation_id
+        with target firing time ≈ assigned_at + 2h
+    • <strong>TAS DB</strong> — install_execution_candidates row for &lt;csp_Y&gt;
+        → distinct candidate_id from &lt;csp_X&gt;'s closed candidate
+        → current_state = 'AWAITING_SLOT_PROPOSAL'
+        → deadline_at = AllocationAssigned.p41_deadline_at (NOT recomputed from now())
+    • <strong>TAS state_transition_log</strong> — two rows for the new candidate:
+        Row 1: NULL → ASSIGNED (reason ALLOCATION_ASSIGNED)
+        Row 2: ASSIGNED → AWAITING_SLOT_PROPOSAL (reason AUTO_ADVANCE)
+    • <strong>CL DB</strong> — for triggers (a) and (b): connections.current_state stays = 'REQUESTED' throughout.
+        For trigger (c): current_state went PENDING_INSTALL → REQUESTED via T3, stays REQUESTED through the reroute.
+        No T1 fire on the reroute itself.
+    • <strong>Regression guard</strong> — repeat this case 3 times for the same connection_id (CSP_Y times out,
+        CSP_Z picked, CSP_Z times out, CSP_W picked, etc). Every round must show the same ASSIGNED-only
+        behavior. If any round shows ACCEPTED at reroute time, one of the 3 markAutoAccepted callsites
+        was missed in the fix.</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> Slot proposal arrives, but allocation is no longer in ASSIGNED (race / late event)
   <em>Real-world:</em> CSP submits slot a fraction of a second after P41 fired and the candidate
   was already closed. EsInstallSlotSelected arrives at DAS late.
 
@@ -701,7 +763,7 @@ sequenceDiagram
   <span class="kw">When</span>  both events reach DAS
   <span class="kw">Then</span>  whichever commits first determines the outcome
         (transaction-isolation guarantees serializability)
-  <span class="kw">And</span>   the loser is treated as a late event (LOGIC-4 path)
+  <span class="kw">And</span>   the loser is treated as a late event (LOGIC-5 path)
 
   <span class="kw">Verify:</span>
     • <strong>DAS DB</strong> — the allocation lands in exactly one terminal post-state
@@ -775,7 +837,7 @@ sequenceDiagram
   <table class="coverage">
     <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
     <tbody>
-      <tr><td class="cls">Business logic</td><td>A5 rows (happy-path + P41 cascade + CSP-decline cascade)</td><td>4 logic lines</td><td>LOGIC-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Business logic</td><td>A5 rows (happy-path + P41 cascade + CSP-decline cascade + reroute correctness)</td><td>5 logic lines</td><td>LOGIC-1..5</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>—</td><td>N/A (state transitions, no math)</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Invariants</td><td>A7.1 N/A at Light</td><td>—</td><td>—</td><td>N/A</td></tr>
       <tr><td class="cls">Use / edge</td><td>EDGE-1..5 (replay, race, short windows, DAS backwards compat, TAS enum migration)</td><td>5 edges</td><td>EDGE-1..5</td><td>All covered</td></tr>
