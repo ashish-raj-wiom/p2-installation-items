@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GAP-08 — Customer-captured location + voice directions on CSP app · Change Spec</title>
+<title>GAP-08 — Customer location + voice directions on the CSP / Technician app · Change Spec</title>
 <style>
   :root {
     --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
@@ -21,7 +21,7 @@
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.6; color: var(--ink); background: var(--bg); }
   .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
   nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
   nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
@@ -41,8 +41,8 @@
   main { padding: 40px 56px 120px; max-width: 980px; }
   header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
   header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
-  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc h1 { font-size: 30px; margin: 6px 0 10px; line-height: 1.25; }
+  header.doc p.lede { color: var(--ink); font-size: 15px; margin: 0; max-width: 72ch; }
   header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
 
   .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
@@ -69,7 +69,7 @@
   section.spec { margin: 40px 0; scroll-margin-top: 24px; }
   section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
-  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  section.spec h3 { font-size: 15px; margin: 18px 0 6px; }
   .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
   .tier.what { background: var(--what-bg); color: var(--what); }
   .tier.how { background: var(--how-bg); color: var(--how); }
@@ -79,23 +79,18 @@
   .expected strong { font-weight: 700; }
   .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
   .tbc { background: var(--tbc-bg); border-left: 3px solid var(--tbc-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--tbc-ink); border-radius: 4px; }
-  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-  .row-mode.req { background: var(--required-bg); color: var(--required); }
-  .row-mode-note { font-size: 12.5px; color: var(--muted); margin-left: 8px; }
 
   table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
-  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th, td { text-align: left; padding: 10px 12px; border: 1px solid var(--rule); vertical-align: top; }
   th { background: var(--bg); font-weight: 600; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
   table.delta th.before { background: #f3f4f6; }
   table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
 
-  pre { background: var(--bg); padding: 12px 14px; border-radius: 5px; border: 1px solid var(--rule); overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
-  pre code { background: none; border: none; padding: 0; }
-
-  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
-  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .scenario { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 14px 18px; margin: 12px 0; font-size: 14px; }
+  .scenario h4 { margin: 0 0 6px; font-size: 14px; color: var(--core); }
+  .scenario p { margin: 4px 0; }
+  .scenario .what-happens { font-weight: 600; color: var(--ink); }
   table.coverage th { background: var(--bg); }
   table.coverage td.cls { font-weight: 600; }
 
@@ -104,8 +99,6 @@
   footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
   footer.checklist h2 { font-size: 20px; margin-top: 0; }
   footer.checklist table { font-size: 13.5px; }
-  footer.checklist td.tier-cell { width: 110px; }
-  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
   footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
 
   @media print {
@@ -132,13 +125,13 @@
     <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
     <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
     <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
-    <li><a href="#workflow"><span class="ix">WF.</span>Workflow — data flow</a></li>
-    <li><a href="#wired"><span class="ix">WR.</span>What's wired / what's not</a></li>
-    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+    <li><a href="#workflow"><span class="ix">WF.</span>How the data flows</a></li>
+    <li><a href="#wired"><span class="ix">WR.</span>What's in place / what's missing</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>Teams to involve &amp; sign-off</a></li>
   </ol>
   <h2 class="how">Part B — HOW (detailing)</h2>
   <ol>
-    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>What success looks like</a></li>
   </ol>
   <h2 class="close">Closeout</h2>
   <ol>
@@ -152,16 +145,14 @@
 
 <header class="doc">
   <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-08</div>
-  <h1>Customer-captured structured location + voice directions on the CSP / Technician app</h1>
-  <p class="lede">Customer App now captures the install location as a structured object (house number, street, locality, landmark, pincode, city) plus a <strong>voice-recorded direction note</strong> uploaded to S3. None of this reaches the CSP / Technician App today — the partner sees only the customer's free-text address at booking, often inadequate (ambiguous landmarks, rural lanes without street names, multi-tenant buildings without floor markers). Voice directions are how the customer can explain "turn left after the white temple, the gate is opposite the chai shop" without typing it. <strong>Scope of this gap: backend-only.</strong> Get the structured-location object + voice-audio URL from Customer Backend into the CSP backend (TAS install-candidate), and expose both via the existing CSP-App-facing candidate-detail endpoint so the app can render them. Frontend rendering (audio player UI, address presentation) is a separate Surface Contract / app spec.</p>
+  <h1>Customer location + voice directions on the CSP / Technician app</h1>
+  <p class="lede">The Customer App now captures the install location as a set of structured fields (house number, street, locality, landmark, pincode, city) and also lets the customer record a <strong>voice note</strong> explaining how to reach the door — "turn left after the white temple, look for the chai shop." None of this reaches the partner today. The technician arrives with just a free-text address line, which in many zones is not enough to find the door. This spec wires the data from where the customer gives it to where the technician needs it.</p>
   <div class="meta-row">
-    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Customer Backend + TAS Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> Customer Backend + CSP Backend &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
   </div>
   <div class="convention">
-    <strong>Tier:</strong>
-    <span class="badge light">Light</span> — A1, A2, A5, A8, B5 + Workflow + Wired-layers. Backend-only spec: Customer Backend exposes the data, TAS persists it, CSP-app reads via existing candidate endpoint. <strong>Three connected changes:</strong> (1) Customer Backend pushes the structured-location + voice-audio fields to TAS at booking-creation time, (2) TAS persists both on the install_execution_candidate row, (3) TAS includes both in its CSP-facing candidate-detail response.
-    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
-    <br><strong>Open items:</strong> <span class="badge tbc">TBC</span> — exact field name + URL semantics (presigned vs durable) for the voice-audio link are pending Customer Backend team confirmation; placeholders used in §A5 and §B5 with explicit <code>«TBC»</code> markers.
+    <strong>Scope:</strong> backend-only. This spec describes the data flow between Customer Backend and CSP Backend so that the CSP / Technician App can display the customer's structured address and voice note. <strong>It does not cover the app UI</strong> — layout, audio player, icons, fallback states are a separate Surface Contract.
+    <br><strong>Open items:</strong> <span class="badge tbc">TBC</span> — exact field name for the voice audio link and how its access works (always-valid vs short-lived) are pending Customer Backend team confirmation.
   </div>
 </header>
 
@@ -169,37 +160,35 @@
   <h2>Quick Check</h2>
   <div class="qc-tag">7-line triage — read this before the rest.</div>
   <dl>
-    <dt>What is changing?</dt>     <dd>Customer Backend → TAS pipeline for two payload additions: <strong>(1) <code>customer_location_details</code></strong> — JSON object with the fields the Customer App captures today (<code>home</code>, <code>streetNumber</code>, <code>locality</code>, <code>street</code>, <code>landMarkType</code>, <code>address</code>, <code>pincode</code>, <code>city</code>); <strong>(2) <code>voice_direction_url</code></strong> — S3 URL to the customer's voice-recorded address direction (field name <code>«TBC by Customer Backend team»</code>). Both flow into TAS via the existing <code>ConnectionRequestCreated</code> event payload (extended) and are persisted on <code>install_execution_candidates</code>. The existing CSP-facing candidate-detail endpoint returns both in its response so the CSP / Technician App can render them.</dd>
-    <dt>What triggered it?</dt>    <dd>Customer App rollout (2026 Q2) added structured-location capture + voice-direction recording at the BFP/booking-creation step. The fields land in Customer Backend at booking time and stay siloed there — TAS never receives them, CSP App never sees them. Field technicians have repeatedly flagged that the free-text address alone is insufficient for navigation in tier-2/3 cities and rural zones, where landmarks are spoken not written.</dd>
-    <dt>Blast radius</dt>          <dd>Customer Backend (booking service — payload extension on <code>ConnectionRequestCreated</code>) · TAS (inbound handler payload, candidate entity, DB migration for two new columns, candidate-detail response DTO) · CSP / Technician App (consumer of the candidate-detail endpoint — no code change in this spec, just consumes the new fields). No event-name change, no new event class, no schema break.</dd>
-    <dt>Who is affected?</dt>      <dd><strong>Partners (CSP / Technician):</strong> get the structured address + audio cue at install time → fewer wrong-address visits, fewer customer call-outs. <strong>Customers:</strong> the voice they recorded actually reaches the technician — no silent loss of input. <strong>Ops:</strong> reduced "wrong address" install-failed reason codes, better first-visit success rate. <strong>Customer Backend team:</strong> must extend the existing event payload they emit today.</dd>
-    <dt>Spec source / inputs</dt>   <dd><strong>Customer App captured shape</strong> (verbatim from PM observation): <code>{"home":"R","streetNumber":"Test","locality":"Sector 32, 122001","street":"VE Commercial Vehicles Ltd.","landMarkType":"OTHER","address":"Ground Floor, Plot no. 94, Sector 32","pincode":"122001","city":"Gurugram"}</code>. <strong>Voice URL field name:</strong> <code>«TBC by Customer Backend team»</code> — assumed key <code>voice_direction_url</code> for this spec, replace once confirmed.</dd>
-    <dt>Out of scope</dt>          <dd>CSP / Technician App UI for rendering the address layout (separate Surface Contract). Audio player controls (separate app spec). Voice transcription to text (future enhancement). Analytics on whether the audio actually got played (future). <strong>The customer-side capture flow itself</strong> — already live; this spec only consumes its output.</dd>
-    <dt>Hard checks (before sign-off)</dt><dd>Customer Backend team confirms the voice URL field name. URL semantics confirmed: is it a presigned URL with TTL, or a durable S3 path that TAS / CSP-app must combine with credentials? Auth for the audio fetch confirmed: does the CSP / Technician App fetch S3 directly with a presigned URL, or via a TAS pass-through endpoint? Existing <code>ConnectionRequestCreated</code> event subscribers (other than TAS) tolerate the payload extension (additive, not breaking).</dd>
+    <dt>What is changing?</dt>     <dd>Two pieces of customer-provided information — the <strong>structured address</strong> (the 8 fields the Customer App captures) and the <strong>voice direction</strong> (an audio file the customer can record at booking) — are made available to the CSP / Technician app. The data already exists on the Customer Backend side; the change is to forward it to the CSP backend and surface it in the existing partner-facing booking view.</dd>
+    <dt>What triggered it?</dt>    <dd>The Customer App rolled out structured-address capture and voice recording at booking earlier this year. Field technicians have repeatedly reported that the free-text address is not enough in tier-2/3 cities and rural zones, where landmarks are spoken rather than written. Meanwhile the customer's voice note — recorded specifically to help the technician — sits unheard.</dd>
+    <dt>Who is affected?</dt>      <dd><strong>Technicians and partner field staff</strong> — they get more usable information at install time. <strong>Customers</strong> — the effort they put into recording the voice note is no longer silently lost. <strong>Ops</strong> — fewer "wrong address" install failures and re-visits.</dd>
+    <dt>What teams need to act?</dt><dd><strong>Customer Backend team</strong> — confirms the field name of the voice audio link and how its access works, and forwards both pieces of information to the CSP backend on booking creation. <strong>CSP Backend team</strong> — stores both pieces against the install booking and exposes them in the partner-facing API the CSP app already calls. <strong>CSP App team</strong> — consumes the two new pieces of data (UI rendering is a separate spec).</dd>
+    <dt>Out of scope</dt>          <dd>CSP / Technician App UI (separate Surface Contract). Voice-to-text transcription. Analytics on whether the audio was played. The customer-side capture flow itself (already live). Multi-language audio handling beyond playing the file.</dd>
+    <dt>Risk to flag</dt>          <dd>The voice recording is the customer's voice — there is a privacy dimension. Access to the audio must be restricted to the partner actually assigned to the booking. The customer's consent for the partner to hear it must be confirmed by Legal / Privacy.</dd>
+    <dt>What success looks like</dt><dd>When a technician opens a booking that has structured address + voice recorded, they see the address laid out properly and can tap to play the customer's voice note. When either piece is missing — older booking, customer skipped voice — the app degrades cleanly with no error. Customer Backend's existing event stream to CSP backend gains two extra pieces of information; nothing else changes.</dd>
   </dl>
 </aside>
 
 <div class="part-divider what">
   <div class="label">Part A</div>
   <h2>WHAT — The Change</h2>
-  <p>Backend-only delta to pipe the customer-side location + voice-direction capture through to TAS and into the existing candidate-detail response read by the CSP / Technician App.</p>
-  <div class="author-note">Authored by the PM. Reviewed by Customer Backend + TAS Engineering. Frontend out of scope (separate Surface Contract).</div>
+  <p>Backend-only spec. Tells the two backend teams (Customer Backend and CSP Backend) what data needs to flow, and where it needs to land. The CSP / Technician App UI is a separate spec.</p>
+  <div class="author-note">Authored by the PM. Reviewed by Customer Backend + CSP Backend. Frontend rendering out of scope.</div>
 </div>
 
 <section class="spec" id="a1">
   <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
-  <div class="expected"><strong>What is expected:</strong> One row per metadata point — for traceability and routing.</div>
   <table>
     <tbody>
       <tr><td>Change ID</td><td>GAP-08</td></tr>
-      <tr><td>Change title</td><td>Customer-captured structured location + voice directions on the CSP / Technician app</td></tr>
-      <tr><td>Type</td><td>Gap (feature addition — pre-existing capture, missing downstream surfacing)</td></tr>
+      <tr><td>Title</td><td>Customer location + voice directions on the CSP / Technician app</td></tr>
+      <tr><td>Type</td><td>Gap — data already captured by the Customer App but not surfaced to the partner</td></tr>
       <tr><td>Tier</td><td>Light</td></tr>
       <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
-      <tr><td>Reviewers</td><td>Customer Backend team (event-payload extension), TAS Engineering (persistence + response DTO), CSP / Technician App team (consumer awareness — no code in this spec)</td></tr>
-      <tr><td>Status</td><td>v1.0 — draft for technical review</td></tr>
-      <tr><td>Baseline (original PRD / OS)</td><td>No OS clause governs this — operational data enrichment, not a state-machine change. Customer-side capture shape baseline: the JSON object on the Customer App's address-entry screen (verbatim sample in Quick Check). CSP-side consumer baseline: existing TAS candidate-detail endpoint already returns <code>connection_id</code>, <code>customer_id</code>, scheduled-slot, etc. — the two new fields are additive to that response. Existing event class: <code>ConnectionRequestCreated</code> from Customer Backend (extended in this spec).</td></tr>
-      <tr><td>Out of scope</td><td>(1) CSP / Technician App UI for rendering address + audio (separate Surface Contract). (2) Voice transcription. (3) Analytics on audio playback. (4) Customer-side capture flow (already live). (5) Multi-language voice handling beyond passing the URL through.</td></tr>
+      <tr><td>Reviewers</td><td>Customer Backend team · CSP Backend team · CSP / Technician App team (informational) · Legal / Privacy</td></tr>
+      <tr><td>Status</td><td>v1.0 — draft for cross-team review</td></tr>
+      <tr><td>Out of scope</td><td>App UI for the address + audio (separate Surface Contract). Voice-to-text transcription. Audio playback analytics. Customer-side capture (already live).</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -207,355 +196,249 @@
 
 <section class="spec" id="a2">
   <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
-  <div class="expected"><strong>What is expected:</strong> The problem in plain English, who's affected, the cost of leaving it.</div>
-  <table>
-    <tbody>
-      <tr><td>What's wrong with the current behaviour?</td><td><strong>Information asymmetry between booking-time and install-time.</strong> The Customer App now collects a structured address object (8 fields including landmark type, locality, street, pincode) AND lets the customer record a voice note explaining how to reach the install location. The structured object lands in Customer Backend; the audio gets uploaded to S3. <strong>None of this reaches TAS today</strong> — the install_execution_candidate row only carries the connection_id and customer_id. When the CSP / Technician App reads its candidate-detail endpoint, the technician sees only the free-text address string. Result: in zones where street names are absent (rural / interior), the technician arrives at the wrong place, calls the customer, sometimes fails the install entirely, and books a re-visit. The customer's voice explanation — recorded specifically for this moment — sits unheard in S3.</td></tr>
-      <tr><td>Who experiences it?</td><td><strong>Technicians / Partner field staff:</strong> first-visit success rate is lower than it should be in addressing-difficult zones; the input the customer provided was discarded by the pipeline. <strong>Customers:</strong> they spent the effort to record the voice note assuming it'd be heard — silent breakage of expectation. <strong>Ops:</strong> "wrong address" rejections show up as <code>FAILED_AT_DOOR</code> / <code>NOT_FOUND</code> patterns in install-failure analytics. <strong>Repeat-visit cost:</strong> each wrong-address visit consumes a slot, a router activation, and partner-payout dispute risk.</td></tr>
-      <tr><td>Cost of leaving it as-is?</td><td>Every booking in an addressing-difficult zone has a structurally higher install-fail rate than it would with the structured fields + voice directions surfaced. The customer's voice note becomes a feature shipped on the Customer App that never closes the loop on the CSP side — a "shipped but inert" surface. As Customer App rolls structured-capture to more zones, the gap widens.</td></tr>
-      <tr><td>OS prescription (if any)</td><td>None. This is operational data enrichment — no OS clause is being violated or restored. The data conceptually belongs to the customer's connection profile; carrying it forward to the install execution candidate is a UX completeness move, not a state-machine fix.</td></tr>
-    </tbody>
-  </table>
+
+  <h3>The problem in one paragraph</h3>
+  <p>The Customer App collects useful information at booking — a structured address (house, street, locality, landmark, pincode, city) and an optional voice note where the customer can explain how to find the door. The free-text address that finally reaches the partner is often inadequate, especially in addressing-difficult zones — rural lanes without street names, multi-tenant buildings without floor markers, urban interior pockets where the landmark matters more than the postal address. The structured fields and the voice recording would help the technician, but neither makes it to them today. The result: more wrong-address arrivals, more customer call-outs, more re-visits.</p>
+
+  <h3>Who experiences it</h3>
+  <ul>
+    <li><strong>Technicians</strong> — first-visit success rate is lower than it could be in addressing-difficult zones. The information the customer provided was discarded by the pipeline before it reached them.</li>
+    <li><strong>Customers</strong> — they recorded a voice note assuming someone would hear it. They paid the time cost; the partner never received the file.</li>
+    <li><strong>Ops</strong> — "wrong address" rejections show up in install-failure analytics. Each one consumes a slot and a partner trip.</li>
+  </ul>
+
+  <h3>Cost of leaving it as-is</h3>
+  <p>Every booking in an addressing-difficult zone has a structurally higher install-failure rate than it would otherwise. The voice-recording feature on the Customer App becomes a shipped-but-inert surface — present in the product, never closing the loop. As the Customer App's structured capture rolls out to more zones, the gap widens.</p>
+
+  <h3>OS prescription</h3>
+  <p>None — this is operational data enrichment, not a state-machine change. No OS clause is being violated or restored. The data conceptually belongs to the customer's booking; carrying it forward to the partner is a UX completeness move.</p>
+
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="a5">
   <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
-  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes → before → after → why</em>.</div>
+  <div class="expected"><strong>What is expected:</strong> One row per piece of change — described in business terms, not API contracts.</div>
+
   <table class="delta">
-    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Today</th><th class="after" style="width:28%">After this change</th><th>Why</th></tr></thead>
     <tbody>
       <tr>
-        <td>Customer Backend — extend <code>ConnectionRequestCreated</code> event payload with structured-location object</td>
-        <td>The event carries <code>connection_id</code>, <code>customer_id</code>, <code>zone_id</code>, <code>created_at</code>, plus a free-text <code>address</code> string. The structured fields the Customer App captures (<code>home</code>, <code>streetNumber</code>, <code>locality</code>, <code>street</code>, <code>landMarkType</code>, <code>address</code>, <code>pincode</code>, <code>city</code>) live in Customer Backend's booking record but are not in the outbound event.</td>
-        <td>Event payload gains <code>customer_location_details</code> — a JSON object with the eight fields the Customer App captures, passed through verbatim (no transformation, no field renaming). Sample shape: <code>{"home":"R","streetNumber":"Test","locality":"Sector 32, 122001","street":"VE Commercial Vehicles Ltd.","landMarkType":"OTHER","address":"Ground Floor, Plot no. 94, Sector 32","pincode":"122001","city":"Gurugram"}</code>. Field is <strong>optional</strong> at the schema level (older bookings without structured capture pass <code>null</code>); TAS gracefully handles absence.</td>
-        <td>Carries the structured input from where it was captured (Customer App) to where it's needed (install execution). Verbatim pass-through avoids any semantic loss between capture and consumption. Schema-optional preserves backward compatibility for in-flight bookings created before this rollout.</td>
+        <td>Customer Backend forwards the structured address to CSP backend</td>
+        <td>The Customer App captures eight address fields (house, street number, locality, street, landmark type, address, pincode, city) and saves them on the booking record. The notification Customer Backend already sends to the CSP side at booking creation carries only the free-text address — the structured fields are left behind.</td>
+        <td>The same notification now includes the full structured address object alongside the free-text address. No transformation, no renaming — the partner side sees what the customer typed.</td>
+        <td>The structured fields are how the customer expressed where they live. Sending only the free-text line throws away useful detail. Adding the structured object to the existing notification is the smallest change that closes the loop.</td>
       </tr>
       <tr>
-        <td>Customer Backend — add <code>voice_direction_url</code> field to <code>ConnectionRequestCreated</code> payload <span class="badge tbc">TBC</span></td>
-        <td>Voice-direction audio is uploaded to S3 by the Customer App at booking time. The S3 URL lives in Customer Backend's booking record but is not on the outbound event. Field name on Customer Backend's record is <strong>«TBC by Customer Backend team»</strong>.</td>
-        <td>Event payload gains <code>voice_direction_url</code> (string, optional). URL semantics are one of: <strong>(a)</strong> durable S3 URL (signed-on-fetch by the consumer), <strong>(b)</strong> presigned URL with TTL ≥ install window (P74 = 72h), or <strong>(c)</strong> opaque proxy URL served by Customer Backend with its own auth. <strong>Customer Backend team to confirm which.</strong> If presigned with shorter TTL than 72h, an additional fetch path is needed (see row 5). If field is absent (older bookings, or customer skipped voice recording), TAS persists <code>null</code> — not an error.</td>
-        <td>Same pass-through principle as the location object — carry the captured signal to where it's consumed. URL semantics matter for the consumer (CSP App needs to know whether to fetch directly, refresh via TAS, or proxy through). Treating absence as valid means existing flows aren't blocked while structured capture is being rolled to more zones.</td>
+        <td>Customer Backend forwards the voice-direction link to CSP backend <span class="badge tbc">TBC</span></td>
+        <td>The Customer App uploads the voice recording to a file-storage location and the link is saved on the booking record. The link never reaches the CSP side.</td>
+        <td>The notification Customer Backend sends to the CSP side includes the link to the voice recording, when one exists. If the customer skipped the recording, the link is simply absent.</td>
+        <td>Same closing-the-loop principle as the address row. The audio is the customer's effort to help the technician; it needs to reach the technician.</td>
       </tr>
       <tr>
-        <td>TAS — extend <code>InboundEventProcessingService.process(ConnectionRequestCreated)</code> to read the two new payload fields</td>
-        <td>Handler reads <code>connection_id</code>, <code>customer_id</code>, <code>zone_id</code>, <code>created_at</code> and ignores everything else. No code paths today look at structured location or voice fields.</td>
-        <td>Handler reads the two new fields. Both are nullable. Values are written through to the install_execution_candidate row at candidate-create time (which TAS already does on this event in some flows — confirm timing with TAS engineer; if not at this event, then at the AllocationAssigned moment when the candidate is actually created — see row 4 alternate).</td>
-        <td>Single integration point for both fields; reuses the existing inbound event pipeline. No new TAS endpoint, no new event class. The location/voice are properties of the customer's booking, not of the CSP allocation — so they should land on TAS at the same moment the booking is acknowledged, not at allocation time.</td>
+        <td>CSP Backend stores both pieces against the booking</td>
+        <td>The CSP backend's install booking record carries scheduling, customer name, free-text address, partner-side state. Nothing structured, no audio reference.</td>
+        <td>The CSP backend now also stores the structured address object and the voice link against the booking. Both are optional — older bookings simply won't have them and that's fine.</td>
+        <td>The information needs a home on the partner side so that whenever the partner-facing booking view is fetched, it can carry these along.</td>
       </tr>
       <tr>
-        <td>TAS — add two columns to <code>install_execution_candidates</code>: <code>customer_location_details</code> (jsonb), <code>voice_direction_url</code> (text)</td>
-        <td>Existing schema has <code>execution_candidate_id</code>, <code>connection_id</code>, <code>csp_id</code>, <code>current_state</code>, slot fields, deadline fields, reason fields. No customer-location field, no voice-direction field.</td>
-        <td>Flyway migration adds two columns:<br><code>customer_location_details JSONB NULL</code> — stores the verbatim object from the event payload.<br><code>voice_direction_url TEXT NULL</code> — stores the URL from the event payload. No index needed (read-only on candidate-fetch by id; not queried by location content).</td>
-        <td>JSONB for the structured location is correct (schema may evolve with new keys; treating as opaque JSON avoids per-field migrations downstream). Text for the URL is sufficient. NULL allowed because: (a) older bookings predate structured capture, (b) the customer can skip voice recording, (c) URL semantics may need a fetch-time refresh (see row 5).</td>
+        <td>The partner-facing booking view returns both pieces</td>
+        <td>The CSP / Technician App calls the partner-side booking-detail endpoint to render the booking screen. It receives scheduling, customer details, address text. Nothing else.</td>
+        <td>The same endpoint now also returns the structured address object and the voice link. The CSP App reads these and decides how to present them (UI is a separate spec).</td>
+        <td>The CSP App already polls or fetches this view today; extending what it returns is the smallest possible surface change for the app. No new endpoint, no new auth model.</td>
       </tr>
       <tr>
-        <td>TAS — extend the CSP-facing candidate-detail response DTO with the two new fields</td>
-        <td>The existing CSP-facing endpoint (<code>GET /candidates/{candidate_id}</code> or the <code>/home/feed</code> aggregation endpoint — confirm exact endpoint name with TAS engineer) returns slot timing, customer name/contact, address text, and state. No structured location, no voice URL.</td>
-        <td>Response DTO gains:<br><code>customer_location_details</code> — the JSON object from the candidate row, passed through as-is.<br><code>voice_direction_url</code> — the URL from the candidate row. <strong>If</strong> Customer Backend uses presigned-with-short-TTL semantics (row 2 option b), TAS calls a Customer Backend refresh-URL endpoint at response-build time and returns a freshly-signed URL. Otherwise TAS returns the stored URL verbatim. Authorization unchanged — existing CSP-auth check on candidate-detail endpoint ensures only the assigned CSP sees the data.</td>
-        <td>The CSP App already polls / fetches candidate detail to render the booking. Extending that response is the smallest CSP-app surface change (just consume two new optional fields). No new endpoint, no new auth model. Putting the URL-refresh on the read path rather than write path means stale-URL handling lives in one place, deterministically.</td>
-      </tr>
-      <tr>
-        <td>CSP / Technician App — consume the two new response fields <span class="badge tbc">consumer awareness only</span></td>
-        <td>App renders the free-text address string from the candidate-detail response.</td>
-        <td>App reads the two new fields when present, renders the structured address layout above the free-text fallback, and exposes the audio via a player control. <strong>UI rendering details are out of scope for this spec</strong> (separate Surface Contract) — this row exists to confirm the consumer is informed that the contract is extending.</td>
-        <td>Closes the loop. Without the consumer consuming, the backend changes are inert. The Surface Contract spec will detail the layout, audio player, fallback behaviour, accessibility.</td>
+        <td>Access control on the voice file</td>
+        <td>Not applicable — the audio doesn't reach the partner side today.</td>
+        <td>Only the partner actually assigned to the booking should be able to retrieve the audio. The mechanism depends on how Customer Backend exposes the link (always-valid vs short-lived) — Customer Backend team to confirm. Whichever path is chosen, unassigned parties must not be able to retrieve the audio.</td>
+        <td>The recording is the customer's voice — privacy-sensitive. The control should be tight: the partner who has the booking can hear it, no one else.</td>
       </tr>
     </tbody>
   </table>
-  <div class="hint"><strong>Why an event-extension and not a new event.</strong> The customer's structured location and voice direction are properties of the existing <code>ConnectionRequestCreated</code> domain fact — a booking was created with these inputs. They should live on the same event, not in a sibling "BookingDetailsAdded" event that would require ordering guarantees between the two. Additive payload extension is backward-compatible (older consumers ignore unknown fields) and atomic with the booking creation.</div>
-  <div class="tbc"><strong>TBC for Customer Backend team:</strong> (1) Confirm the exact field name for the voice S3 URL on the booking record. (2) Confirm URL semantics — durable S3 URL, presigned with TTL (and what TTL), or proxy URL via Customer Backend. (3) If presigned with TTL &lt; P74 (72h), confirm whether Customer Backend exposes a refresh endpoint TAS can call at candidate-detail-fetch time. (4) Confirm whether all existing <code>ConnectionRequestCreated</code> consumers tolerate the additive payload (forward-compatible deserialization).</div>
+
+  <div class="tbc"><strong>For the Customer Backend team to confirm:</strong>
+    <ol>
+      <li>The exact name of the voice-audio link field on the booking record (we have assumed a placeholder name for this spec).</li>
+      <li>How the link works once shared — does it stay valid for the full install window (3 days), is it short-lived and needs refreshing, or does it go through Customer Backend with its own access check? The choice determines whether CSP Backend has to ask Customer Backend for a fresh link each time the partner opens the booking, or can simply pass the link through.</li>
+      <li>Whether all existing consumers of the booking-creation notification will keep working when these two new pieces of information are added.</li>
+    </ol>
+  </div>
+
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="workflow">
-  <h2><span class="num">WF.</span> Workflow — data flow <span class="tier what">WHAT</span></h2>
-  <div class="expected"><strong>What is expected:</strong> A sequence diagram showing the end-to-end flow from customer capture to CSP-app render.</div>
+  <h2><span class="num">WF.</span> How the data flows <span class="tier what">WHAT</span></h2>
 
-  <h3>End-to-end data flow</h3>
+  <h3>The journey of a single booking</h3>
   <div class="mermaid">
 sequenceDiagram
     autonumber
+    participant Customer as Customer
     participant CA as Customer App
     participant CB as Customer Backend
-    participant S3
-    participant TAS
-    participant CSPApp as CSP / Technician App
+    participant CSPB as CSP Backend
+    participant Partner as Partner / Technician App
 
-    Note over CA,S3: Booking creation (BFP step)
-    CA->>CA: customer enters structured address
-    CA->>CA: customer records voice direction
-    CA->>S3: upload voice audio
-    S3-->>CA: S3 URL
-    CA->>CB: POST /booking with location + voice URL
-    CB->>CB: persist booking record (location_details + voice_direction_url)
+    Note over Customer,CA: Customer fills the address screen
+    Customer->>CA: types structured address
+    Customer->>CA: records voice note (optional)
+    CA->>CB: submits booking with both pieces
 
-    Note over CB,TAS: Existing event flow (this spec extends payload)
-    CB->>TAS: ConnectionRequestCreated (EXTENDED payload)
-    Note over CB,TAS: payload now includes customer_location_details + voice_direction_url
-    TAS->>TAS: handler reads new fields, writes to install_execution_candidates
+    Note over CB: Customer Backend persists everything
 
-    Note over TAS,CSPApp: CSP fetches candidate (existing flow)
-    CSPApp->>TAS: GET /candidates/{id} (existing endpoint)
-    TAS->>TAS: load candidate row
-    alt voice_direction_url is presigned with short TTL
-        TAS->>CB: refresh-URL endpoint (TBC)
-        CB-->>TAS: fresh presigned URL
-    end
-    TAS-->>CSPApp: response DTO (now includes customer_location_details + voice_direction_url)
-    CSPApp->>CSPApp: render structured address + audio player
-    Note over CSPApp: optional - CSP plays audio
-    CSPApp->>S3: GET audio (via presigned or proxy URL)
-    S3-->>CSPApp: audio bytes
+    Note over CB,CSPB: Booking creation notification (today, extended in this spec)
+    CB->>CSPB: notification carries: scheduling, customer, free-text address,<br/>PLUS structured address, PLUS voice link
+    CSPB->>CSPB: stores all of these against the install booking
+
+    Note over CSPB,Partner: Partner opens the booking
+    Partner->>CSPB: fetch booking detail
+    CSPB-->>Partner: scheduling, customer, free-text address,<br/>structured address, voice link
+    Partner->>Partner: renders address + audio player (UI is a separate spec)
+    Note over Partner: Optional - partner taps play
+    Partner->>CB: streams audio (directly or via CSP Backend, TBC)
   </div>
-  <p>Three boundaries cross in this flow: <strong>(1)</strong> Customer App → Customer Backend (already wired today); <strong>(2)</strong> Customer Backend → TAS via <code>ConnectionRequestCreated</code> (event class wired, payload extended in this spec); <strong>(3)</strong> TAS → CSP App via candidate-detail endpoint (endpoint wired, response DTO extended in this spec). Only one new dotted path is conditional — the URL refresh against Customer Backend — and only if presigned-with-short-TTL semantics are chosen in §A5 row 2.</p>
 
-  <h3>Field-by-field flow</h3>
+  <h3>What flows at each step — in plain English</h3>
   <table>
-    <thead><tr><th>Field</th><th>Customer App</th><th>Customer Backend</th><th>TAS</th><th>CSP App response</th></tr></thead>
+    <thead><tr><th>Step</th><th>What happens</th></tr></thead>
     <tbody>
-      <tr><td><code>home</code></td><td>captures</td><td>persists on booking</td><td>inside <code>customer_location_details</code> JSONB</td><td>inside <code>customer_location_details</code> object</td></tr>
-      <tr><td><code>streetNumber</code></td><td>captures</td><td>persists</td><td>same JSONB</td><td>same object</td></tr>
-      <tr><td><code>locality</code></td><td>captures</td><td>persists</td><td>same JSONB</td><td>same object</td></tr>
-      <tr><td><code>street</code></td><td>captures</td><td>persists</td><td>same JSONB</td><td>same object</td></tr>
-      <tr><td><code>landMarkType</code></td><td>captures</td><td>persists</td><td>same JSONB</td><td>same object</td></tr>
-      <tr><td><code>address</code></td><td>captures</td><td>persists</td><td>same JSONB</td><td>same object</td></tr>
-      <tr><td><code>pincode</code></td><td>captures</td><td>persists</td><td>same JSONB</td><td>same object</td></tr>
-      <tr><td><code>city</code></td><td>captures</td><td>persists</td><td>same JSONB</td><td>same object</td></tr>
-      <tr><td><code>voice_direction_url</code> <span class="badge tbc">TBC</span></td><td>uploads audio, captures S3 URL</td><td>persists URL (field name TBC)</td><td>top-level column <code>voice_direction_url</code></td><td>top-level field; optionally refreshed at fetch time</td></tr>
+      <tr><td>1. Customer captures</td><td>On the Customer App, the customer types their structured address (house, street, locality, etc.) and optionally records a voice direction. The audio is uploaded to file storage.</td></tr>
+      <tr><td>2. Customer Backend saves</td><td>Customer Backend stores all of this on the booking record — already happening today.</td></tr>
+      <tr><td>3. Notification to CSP side</td><td>Customer Backend notifies the CSP side that a new booking exists. <strong>Today this notification carries only basic details + free-text address. After this change, it also carries the structured address object and the voice link.</strong></td></tr>
+      <tr><td>4. CSP Backend remembers</td><td>The CSP backend saves both new pieces against the booking. Where it stores them is an internal detail — the important thing is that they're retrievable later.</td></tr>
+      <tr><td>5. Partner fetches the booking</td><td>When the CSP / Technician App opens a booking screen, it asks the CSP backend for the booking detail. <strong>The response now also includes the structured address and the voice link.</strong></td></tr>
+      <tr><td>6. Partner sees the data</td><td>The app renders the address fields and offers an audio player. The technician decides if and when to play the recording. (UI rendering is a separate spec.)</td></tr>
     </tbody>
   </table>
+
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="wired">
-  <h2><span class="num">WR.</span> What's wired, what's not <span class="tier what">WHAT</span></h2>
-  <div class="expected"><strong>What is expected:</strong> Per-layer audit — same pattern as <a href="./gap-07.html#wired">GAP-07</a>.</div>
+  <h2><span class="num">WR.</span> What's in place, what's missing <span class="tier what">WHAT</span></h2>
+
   <table>
-    <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:26%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+    <thead><tr><th style="width:30%">Layer</th><th style="width:18%">Status</th><th>Note</th></tr></thead>
     <tbody>
-      <tr><td>1</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Customer App structured location + voice capture</td><td>Live on Customer App today. Captures the 8 location fields + uploads voice to S3. Out of scope for this spec — consuming, not building.</td></tr>
-      <tr><td>2</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Customer Backend booking persistence</td><td>Customer Backend already persists the location object + voice S3 URL on the booking record at BFP completion. Field name for voice URL <span class="badge tbc">TBC</span> — confirm with Customer Backend team.</td></tr>
-      <tr><td>3</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td><code>ConnectionRequestCreated</code> event from Customer Backend to TAS</td><td>Event class exists, emit happens at booking creation, TAS subscribes today. Payload extension (additive) is the change in this spec.</td></tr>
-      <tr><td>4</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>TAS install_execution_candidates table</td><td>Existing table; Flyway-managed. Adding two columns is a standard ALTER migration.</td></tr>
-      <tr><td>5</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>TAS CSP-facing candidate-detail endpoint</td><td>Endpoint exists, CSP App already polls / fetches today. Response DTO is the only artefact that extends.</td></tr>
-      <tr><td>6</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Customer Backend payload extension on <code>ConnectionRequestCreated</code></td><td>Two fields to add to the outbound event: <code>customer_location_details</code> (JSON object), <code>voice_direction_url</code> (string). Both nullable. Field name for voice URL pending Customer Backend team confirmation.</td></tr>
-      <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>TAS handler updates + schema migration + DTO extension</td><td>Three engineering touchpoints inside TAS: (a) update <code>InboundEventProcessingService.process(ConnectionRequestCreated)</code> to read the two new fields and write to the candidate row, (b) Flyway migration <code>VNNN__add_customer_location_and_voice_to_candidates.sql</code> adding the two columns, (c) extend the response DTO of the CSP-facing candidate-detail endpoint with the two fields.</td></tr>
-      <tr><td>8</td><td><span style="background:#fff7ed;color:#7c2d12;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">TBC</span></td><td>URL refresh path (conditional on URL semantics)</td><td>Only required if Customer Backend uses presigned URLs with TTL &lt; P74 (72h). If yes, Customer Backend exposes a refresh endpoint (e.g. <code>GET /booking/{id}/voice-direction-url</code>) that TAS calls at candidate-detail-response-build time. If URL is durable or has TTL ≥ 72h, this row is N/A.</td></tr>
-      <tr><td>9</td><td><span style="background:#f1f3f5;color:#6b7280;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Out of scope</span></td><td>CSP / Technician App UI rendering</td><td>Separate Surface Contract spec covers: layout of structured address, audio player controls, fallback when fields are null, accessibility, etc. Not in this gap.</td></tr>
+      <tr><td>Customer App captures structured address + voice</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>Live on the Customer App today. Already gathering all eight address fields and uploading voice recordings.</td></tr>
+      <tr><td>Customer Backend stores them</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>Customer Backend already persists both pieces on the booking record. The voice link is there too, just unconfirmed which field name it uses.</td></tr>
+      <tr><td>Booking notification from Customer to CSP Backend</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>The notification already fires at booking creation. This spec asks Customer Backend to add the two new pieces to what it carries.</td></tr>
+      <tr><td>CSP Backend has a booking record</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>Already exists. Just needs room to keep the two new pieces.</td></tr>
+      <tr><td>Partner-facing booking-detail endpoint</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>CSP / Technician App already calls this to render the booking screen.</td></tr>
+      <tr><td>Forwarding the two new pieces in the notification</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>The change Customer Backend needs to make.</td></tr>
+      <tr><td>Storing them on the CSP side</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>The change CSP Backend needs to make.</td></tr>
+      <tr><td>Returning them in the booking-detail response</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Final piece on the CSP Backend side.</td></tr>
+      <tr><td>Voice-link refresh path (if short-lived links)</td><td><span style="background:#fff7ed;color:#7c2d12;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Depends on TBC</span></td><td>Only needed if Customer Backend uses short-lived audio links. If they stay valid for the install window, this row goes away.</td></tr>
+      <tr><td>App UI for address + audio</td><td><span style="background:#f1f3f5;color:#6b7280;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Out of scope</span></td><td>Separate Surface Contract spec.</td></tr>
     </tbody>
   </table>
+
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="a8">
-  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
-  <div class="expected"><strong>What is expected:</strong> One row per OS / team plausibly in the blast radius.</div>
+  <h2><span class="num">A8.</span> Teams to involve &amp; sign-off <span class="tier guard">GATE</span></h2>
+
   <table>
-    <thead><tr><th>OS / team</th><th>Impacted?</th><th>Notes</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <thead><tr><th>Team</th><th>What we need from them</th><th>Sign-off</th></tr></thead>
     <tbody>
-      <tr><td>Customer Backend</td><td>Yes — owner</td><td>Extends the <code>ConnectionRequestCreated</code> event payload with two additive fields. Confirms voice-URL field name, URL semantics (durable / presigned with TTL / proxy), and whether a refresh endpoint is needed. Confirms existing consumers tolerate the additive payload.</td><td>Customer Backend team</td><td>Pending</td></tr>
-      <tr><td>Installation Flow OS / TAS</td><td>No amendment</td><td>No state machine change, no new event class, no new endpoint. Schema gets two new nullable columns. Inbound handler reads two new payload fields. Response DTO gets two new fields. No behavioural change to install candidate lifecycle.</td><td>TAS Engineering</td><td>Pending</td></tr>
-      <tr><td>CL OS / D&amp;A OS / Capacity OS</td><td>No</td><td>None of these touch the location / voice fields. Carried through TAS as opaque metadata.</td><td>—</td><td>—</td></tr>
-      <tr><td>CSP / Technician App</td><td>Consumer — awareness</td><td>App receives two new optional fields on the existing candidate-detail response. UI rendering covered in a separate Surface Contract. No backend code change in this spec.</td><td>CSP App team</td><td>Pending — informational</td></tr>
-      <tr><td>ESR (Event Schema Registry)</td><td>Verify</td><td>Register the extended <code>ConnectionRequestCreated</code> schema with the two new optional fields. No new event class — only payload extension.</td><td>ESR owner</td><td>Pending — registration</td></tr>
-      <tr><td>Privacy / Data Protection</td><td>Verify</td><td>Voice recordings of customers carry biometric-adjacent risk. Confirm S3 access controls; the URL surfaced to CSP App should not be globally accessible. Confirm retention policy on the audio matches the booking retention policy. Confirm consent text in the Customer App informs customers their voice direction may be heard by the assigned partner.</td><td>Privacy / Legal</td><td>Pending</td></tr>
+      <tr><td>Customer Backend</td><td>Confirm the voice-link field name and how access works. Add the two new pieces to the existing booking-creation notification. Confirm existing consumers won't break when the notification carries them.</td><td>Pending</td></tr>
+      <tr><td>CSP Backend</td><td>Make room to store both pieces against the install booking. Return them in the existing partner-facing booking-detail response. No new endpoint.</td><td>Pending</td></tr>
+      <tr><td>CSP / Technician App</td><td>Aware that the booking-detail response will start carrying two new optional pieces of data. UI rendering is a separate spec; this row is informational only.</td><td>Pending — informational</td></tr>
+      <tr><td>Legal / Privacy</td><td>Confirm: (a) the customer's consent text covers the partner hearing their voice recording, (b) access to the audio is restricted to the assigned partner, (c) the audio retention aligns with the booking retention.</td><td>Pending</td></tr>
     </tbody>
   </table>
+
   <hr class="sect-end">
 </section>
 
 <div class="part-divider how">
   <div class="label">Part B</div>
   <h2>HOW — Detailing</h2>
-  <p>Verification layer for engineering build and test. LOGIC + EDGE only (per the gap-05 v1.2 convention).</p>
-  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+  <p>What success looks like — described as scenarios, not test scripts.</p>
+  <div class="author-note">A QA / engineering team will turn these into test cases at build time.</div>
 </div>
 
 <section class="spec" id="b5">
-  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
-  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering the data-flow contract. §A6 + REGRESSION omitted per gap-05 v1.2 PM convention.</div>
+  <h2><span class="num">B5.</span> What success looks like <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Scenarios in plain English. Each one describes a real situation and what should happen.</div>
 
-  <h3>Business logic</h3>
-  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Happy path — booking with all fields → TAS persists → CSP-App reads
-<em>Real-world:</em> normal booking in a zone where Customer App captures structured location AND the customer recorded a voice note.
+  <div class="scenario">
+    <h4>Scenario 1 — The happy path</h4>
+    <p>A customer in Gurugram books a connection on the Customer App. They fill in all the address fields (house, street, locality, landmark, pincode, city) and record a 15-second voice note explaining that the gate is opposite a chai shop.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>By the time a partner is assigned and opens this booking on their app, they see the full structured address laid out, and they see an audio player they can tap. The voice note plays cleanly.</p>
+  </div>
 
-<span class="kw">Given</span> a Customer App booking with the full location object captured
-      AND a voice direction uploaded to S3 with URL &lt;voice_url&gt;
-<span class="kw">When</span>  Customer Backend emits ConnectionRequestCreated for &lt;connection_id&gt;
-<span class="kw">Then</span>  the event payload contains both:
-      customer_location_details = {home, streetNumber, locality, street, landMarkType, address, pincode, city}
-      voice_direction_url = &lt;voice_url&gt;
-<span class="kw">And</span>   TAS handler writes both fields to install_execution_candidates row for &lt;connection_id&gt;
-<span class="kw">And</span>   GET /candidates/{candidate_id} returns both fields in the response
+  <div class="scenario">
+    <h4>Scenario 2 — Customer skipped the voice recording</h4>
+    <p>The customer fills the address fields but does not record a voice note (most common case in cities where the address alone is enough).</p>
+    <p class="what-happens">What should happen:</p>
+    <p>The partner sees the structured address. The audio player simply doesn't appear (the absence is handled gracefully on the UI side — separate spec). Nothing breaks, no error.</p>
+  </div>
 
-<span class="kw">Verify:</span>
-  • <strong>TAS DB</strong> — install_execution_candidates
-      WHERE connection_id = &lt;connection_id&gt;
-      → customer_location_details (jsonb) matches the captured object byte-for-byte
-      → voice_direction_url = &lt;voice_url&gt; (or refreshed equivalent if presigned)
-  • <strong>TAS response</strong> — candidate-detail endpoint includes both fields
-  • <strong>Customer Backend event log</strong> — ConnectionRequestCreated payload carries both fields</pre></div>
+  <div class="scenario">
+    <h4>Scenario 3 — Older booking that predates the Customer App's structured capture</h4>
+    <p>A booking was created before the Customer App rolled out structured capture in the customer's zone. The booking has only the legacy free-text address.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>The partner sees the free-text address as they do today. No structured address, no audio player. The booking flows through install end-to-end without any pipeline error.</p>
+  </div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Customer skipped voice recording (structured location only)
-<em>Real-world:</em> common case — customer fills the address fields but doesn't record voice.
+  <div class="scenario">
+    <h4>Scenario 4 — The voice link has gone stale</h4>
+    <p>This only applies if Customer Backend uses short-lived voice links. The partner opens a booking 60 hours after it was created, and the original link to the audio has expired.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>The partner gets a fresh, working link — the CSP Backend should have asked Customer Backend for a refreshed link at fetch time. The partner doesn't see a broken file or an error. If the refresh path itself is unavailable (Customer Backend is down), the partner sees the rest of the booking normally and the audio player is just not offered — no error pop-up.</p>
+  </div>
 
-<span class="kw">Given</span> a Customer App booking with the location object captured
-      AND no voice recording
-<span class="kw">When</span>  Customer Backend emits ConnectionRequestCreated for &lt;connection_id&gt;
-<span class="kw">Then</span>  the event payload contains:
-      customer_location_details = {...8 fields...}
-      voice_direction_url = null (or field absent)
-<span class="kw">And</span>   TAS handler writes location_details, writes NULL for voice URL
-<span class="kw">And</span>   GET /candidates/{candidate_id} returns location_details object, voice_direction_url = null
+  <div class="scenario">
+    <h4>Scenario 5 — The audio file has been removed from storage</h4>
+    <p>Retention policy or a manual cleanup removed the audio file. The link exists but the file is gone.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>When the partner taps play, the player handles the "file not found" gracefully — same fallback as any audio-playback failure. The CSP backend isn't responsible for detecting that the file is missing.</p>
+  </div>
 
-<span class="kw">Verify:</span>
-  • <strong>TAS DB</strong> — voice_direction_url IS NULL on this row
-  • <strong>TAS response</strong> — voice_direction_url field present in JSON with value null
-  • CSP App is expected to gracefully hide the audio player when null (out of scope for this spec)</pre></div>
+  <div class="scenario">
+    <h4>Scenario 6 — The customer filled only some of the structured fields</h4>
+    <p>The customer filled house, address, pincode, and city, but skipped street number, locality, street, and landmark type. The Customer App allowed this partial submission.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>The structured address object reaches the partner with the fields the customer filled, and the empty ones simply empty. The partner-side rendering handles missing fields (separate spec). No validation rejection in the pipeline — what the customer entered is what the partner sees.</p>
+  </div>
 
-  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> Older booking predating Customer App structured capture
-<em>Real-world:</em> in-flight bookings that were created before Customer App rolled out the structured capture flow. Backward-compat case.
+  <div class="scenario">
+    <h4>Scenario 7 — Unauthorised partner tries to see the booking</h4>
+    <p>A partner who is not assigned to this booking somehow calls the booking-detail endpoint for it (whether by guessing a booking ID, or by a bug).</p>
+    <p class="what-happens">What should happen:</p>
+    <p>They are blocked from seeing the booking at all — same auth check the endpoint already has today. The voice link and structured address are not leaked. This is the access-control row from §A5 in action.</p>
+  </div>
 
-<span class="kw">Given</span> a Customer App booking from before the structured-capture rollout
-      AND only the free-text address string is on the booking record
-<span class="kw">When</span>  Customer Backend emits ConnectionRequestCreated for &lt;connection_id&gt;
-<span class="kw">Then</span>  the event payload may have:
-      customer_location_details = null (or field absent)
-      voice_direction_url = null (or field absent)
-<span class="kw">And</span>   TAS handler writes NULL for both
-<span class="kw">And</span>   GET /candidates/{candidate_id} returns both as null
-<span class="kw">And</span>   the existing free-text address field on the response is unchanged
-
-<span class="kw">Verify:</span>
-  • <strong>TAS DB</strong> — both new columns IS NULL on this row
-  • <strong>TAS response</strong> — both fields present with value null
-  • <strong>Negative</strong> — no error, no warning, no fallback hardcoding (genuine null, not empty object)
-  • Existing flows for this connection (slot proposal, install, etc.) work unchanged</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> URL refresh path (conditional — only if presigned with TTL &lt; 72h)
-<em>Real-world:</em> if Customer Backend uses presigned URLs with TTL shorter than P74, TAS must refresh the URL when the CSP App requests candidate detail.
-
-<span class="kw">Given</span> voice_direction_url stored on install_execution_candidates was issued T-hours ago
-      AND Customer Backend's presigned TTL is &lt; 72h (e.g. 24h)
-      AND T &gt;= (TTL - safety_window)
-<span class="kw">When</span>  CSP App calls GET /candidates/{candidate_id}
-<span class="kw">Then</span>  TAS detects the stored URL is near-expiry
-<span class="kw">And</span>   TAS calls Customer Backend's refresh-URL endpoint for &lt;connection_id&gt;
-<span class="kw">And</span>   Customer Backend returns a fresh presigned URL
-<span class="kw">And</span>   TAS returns the fresh URL in the response (does NOT need to persist it; can re-refresh on next call)
-
-<span class="kw">Verify:</span>
-  • <strong>TAS response</strong> — voice_direction_url field carries a fresh signature timestamp
-  • <strong>TAS logs</strong> — URL-refresh call to Customer Backend recorded
-  • <strong>Customer Backend logs</strong> — refresh endpoint hit
-  • If URL semantics are durable (option a) or TTL ≥ 72h, this LOGIC is N/A — no refresh path exists</pre></div>
-
-  <h3>Use &amp; edge cases</h3>
-  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Customer Backend refresh endpoint unavailable (degraded)
-<em>Real-world:</em> only applies if LOGIC-4's refresh path is wired. Customer Backend returns 5xx or times out.
-
-<span class="kw">Given</span> the URL refresh path is wired (LOGIC-4)
-      AND Customer Backend's refresh endpoint returns 503 or times out
-<span class="kw">When</span>  CSP App calls GET /candidates/{candidate_id}
-<span class="kw">Then</span>  TAS logs the failure with WARN
-<span class="kw">And</span>   TAS returns the candidate-detail response WITHOUT failing — voice_direction_url field is null
-      OR returns the stored (possibly expired) URL with a flag indicating "may be stale"
-        (PM decision — leaning toward null with WARN)
-<span class="kw">And</span>   the rest of the response (location_details, slot, state) is unaffected
-
-<span class="kw">Verify:</span>
-  • <strong>Service logs</strong> — WARN entry for the refresh failure on this candidate
-  • <strong>TAS response</strong> — voice_direction_url = null (decision: null is safer than stale)
-  • <strong>Negative</strong> — request does NOT fail; CSP App still gets the candidate detail</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> S3 audio object missing / deleted
-<em>Real-world:</em> retention policy removed the audio, or it was manually deleted by ops. URL exists but fetch returns 404.
-
-<span class="kw">Given</span> voice_direction_url is set on the candidate row
-      AND the underlying S3 object is no longer present
-<span class="kw">When</span>  CSP App resolves the URL and fetches the audio
-<span class="kw">Then</span>  S3 returns 404
-<span class="kw">And</span>   CSP App handles the 404 gracefully (UI behaviour — out of scope here)
-<span class="kw">And</span>   TAS is not involved in this failure path — no log on TAS side
-<span class="kw">And</span>   Future candidate-detail responses still carry the URL (TAS does not detect S3-side absence)
-
-<span class="kw">Verify:</span>
-  • Documented expectation — TAS does NOT verify S3 object presence
-  • If retention removal is a real concern, Customer Backend should null the URL on its side
-    when the object is purged; that null propagates on the next ConnectionRequestCreated
-    or via an explicit BookingUpdated event (future enhancement, out of scope)</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Customer App captured a partial structured object
-<em>Real-world:</em> customer filled some fields, skipped others. Customer App allows partial submission.
-
-<span class="kw">Given</span> the Customer App submission had only home, address, pincode, city
-      AND streetNumber, locality, street, landMarkType are empty / null
-<span class="kw">When</span>  Customer Backend emits ConnectionRequestCreated
-<span class="kw">Then</span>  the event payload's customer_location_details object preserves the partial shape
-      (missing keys, or keys present with null values — Customer Backend chooses)
-<span class="kw">And</span>   TAS persists the object verbatim
-<span class="kw">And</span>   GET /candidates/{candidate_id} returns the object verbatim
-
-<span class="kw">Verify:</span>
-  • <strong>No validation enforcement</strong> on the structured object's internal shape — TAS treats it
-    as opaque JSON. Validation of which fields are mandatory lives on the Customer App
-    submission flow, not on TAS.
-  • <strong>CSP App rendering</strong> handles missing keys gracefully (out of scope here)</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Event payload extension breaks existing consumer
-<em>Real-world:</em> some other service subscribes to ConnectionRequestCreated and its deserializer is strict
-about unknown fields. Should never happen with well-behaved services but worth verifying.
-
-<span class="kw">Given</span> the existing ConnectionRequestCreated has consumers other than TAS
-      (CL, Capacity OS signals, analytics, etc.)
-<span class="kw">When</span>  the extended payload (with the two new fields) is published
-<span class="kw">Then</span>  all existing consumers continue to process events successfully
-<span class="kw">And</span>   no consumer fails with "unknown field" deserialization error
-
-<span class="kw">Verify:</span>
-  • <strong>Integration test</strong> in staging: publish an extended-payload ConnectionRequestCreated,
-    confirm every subscriber processes it without error
-  • <strong>Service logs</strong> across all subscribers — no deserialization warnings
-  • If any consumer is strict-mode, coordinate the schema update with that team
-    (this is why §A8 has an ESR row)</pre></div>
   <hr class="sect-end">
 </section>
 
 <footer class="checklist" id="checklist">
   <h2>Completeness Checklist</h2>
-  <p>One row per spec class. Mark each as covered, omitted (with reason), or pending.</p>
   <table class="coverage">
-    <thead><tr><th>Class</th><th>Where in this spec</th><th>Rows</th><th>Test IDs</th><th>Status</th></tr></thead>
+    <thead><tr><th>Class</th><th>Where in this spec</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td class="cls">Metadata</td><td>§A1</td><td>9 rows</td><td>—</td><td>Covered</td></tr>
-      <tr><td class="cls">Why</td><td>§A2</td><td>4 rows</td><td>—</td><td>Covered</td></tr>
-      <tr><td class="cls">Delta</td><td>§A5</td><td>6 atomic changes</td><td>—</td><td>Covered</td></tr>
-      <tr><td class="cls">Workflow</td><td>§WF</td><td>Sequence diagram + field-by-field table</td><td>—</td><td>Covered</td></tr>
-      <tr><td class="cls">Wired-layers</td><td>§WR</td><td>9 layers</td><td>—</td><td>Covered</td></tr>
-      <tr><td class="cls">OS impact + sign-off</td><td>§A8</td><td>6 rows (incl. Privacy)</td><td>—</td><td>Covered</td></tr>
-      <tr><td class="cls">Business logic</td><td>§A5 + §B5 LOGIC</td><td>4 logic cases</td><td>LOGIC-1..4</td><td>Covered</td></tr>
-      <tr><td class="cls">Edge cases</td><td>§B5 EDGE</td><td>4 edge cases</td><td>EDGE-1..4</td><td>Covered</td></tr>
-      <tr><td class="cls">Must-not-change</td><td>§A6 omitted per gap-05 v1.2 convention</td><td>—</td><td>—</td><td>N/A (scope decision)</td></tr>
-      <tr><td class="cls">Regression</td><td>§A6 + B5 REGRESSION blocks omitted per gap-05 v1.2 convention</td><td>—</td><td>—</td><td>N/A (scope decision)</td></tr>
+      <tr><td class="cls">Metadata</td><td>§A1</td><td>Covered</td></tr>
+      <tr><td class="cls">Why</td><td>§A2 (problem, who's affected, cost)</td><td>Covered</td></tr>
+      <tr><td class="cls">Delta</td><td>§A5 — 5 atomic changes described in business terms</td><td>Covered</td></tr>
+      <tr><td class="cls">Workflow</td><td>§WF — sequence diagram + plain-English step list</td><td>Covered</td></tr>
+      <tr><td class="cls">What's in place / missing</td><td>§WR — 10 layers, status per layer</td><td>Covered</td></tr>
+      <tr><td class="cls">Teams &amp; sign-off</td><td>§A8 — 4 teams, what each needs to do</td><td>Covered</td></tr>
+      <tr><td class="cls">Scenarios</td><td>§B5 — 7 scenarios in plain English</td><td>Covered</td></tr>
+      <tr><td class="cls">Open items</td><td>Flagged in §A5 TBC block — voice-link field name + access semantics</td><td>Pending Customer Backend team</td></tr>
     </tbody>
   </table>
   <div class="note" style="margin-top:24px;padding:14px;background:var(--bg);border-left:3px solid var(--ink);font-size:13px;">
-    <strong>What this spec deliberately does NOT cover:</strong>
+    <strong>What this spec deliberately does not cover:</strong>
     <ul style="margin:6px 0 0;padding-left:20px;">
-      <li><strong>CSP / Technician App UI rendering</strong> (address layout, audio player, fallback states) — separate Surface Contract spec.</li>
-      <li><strong>Voice transcription to text</strong> — future enhancement; out of scope.</li>
-      <li><strong>Analytics on audio playback</strong> (did the technician actually play it?) — future, separate spec.</li>
-      <li><strong>Customer-side capture flow</strong> — already live on the Customer App; this spec only consumes its output.</li>
-      <li><strong>Multi-language voice handling</strong> beyond passing the URL through.</li>
-      <li><strong>S3 retention policy alignment</strong> with booking retention — Privacy team to confirm in §A8.</li>
-    </ul>
-    <strong>Required input from Customer Backend team before sign-off (the TBC items):</strong>
-    <ul style="margin:6px 0 0;padding-left:20px;">
-      <li>Exact field name on the booking record for the voice S3 URL (assumed <code>voice_direction_url</code> in this spec).</li>
-      <li>URL semantics — durable, presigned-with-TTL (and what TTL), or proxy.</li>
-      <li>If presigned with TTL &lt; 72h: confirm refresh endpoint contract (URL + auth).</li>
-      <li>Confirmation that existing <code>ConnectionRequestCreated</code> subscribers tolerate additive payload extension.</li>
+      <li>The CSP / Technician App UI (separate Surface Contract).</li>
+      <li>Voice-to-text transcription.</li>
+      <li>Analytics on whether the audio was played.</li>
+      <li>The customer-side capture flow (already live).</li>
+      <li>Multi-language audio handling beyond simply playing the file.</li>
     </ul>
   </div>
 </footer>
@@ -565,7 +448,7 @@ about unknown fields. Should never happen with well-behaved services but worth v
   <table>
     <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
     <tbody>
-      <tr><td>v1.0</td><td>2026-06-16</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Backend-only spec to pipe the Customer App's structured-location object (8 fields) and voice-direction S3 URL into TAS via an additive payload extension on the existing <code>ConnectionRequestCreated</code> event, persist both on the <code>install_execution_candidates</code> row, and surface both via the existing CSP-facing candidate-detail endpoint. No new event class, no new endpoint, no state-machine change, no OS amendment. Two TBCs flagged for Customer Backend team: (1) exact field name for the voice S3 URL on the booking record, (2) URL semantics (durable / presigned-with-TTL / proxy) and consequent need for a refresh endpoint. CSP / Technician App UI rendering is out of scope (separate Surface Contract). Privacy sign-off requested in §A8 given biometric-adjacent risk of customer voice audio.</td><td>Pending</td></tr>
+      <tr><td>v1.0</td><td>2026-06-16</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Pipes the Customer App's structured address (eight fields) and voice direction recording from Customer Backend to the CSP / Technician App by extending the existing booking-creation notification with two additional pieces of information. CSP Backend stores both against the booking and returns them on the partner-facing booking-detail endpoint. Two open items pending Customer Backend team: the exact field name of the voice link, and the access semantics (always-valid vs short-lived). CSP / Technician App UI rendering is a separate Surface Contract. Privacy sign-off requested given the voice recording is the customer's own.</td><td>Pending</td></tr>
     </tbody>
   </table>
 </section>
