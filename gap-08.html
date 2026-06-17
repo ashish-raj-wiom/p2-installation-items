@@ -372,45 +372,24 @@ sequenceDiagram
   </div>
 
   <div class="scenario">
-    <h4>Scenario 2 — Customer skipped the voice recording</h4>
-    <p>The customer fills the address fields but does not record a voice note (most common case in cities where the address alone is enough).</p>
-    <p class="what-happens">What should happen:</p>
-    <p>The partner sees the structured address. The audio player simply doesn't appear (the absence is handled gracefully on the UI side — separate spec). Nothing breaks, no error.</p>
-  </div>
-
-  <div class="scenario">
-    <h4>Scenario 3 — Older booking that predates the Customer App's structured capture</h4>
+    <h4>Scenario 2 — Older booking that predates the Customer App's structured capture</h4>
     <p>A booking was created before the Customer App rolled out structured capture in the customer's zone. The booking has only the legacy free-text address.</p>
     <p class="what-happens">What should happen:</p>
     <p>The partner sees the free-text address as they do today. No structured address, no audio player. The booking flows through install end-to-end without any pipeline error.</p>
   </div>
 
   <div class="scenario">
-    <h4>Scenario 4 — The voice link has gone stale</h4>
+    <h4>Scenario 3 — The voice link has gone stale</h4>
     <p>This only applies if Customer Backend uses short-lived voice links. The partner opens a booking 60 hours after it was created, and the original link to the audio has expired.</p>
     <p class="what-happens">What should happen:</p>
     <p>The partner gets a fresh, working link — the CSP Backend should have asked Customer Backend for a refreshed link at fetch time. The partner doesn't see a broken file or an error. If the refresh path itself is unavailable (Customer Backend is down), the partner sees the rest of the booking normally and the audio player is just not offered — no error pop-up.</p>
   </div>
 
   <div class="scenario">
-    <h4>Scenario 5 — The audio file has been removed from storage</h4>
+    <h4>Scenario 4 — The audio file has been removed from storage</h4>
     <p>Retention policy or a manual cleanup removed the audio file. The link exists but the file is gone.</p>
     <p class="what-happens">What should happen:</p>
     <p>When the partner taps play, the player handles the "file not found" gracefully — same fallback as any audio-playback failure. The CSP backend isn't responsible for detecting that the file is missing.</p>
-  </div>
-
-  <div class="scenario">
-    <h4>Scenario 6 — The customer filled only some of the structured fields</h4>
-    <p>The customer filled house, address, pincode, and city, but skipped street number, locality, street, and landmark type. The Customer App allowed this partial submission.</p>
-    <p class="what-happens">What should happen:</p>
-    <p>The structured address object reaches the partner with the fields the customer filled, and the empty ones simply empty. The partner-side rendering handles missing fields (separate spec). No validation rejection in the pipeline — what the customer entered is what the partner sees.</p>
-  </div>
-
-  <div class="scenario">
-    <h4>Scenario 7 — Unauthorised partner tries to see the booking</h4>
-    <p>A partner who is not assigned to this booking somehow calls the booking-detail endpoint for it (whether by guessing a booking ID, or by a bug).</p>
-    <p class="what-happens">What should happen:</p>
-    <p>They are blocked from seeing the booking at all — same auth check the endpoint already has today. The voice link and structured address are not leaked. This is the access-control row from §A5 in action.</p>
   </div>
 
   <hr class="sect-end">
@@ -427,7 +406,7 @@ sequenceDiagram
       <tr><td class="cls">Workflow</td><td>§WF — sequence diagram + plain-English step list</td><td>Covered</td></tr>
       <tr><td class="cls">What's in place / missing</td><td>§WR — 10 layers, status per layer</td><td>Covered</td></tr>
       <tr><td class="cls">Teams &amp; sign-off</td><td>§A8 — 4 teams, what each needs to do</td><td>Covered</td></tr>
-      <tr><td class="cls">Scenarios</td><td>§B5 — 7 scenarios in plain English</td><td>Covered</td></tr>
+      <tr><td class="cls">Scenarios</td><td>§B5 — 4 scenarios in plain English</td><td>Covered</td></tr>
       <tr><td class="cls">Open items</td><td>Flagged in §A5 TBC block — voice-link field name + access semantics</td><td>Pending Customer Backend team</td></tr>
     </tbody>
   </table>
