@@ -113,6 +113,7 @@ const GAPS = [
   { id: 'gap-06', num: 'GAP-06', short: 'P74 install-timeout sweep + cascade' },
   { id: 'gap-07', num: 'GAP-07', short: 'Remove auto-accept; slot proposal triggers ACCEPTED; wire P41' },
   { id: 'gap-08', num: 'GAP-08', short: 'Customer location + voice directions on CSP / Technician app' },
+  { id: 'gap-09', num: 'GAP-09', short: 'Timeline misses the first update (booking allotted)' },
 ];
 
 // ----------------------------------------------------------------------------

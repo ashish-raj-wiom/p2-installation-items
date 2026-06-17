@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-09 — Timeline misses the first update (booking allotted) · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+    --tbc-bg: #fff7ed; --tbc-rule: #c2410c; --tbc-ink: #7c2d12;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.6; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 30px; margin: 6px 0 10px; line-height: 1.25; }
+  header.doc p.lede { color: var(--ink); font-size: 15px; margin: 0; max-width: 72ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .badge.tbc { background: var(--tbc-bg); color: var(--tbc-ink); border: 1px solid var(--tbc-rule); }
+
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 18px 0 6px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 10px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .tbc { background: var(--tbc-bg); border-left: 3px solid var(--tbc-rule); padding: 10px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--tbc-ink); border-radius: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .scenario { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 14px 18px; margin: 12px 0; font-size: 14px; }
+  .scenario h4 { margin: 0 0 6px; font-size: 14px; color: var(--core); }
+  .scenario p { margin: 4px 0; }
+  .scenario .what-happens { font-weight: 600; color: var(--ink); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#workflow"><span class="ix">WF.</span>How it should look on the partner timeline</a></li>
+    <li><a href="#wired"><span class="ix">WR.</span>What's in place / what's missing</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>Teams to involve &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>What success looks like</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">← Bugs &amp; gaps index</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · GAP-09</div>
+  <h1>Timeline misses the first update — "new booking allotted"</h1>
+  <p class="lede">When a new connection is allotted to a CSP, the partner app's <strong>Updates</strong> timeline does not show this event. The timeline only starts surfacing entries from the slot-proposal moment onwards. The very first action the partner needs to know about — "you have a new booking to act on" — is silently missing. This is a backend gap: the audit table that the timeline endpoint reads from never gets a row written for the initial allotment, even though the partner's update version counter does jump forward at that moment. This spec writes the missing first row so the timeline begins where it should.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;·&nbsp; <strong>Reviewer:</strong> TAS Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Scope:</strong> backend-only. One audit-row write at booking-allotment time + a display copy for the new entry. No app changes (the existing timeline endpoint will just start carrying this entry like any other). No state-machine change.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage — read this before the rest.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>At the moment a new install booking is allotted to a CSP, the backend writes a row into the timeline audit table (the one the partner-facing timeline endpoint already reads from). The partner app's <strong>Updates</strong> section then shows "new booking allotted" as the first entry, alongside the existing entries for slot proposal, customer confirmation, technician assignment, install-day reminder, and so on.</dd>
+    <dt>What triggered it?</dt>    <dd>QA on staging — the partner timeline begins at "Slot proposed" instead of "Booking allotted." The PM checked the API response: the unseen-count counter on the booking sits at <strong>version 5</strong> but the timeline returns only <strong>4 entries</strong> (versions 2, 3, 4, 5). Version 1 — the booking-allotment moment — is missing from the table the API reads from.</dd>
+    <dt>Where the data lives</dt>   <dd>The timeline endpoint reads from a table called <code>install_attention_event_log</code> on the partner-side backend (TAS). Each row in this table is one "update" the partner needs to see. Today, when a candidate is created (booking allotted), the backend bumps the partner-facing version counter on the booking row but does not write a corresponding audit row for that bump. So when the partner app fetches the timeline, version 1 has nothing to show.</dd>
+    <dt>Who is affected?</dt>      <dd><strong>Partners</strong> — their Updates section starts mid-flow ("slot proposed") with no preceding "you've got a booking" entry, which is the most important update for them to act on. <strong>Ops</strong> — debugging customer-partner timeline mismatches becomes harder when the initial event is invisible. <strong>Customers</strong> — indirectly, because partner confusion at the lead step delays bookings.</dd>
+    <dt>Out of scope</dt>          <dd>Push notifications. Partner-app UI styling. Counter semantics (the unseen-count logic itself is fine — only the audit row is missing). Other "missing-entry" issues on the timeline if any.</dd>
+    <dt>Risk to flag</dt>          <dd>The fix is a single write at candidate-creation time. The risk is double-counting if the existing version counter is not reset to start from a clean baseline as part of this change. The TAS engineer should confirm whether the counter should reset to 0 and be advanced by the new write, or stay at 1 and just have a back-fill row added. Either approach works; the team should pick one and stay consistent.</dd>
+    <dt>What success looks like</dt><dd>When the partner opens the Updates section on a newly-allotted booking, the very first entry says "new booking allotted to you" (with Hindi and English copy), with timestamp matching the moment the booking was allotted. All subsequent updates (slot proposed, customer confirmed, etc.) follow normally, with version numbers consistent with the unseen-count counter.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>Backend-only spec. One audit row added at the booking-allotment moment, so the partner timeline begins where the partner's responsibility begins.</p>
+  <div class="author-note">Authored by the PM. Reviewed by TAS Engineering.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tbody>
+      <tr><td>Change ID</td><td>GAP-09</td></tr>
+      <tr><td>Title</td><td>Timeline misses the first update — "new booking allotted"</td></tr>
+      <tr><td>Type</td><td>Gap — partner-facing audit row that should be written but isn't</td></tr>
+      <tr><td>Tier</td><td>Light</td></tr>
+      <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+      <tr><td>Reviewers</td><td>TAS Engineering (write site + display copy) · CSP / Technician App team (informational — no app code change)</td></tr>
+      <tr><td>Status</td><td>v1.0 — draft for engineering review</td></tr>
+      <tr><td>Evidence (QA capture)</td><td>Partner-app API response from staging on 2026-06-17 for candidate <code>a0fd4c87-1396-4ba8-9db0-311864d93300</code>: <code>current_version = 5</code>, <code>total_elements = 4</code>, entries returned for versions 2 through 5 only. Version 1 has no row in the audit table.</td></tr>
+      <tr><td>Out of scope</td><td>Partner-app UI styling. Push notifications. Other timeline gaps (if any). Counter semantics rework.</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+
+  <h3>The problem in one paragraph</h3>
+  <p>When a connection gets allotted to a CSP, that's the most important update the partner needs to see — it's the moment they have something to act on. The partner app surfaces this kind of information in its <strong>Updates</strong> timeline, which is driven by a TAS endpoint that reads from an audit table. Today, that audit table has no row for the allotment moment. The partner's update counter does bump (so the "unseen" badge is correct), but when the partner taps in to read the actual update, the first entry they see is the slot proposal — which happens later, after they've already acted. The initial trigger is invisible.</p>
+
+  <h3>What the API returns today (verbatim)</h3>
+  <p>Capture from staging on 2026-06-17 — the partner-side timeline endpoint returns:</p>
+  <pre style="background:var(--bg); padding:12px 14px; border-radius:5px; border:1px solid var(--rule); font-size:12.5px; line-height:1.5; overflow-x:auto;">"current_version": 5,
+"acked_version": 5,
+"unseen_count": 0,
+"total_elements": 4,            // ← only 4 entries despite version count of 5
+"entries": [
+  { "version": 5, "reason_code": "INSTALL_DAY_REMINDER",      ... },
+  { "version": 4, "reason_code": "Technician assigned: 305",  ... },
+  { "version": 3, "reason_code": "Customer confirmed slot 1", ... },
+  { "version": 2, "reason_code": "Slot proposed",             ... }
+  // version 1 — missing
+]</pre>
+  <p>Five versions exist on the booking row's counter; only four show up in the timeline. The missing one is the first: the booking-allotment moment.</p>
+
+  <h3>Who experiences it</h3>
+  <ul>
+    <li><strong>Partners (CSPs, technicians)</strong> — open the Updates section, the first entry is "selected time is sent" (slot proposal). They had to act before that — they proposed the slot in the first place — but no entry tells them why the booking landed on their app.</li>
+    <li><strong>Ops</strong> — when investigating a partner-facing complaint, the audit trail is missing the originating event. Have to cross-reference with the candidate state log (a different table) to reconstruct.</li>
+    <li><strong>Customers</strong> — indirectly affected when partner confusion at the lead step delays the booking flow.</li>
+  </ul>
+
+  <h3>Cost of leaving it as-is</h3>
+  <p>The partner timeline is presented as a complete history of "what's happening with this booking on your side." Missing the first step makes the feature feel incomplete and undermines confidence in the timeline as a single source of truth. As more partners come onto the app, the gap shows up more and gets harder to explain away.</p>
+
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per change, in business terms.</div>
+
+  <table class="delta">
+    <thead><tr><th style="width:24%">What changes</th><th class="before" style="width:28%">Today</th><th class="after" style="width:28%">After this change</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Write the first timeline row at booking-allotment time</td>
+        <td>When a candidate (install booking) is created on the partner side, the booking's "latest update version" counter starts at 1, but no corresponding row gets written to the timeline audit table. So when the partner app fetches the timeline, the first row it sees is from the next update (slot proposal), at version 2.</td>
+        <td>At the moment of candidate creation, a row is written into the timeline audit table at version 1. The row carries the same shape as any other timeline row: an occurrence time (= the allotment moment), the trigger reason ("booking allotted"), and the display copy (see next row).</td>
+        <td>The audit table is the single source of truth that the partner app reads from. If a partner-visible update doesn't have a row here, it's invisible. The version counter being correct without the row being written is the actual gap.</td>
+      </tr>
+      <tr>
+        <td>Display copy for the new entry</td>
+        <td>No copy exists for this entry because the entry doesn't exist.</td>
+        <td>The new row carries display text in English and Hindi, matching the style of existing timeline entries. <strong>Suggested copy:</strong><br>· title_en: "New booking allotted to you"<br>· title_hi: "आपको एक नया कनेक्शन मिला है"<br>· subtitle_en: "Propose a slot to the customer"<br>· subtitle_hi: "ग्राहक को इंस्टॉलेशन का समय भेजें"<br>· category: ALERT (since this is the first action-driving entry)<br>· icon: a bell or new-booking icon (final choice with Design)</td>
+        <td>The partner needs to know what's happened and what to do next. The subtitle tells them the next action; the ALERT category surfaces it visually as actionable rather than informational.</td>
+      </tr>
+      <tr>
+        <td>Update the timeline API if any filter excludes version 1</td>
+        <td>To be confirmed by the TAS engineer: does the timeline endpoint filter rows by version range, or does it simply return whatever exists in the audit table for this booking? The data shows it returns whatever exists — so once the row is written, it should appear. <span class="badge tbc">verify</span></td>
+        <td>If the endpoint already returns all rows regardless of version (most likely), then once the v1 row is written, the partner timeline will start showing it. If a filter exists that drops it, the filter is updated to include v1.</td>
+        <td>Defensive — confirms that no other code path silently drops version 1 once the row is present.</td>
+      </tr>
+      <tr>
+        <td>Counter alignment — pick one of two consistent paths</td>
+        <td>Today the booking row's counter starts at 1 but no row backs that 1. There are two consistent ways forward; the team should pick one.</td>
+        <td><strong>Option A:</strong> the booking row's counter starts at 0; the new write at allotment-time advances it to 1 (and writes the v1 row). Subsequent updates advance normally to 2, 3, 4. This keeps "counter value = number of rows in the audit table" — easiest invariant to reason about.<br><br><strong>Option B:</strong> the booking row's counter keeps starting at 1; the new write doesn't change the counter, just back-fills the missing v1 row. Subsequent updates continue from 2 as today. This is a one-line change but leaves the "1 row implicit, written from row 2 onward" mental model — slightly weirder.<br><br>Recommend Option A — easier invariant, no future surprises. TAS engineer to confirm whichever approach they pick stays consistent across the affected callsites.</td>
+        <td>Either approach delivers the partner-visible outcome (timeline starts at allotment). Option A is cleaner; Option B is smaller. Picking one explicitly avoids the bug coming back via inconsistency.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="hint"><strong>What this gap is — and isn't.</strong> This is purely a missing audit row. The partner-app code, the timeline endpoint, the audit-table schema, the version-counter logic — all already exist and work. The only thing missing is the write at the allotment moment. One small backend change unblocks the partner-visible outcome.</div>
+
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="workflow">
+  <h2><span class="num">WF.</span> How it should look on the partner timeline <span class="tier what">WHAT</span></h2>
+
+  <h3>Today vs after — side by side</h3>
+  <table>
+    <thead><tr><th style="width:50%">Today (broken)</th><th style="width:50%">After this change</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>
+          <strong>Updates section — partner app</strong>
+          <ol style="margin:6px 0 0; padding-left:20px;">
+            <li>Today is the installation day <span style="color:var(--muted); font-size:12px;">— v5</span></li>
+            <li>Technician assigned <span style="color:var(--muted); font-size:12px;">— v4</span></li>
+            <li>Customer confirmed slot <span style="color:var(--muted); font-size:12px;">— v3</span></li>
+            <li>Slot proposed <span style="color:var(--muted); font-size:12px;">— v2</span></li>
+            <li style="color:var(--guard);">⟨ no entry ⟩ <span style="color:var(--muted); font-size:12px;">— v1 missing</span></li>
+          </ol>
+        </td>
+        <td>
+          <strong>Updates section — partner app</strong>
+          <ol style="margin:6px 0 0; padding-left:20px;">
+            <li>Today is the installation day <span style="color:var(--muted); font-size:12px;">— v5</span></li>
+            <li>Technician assigned <span style="color:var(--muted); font-size:12px;">— v4</span></li>
+            <li>Customer confirmed slot <span style="color:var(--muted); font-size:12px;">— v3</span></li>
+            <li>Slot proposed <span style="color:var(--muted); font-size:12px;">— v2</span></li>
+            <li style="color:var(--core);"><strong>New booking allotted to you</strong> <span style="color:var(--muted); font-size:12px;">— v1</span></li>
+          </ol>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>The flow at a high level</h3>
+  <ol>
+    <li>A booking is allotted to a CSP (DAS picks the CSP → notifies the partner side).</li>
+    <li>The partner side creates a candidate (the install-side record of "we have this booking to act on"). <strong>Today this is where the audit row is missing. After the fix, this is where the new row gets written.</strong></li>
+    <li>The partner gets a notification (push / in-app) and opens the booking. The Updates section now shows "new booking allotted" as the first entry.</li>
+    <li>The partner proposes a slot → new row added at version 2 (same as today).</li>
+    <li>Customer confirms → version 3. Technician assigned → version 4. Install-day reminder → version 5. (All unchanged.)</li>
+  </ol>
+
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="wired">
+  <h2><span class="num">WR.</span> What's in place, what's missing <span class="tier what">WHAT</span></h2>
+
+  <table>
+    <thead><tr><th style="width:34%">Layer</th><th style="width:18%">Status</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Timeline audit table (<code>install_attention_event_log</code>)</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>Already exists in the partner-side backend (TAS). Holds one row per partner-visible update. Append-only.</td></tr>
+      <tr><td>Partner-facing timeline endpoint</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td><code>GET /install/candidates/{id}/timeline</code> — the partner app already calls this. Returns rows from the audit table, paginated and ordered.</td></tr>
+      <tr><td>Display copy schema (English + Hindi, title + subtitle + category + icon)</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>Existing timeline entries already carry these fields (see staging capture). Just need a new entry for the allotment reason code with Hindi + English copy.</td></tr>
+      <tr><td>Version counter on the candidate row</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>Already maintained. Drives the "unseen" badge correctly. The mismatch with the audit table is what this gap addresses.</td></tr>
+      <tr><td>Audit-row write at booking-allotment moment</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>The actual gap — the write that adds the v1 row when the candidate is created.</td></tr>
+      <tr><td>Display copy for the new entry</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Hindi + English title and subtitle for the "booking allotted" entry. Suggested copy in §A5; final wording with Design.</td></tr>
+      <tr><td>Endpoint filter check</td><td><span style="background:#fff7ed;color:#7c2d12;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Verify</span></td><td>Confirm the timeline endpoint has no filter that drops version 1. Most likely it returns whatever rows exist — but worth a one-line check.</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> Teams to involve &amp; sign-off <span class="tier guard">GATE</span></h2>
+
+  <table>
+    <thead><tr><th>Team</th><th>What we need from them</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>TAS Engineering</td><td>Add the audit-row write at candidate-creation time. Add the new reason code (e.g. <code>BOOKING_ALLOTTED</code>) to the existing display-copy mapping. Pick Option A or Option B from §A5 and stay consistent. Confirm the endpoint returns the new row without any filter changes — or update the filter if needed.</td><td>Pending</td></tr>
+      <tr><td>Design / Content</td><td>Confirm the Hindi + English copy for the new entry. The suggested copy in §A5 is a starting point. Confirm the icon choice and whether the category should be <code>ALERT</code> (action-driving) or a softer category.</td><td>Pending</td></tr>
+      <tr><td>CSP / Technician App</td><td>Aware that the timeline will start carrying one additional entry. No app code change — the existing rendering already handles whatever entries the endpoint returns. This row is informational.</td><td>Pending — informational</td></tr>
+      <tr><td>QA</td><td>Verify on staging: create a booking, allot it to a test CSP, open the timeline endpoint, confirm version 1 appears with the right copy and timestamp. Confirm subsequent updates continue to flow normally.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>What success looks like — described as scenarios.</p>
+  <div class="author-note">A QA / engineering team will turn these into test cases at build time.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> What success looks like <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Scenarios in plain English. Each one describes a real situation and what should happen.</div>
+
+  <div class="scenario">
+    <h4>Scenario 1 — A new booking lands on the partner side</h4>
+    <p>Routing assigns a new connection to CSP <em>X</em>. The partner side creates a candidate for the booking.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>A row is written into the timeline audit table at version 1, with <code>reason_code = BOOKING_ALLOTTED</code>, occurrence time equal to the moment the candidate was created, and the new English + Hindi display copy. The partner's update counter shows 1 unseen update. When the partner opens the Updates section, the first (and only, at this point) entry says "New booking allotted to you" with the matching subtitle.</p>
+  </div>
+
+  <div class="scenario">
+    <h4>Scenario 2 — Partner proposes a slot after seeing the allotment</h4>
+    <p>The partner reads the "new booking allotted" entry, then proposes a slot to the customer (same flow as today).</p>
+    <p class="what-happens">What should happen:</p>
+    <p>A second audit row is written at version 2 with <code>reason_code = "Slot proposed"</code>, exactly as today. The partner's Updates section now shows two entries — slot proposed on top (newest first), booking allotted below. Counter shows 2 latest, with the acked-version following the partner's behaviour.</p>
+  </div>
+
+  <div class="scenario">
+    <h4>Scenario 3 — A booking in flight when this change deploys</h4>
+    <p>Some bookings were already in flight before this change — their candidates exist on the partner side, but the v1 row was never written for them.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>Two acceptable approaches; the team should pick one:<br>
+    <strong>(a)</strong> Leave existing bookings as they are — they continue to show timelines starting from v2 (the existing state). Only newly allotted bookings (post-deploy) get the v1 row.<br>
+    <strong>(b)</strong> Back-fill: write a v1 row for every active candidate that's missing one, with the candidate's <code>created_at</code> as the occurrence time and "BOOKING_ALLOTTED" as the reason code.<br>
+    Recommend (a) — back-fills carry edge-case risk (counter alignment) and the gap is small for partners with in-flight bookings. TAS engineer to confirm.</p>
+  </div>
+
+  <div class="scenario">
+    <h4>Scenario 4 — Partner re-fetches the timeline after the v1 row exists</h4>
+    <p>Partner-app refresh, pagination, or background sync hits the timeline endpoint again.</p>
+    <p class="what-happens">What should happen:</p>
+    <p>The endpoint returns the same rows it would return on first load — v1 (booking allotted), v2 (slot proposed), and so on. Pagination and ordering work normally. No duplicate writes (the v1 row is written once at candidate creation, not on every fetch).</p>
+  </div>
+
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Where in this spec</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Metadata</td><td>§A1</td><td>Covered</td></tr>
+      <tr><td class="cls">Why (problem + evidence)</td><td>§A2 — includes the staging API response that surfaced the issue</td><td>Covered</td></tr>
+      <tr><td class="cls">Delta</td><td>§A5 — 4 atomic changes in business terms</td><td>Covered</td></tr>
+      <tr><td class="cls">Workflow</td><td>§WF — today vs after, plus the high-level flow</td><td>Covered</td></tr>
+      <tr><td class="cls">What's in place / missing</td><td>§WR — 7 layers, status per layer</td><td>Covered</td></tr>
+      <tr><td class="cls">Teams &amp; sign-off</td><td>§A8 — TAS, Design, App, QA</td><td>Covered</td></tr>
+      <tr><td class="cls">Scenarios</td><td>§B5 — 4 scenarios in plain English</td><td>Covered</td></tr>
+      <tr><td class="cls">Open items</td><td>Counter alignment (Option A vs B) — TAS engineer to choose. Display copy — Design to confirm.</td><td>Pending team picks</td></tr>
+    </tbody>
+  </table>
+  <div class="note" style="margin-top:24px;padding:14px;background:var(--bg);border-left:3px solid var(--ink);font-size:13px;">
+    <strong>What this spec deliberately does not cover:</strong>
+    <ul style="margin:6px 0 0;padding-left:20px;">
+      <li>Push notifications for the booking-allotted moment (separate concern).</li>
+      <li>Partner-app UI styling for the new entry (existing timeline rendering handles it).</li>
+      <li>Counter semantics rework (the existing counter logic is fine; only the audit row is missing).</li>
+      <li>Other potentially missing timeline entries — out of scope; would be filed as separate gaps if found.</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-17</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Writes a row into the partner timeline audit table (<code>install_attention_event_log</code>) at booking-allotment time, so the partner app's Updates section starts at "new booking allotted" instead of skipping ahead to "slot proposed." Backend-only — no app code change, no state-machine change. Includes suggested Hindi + English display copy (Design to confirm), counter-alignment options for TAS engineer to choose, and a defensive check on the timeline endpoint to confirm no filter drops the new row. Evidence: staging API response from 2026-06-17 showing <code>current_version=5</code> but only 4 entries returned (versions 2–5; version 1 missing).</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
+</body>
+</html>
