@@ -248,10 +248,10 @@
         <td>The partner needs to know what's happened and what to do next. The subtitle tells them the next action; the ALERT category surfaces it visually as actionable rather than informational.</td>
       </tr>
       <tr>
-        <td>Update the timeline API if any filter excludes version 1</td>
-        <td>To be confirmed by the TAS engineer: does the timeline endpoint filter rows by version range, or does it simply return whatever exists in the audit table for this booking? The data shows it returns whatever exists — so once the row is written, it should appear. <span class="badge tbc">verify</span></td>
-        <td>If the endpoint already returns all rows regardless of version (most likely), then once the v1 row is written, the partner timeline will start showing it. If a filter exists that drops it, the filter is updated to include v1.</td>
-        <td>Defensive — confirms that no other code path silently drops version 1 once the row is present.</td>
+        <td>Timeline API — no changes needed (verified)</td>
+        <td>The PM checked: the timeline endpoint has <strong>no filter on version anywhere</strong>. It filters only by candidate id, optional time-window (<code>before</code> / <code>after</code> params), and pagination. Once the v1 row is in the audit table, the existing endpoint will return it automatically on the next fetch.</td>
+        <td>No code change on the API side. Just the write at candidate-creation time (row 1 above) is enough to make the v1 entry appear on the partner timeline.</td>
+        <td>Removes a tempting source of side-effects. Engineering doesn't need to touch the read path at all — the gap is purely on the write side.</td>
       </tr>
       <tr>
         <td>Counter alignment — pick one of two consistent paths</td>
@@ -323,7 +323,7 @@
       <tr><td>Version counter on the candidate row</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">In place</span></td><td>Already maintained. Drives the "unseen" badge correctly. The mismatch with the audit table is what this gap addresses.</td></tr>
       <tr><td>Audit-row write at booking-allotment moment</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>The actual gap — the write that adds the v1 row when the candidate is created.</td></tr>
       <tr><td>Display copy for the new entry</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Hindi + English title and subtitle for the "booking allotted" entry. Suggested copy in §A5; final wording with Design.</td></tr>
-      <tr><td>Endpoint filter check</td><td><span style="background:#fff7ed;color:#7c2d12;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Verify</span></td><td>Confirm the timeline endpoint has no filter that drops version 1. Most likely it returns whatever rows exist — but worth a one-line check.</td></tr>
+      <tr><td>Endpoint filter check</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Verified — no filter</span></td><td>PM checked the endpoint code directly. The repository queries filter only by candidate id and optional time window (<code>before</code> / <code>after</code> params); the service layer does no version-based filtering; the controller exposes no version param. Once the v1 row is written, the existing endpoint returns it without any code change on the read path.</td></tr>
     </tbody>
   </table>
 
@@ -336,7 +336,7 @@
   <table>
     <thead><tr><th>Team</th><th>What we need from them</th><th>Sign-off</th></tr></thead>
     <tbody>
-      <tr><td>TAS Engineering</td><td>Add the audit-row write at candidate-creation time. Add the new reason code (e.g. <code>BOOKING_ALLOTTED</code>) to the existing display-copy mapping. Pick Option A or Option B from §A5 and stay consistent. Confirm the endpoint returns the new row without any filter changes — or update the filter if needed.</td><td>Pending</td></tr>
+      <tr><td>TAS Engineering</td><td>Add the audit-row write at candidate-creation time. Add the new reason code (e.g. <code>BOOKING_ALLOTTED</code>) to the existing display-copy mapping. Pick Option A or Option B from §A5 and stay consistent. <strong>No read-path changes needed</strong> — the timeline endpoint has no version-based filter (verified by PM).</td><td>Pending</td></tr>
       <tr><td>Design / Content</td><td>Confirm the Hindi + English copy for the new entry. The suggested copy in §A5 is a starting point. Confirm the icon choice and whether the category should be <code>ALERT</code> (action-driving) or a softer category.</td><td>Pending</td></tr>
       <tr><td>CSP / Technician App</td><td>Aware that the timeline will start carrying one additional entry. No app code change — the existing rendering already handles whatever entries the endpoint returns. This row is informational.</td><td>Pending — informational</td></tr>
       <tr><td>QA</td><td>Verify on staging: create a booking, allot it to a test CSP, open the timeline endpoint, confirm version 1 appears with the right copy and timestamp. Confirm subsequent updates continue to flow normally.</td><td>Pending</td></tr>
@@ -372,13 +372,10 @@
   </div>
 
   <div class="scenario">
-    <h4>Scenario 3 — A booking in flight when this change deploys</h4>
+    <h4>Scenario 3 — Bookings in flight when this change deploys</h4>
     <p>Some bookings were already in flight before this change — their candidates exist on the partner side, but the v1 row was never written for them.</p>
     <p class="what-happens">What should happen:</p>
-    <p>Two acceptable approaches; the team should pick one:<br>
-    <strong>(a)</strong> Leave existing bookings as they are — they continue to show timelines starting from v2 (the existing state). Only newly allotted bookings (post-deploy) get the v1 row.<br>
-    <strong>(b)</strong> Back-fill: write a v1 row for every active candidate that's missing one, with the candidate's <code>created_at</code> as the occurrence time and "BOOKING_ALLOTTED" as the reason code.<br>
-    Recommend (a) — back-fills carry edge-case risk (counter alignment) and the gap is small for partners with in-flight bookings. TAS engineer to confirm.</p>
+    <p><strong>No back-fill.</strong> Existing in-flight bookings continue to show timelines starting from v2, just as today. The fix applies only to <em>new</em> bookings allotted post-deploy — those get the v1 row written at candidate-creation time. The in-flight gap is small (one missing entry on bookings created before the deploy date) and isn't worth the back-fill complexity.</p>
   </div>
 
   <div class="scenario">
@@ -398,7 +395,7 @@
     <tbody>
       <tr><td class="cls">Metadata</td><td>§A1</td><td>Covered</td></tr>
       <tr><td class="cls">Why (problem + evidence)</td><td>§A2 — includes the staging API response that surfaced the issue</td><td>Covered</td></tr>
-      <tr><td class="cls">Delta</td><td>§A5 — 4 atomic changes in business terms</td><td>Covered</td></tr>
+      <tr><td class="cls">Delta</td><td>§A5 — 3 atomic changes in business terms (filter check verified out)</td><td>Covered</td></tr>
       <tr><td class="cls">Workflow</td><td>§WF — today vs after, plus the high-level flow</td><td>Covered</td></tr>
       <tr><td class="cls">What's in place / missing</td><td>§WR — 7 layers, status per layer</td><td>Covered</td></tr>
       <tr><td class="cls">Teams &amp; sign-off</td><td>§A8 — TAS, Design, App, QA</td><td>Covered</td></tr>
