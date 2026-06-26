@@ -361,36 +361,111 @@ sequenceDiagram
 </div>
 
 <section class="spec" id="b5">
-  <h2><span class="num">B5.</span> What success looks like <span class="tier how">HOW</span></h2>
-  <div class="expected"><strong>What is expected:</strong> Scenarios in plain English. Each one describes a real situation and what should happen.</div>
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic and edge cases. Verify steps stay backend-team-agnostic (no specific table or endpoint names) — same human-readable convention as the rest of this spec. §A6 (Must-Not-Change) and REGRESSION blocks omitted per gap-05 v1.2 PM convention.</div>
 
-  <div class="scenario">
-    <h4>Scenario 1 — The happy path</h4>
-    <p>A customer in Gurugram books a connection on the Customer App. They fill in all the address fields (house, street, locality, landmark, pincode, city) and record a 15-second voice note explaining that the gate is opposite a chai shop.</p>
-    <p class="what-happens">What should happen:</p>
-    <p>By the time a partner is assigned and opens this booking on their app, they see the full structured address laid out, and they see an audio player they can tap. The voice note plays cleanly.</p>
-  </div>
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Happy path — booking has both structured address and voice note
+  <em>Real-world:</em> a customer in Gurugram books a connection on the Customer App.
+  They fill in all the address fields (house, street, locality, landmark, pincode, city)
+  and record a 15-second voice note explaining that the gate is opposite a chai shop.
 
-  <div class="scenario">
-    <h4>Scenario 2 — Older booking that predates the Customer App's structured capture</h4>
-    <p>A booking was created before the Customer App rolled out structured capture in the customer's zone. The booking has only the legacy free-text address.</p>
-    <p class="what-happens">What should happen:</p>
-    <p>The partner sees the free-text address as they do today. No structured address, no audio player. The booking flows through install end-to-end without any pipeline error.</p>
-  </div>
+  <span class="kw">Given</span> the customer captured the full structured address on the Customer App
+  <span class="kw">And</span>   the customer recorded a voice direction that uploaded successfully
+  <span class="kw">When</span>  Customer Backend fires the booking-creation notification to the CSP side
+  <span class="kw">Then</span>  the notification payload carries the structured address object verbatim
+        (all eight fields the customer entered, untouched)
+  <span class="kw">And</span>   the notification payload carries the voice-direction link
+  <span class="kw">And</span>   CSP Backend stores both pieces against the install booking
 
-  <div class="scenario">
-    <h4>Scenario 3 — The voice link has gone stale</h4>
-    <p>This only applies if Customer Backend uses short-lived voice links. The partner opens a booking 60 hours after it was created, and the original link to the audio has expired.</p>
-    <p class="what-happens">What should happen:</p>
-    <p>The partner gets a fresh, working link — the CSP Backend should have asked Customer Backend for a refreshed link at fetch time. The partner doesn't see a broken file or an error. If the refresh path itself is unavailable (Customer Backend is down), the partner sees the rest of the booking normally and the audio player is just not offered — no error pop-up.</p>
-  </div>
+  <span class="kw">When</span>  the partner-facing app fetches the booking detail
+  <span class="kw">Then</span>  the response includes the structured address object
+  <span class="kw">And</span>   the response includes the voice-direction link
+  <span class="kw">And</span>   the existing free-text address field is also still present (no removal)
 
-  <div class="scenario">
-    <h4>Scenario 4 — The audio file has been removed from storage</h4>
-    <p>Retention policy or a manual cleanup removed the audio file. The link exists but the file is gone.</p>
-    <p class="what-happens">What should happen:</p>
-    <p>When the partner taps play, the player handles the "file not found" gracefully — same fallback as any audio-playback failure. The CSP backend isn't responsible for detecting that the file is missing.</p>
-  </div>
+  <span class="kw">Verify:</span>
+    • <strong>Customer Backend → CSP Backend notification</strong> — both new pieces are present in the payload
+    • <strong>CSP Backend stored state</strong> — booking record carries the structured address object and the voice link
+    • <strong>Partner-facing booking-detail response</strong> — returns both new pieces alongside everything it returns today
+    • <strong>Partner / Technician App</strong> — renders the structured address and offers an audio player (UI behaviour is a separate Surface Contract; this spec only verifies the data is reaching the app)
+    • <strong>Negative</strong> — no other partner-side data is removed, renamed, or reordered as a side-effect of adding the new pieces</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Older booking — predates the Customer App's structured capture rollout
+  <em>Real-world:</em> a booking was created before the Customer App rolled out structured
+  capture in the customer's zone. The booking has only the legacy free-text address.
+
+  <span class="kw">Given</span> the booking pre-dates the Customer App structured-capture rollout
+  <span class="kw">And</span>   only the legacy free-text address is on the booking record
+  <span class="kw">When</span>  Customer Backend fires the booking-creation notification
+  <span class="kw">Then</span>  the notification payload carries the legacy free-text address
+  <span class="kw">And</span>   the structured address object is absent (or empty)
+  <span class="kw">And</span>   the voice-direction link is absent
+
+  <span class="kw">When</span>  the partner-facing app fetches the booking detail
+  <span class="kw">Then</span>  the partner sees the free-text address exactly as they do today
+  <span class="kw">And</span>   no structured-address surface is rendered (nothing to render)
+  <span class="kw">And</span>   no audio player is offered (nothing to play)
+  <span class="kw">And</span>   the booking flows through install end-to-end with no pipeline error
+
+  <span class="kw">Verify:</span>
+    • <strong>Notification payload</strong> — additive new fields are absent, not present-and-empty in a way that breaks consumers
+    • <strong>CSP Backend</strong> — null / absent values stored; no validation failure on the new pieces
+    • <strong>Partner-facing response</strong> — legacy address field intact; new fields simply not present
+    • <strong>Install flow end-to-end</strong> — the booking can still be slot-proposed, customer-confirmed, technician-assigned, installed
+    • <strong>Negative</strong> — no error path triggered by the absence of the new fields anywhere downstream</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Voice link gone stale — short-lived link expired before partner opened the booking
+  <em>Real-world:</em> applies only if Customer Backend uses short-lived voice links.
+  The partner opens a booking 60 hours after creation; the original link has expired.
+
+  <span class="kw">Given</span> Customer Backend issues voice links with a TTL shorter than the install window
+  <span class="kw">And</span>   the booking was created &gt; TTL ago
+  <span class="kw">And</span>   the originally-stored voice link would now 404 if accessed
+  <span class="kw">When</span>  the partner opens the booking and the partner-facing detail is fetched
+  <span class="kw">Then</span>  CSP Backend detects the stored link is near or past expiry
+  <span class="kw">And</span>   CSP Backend asks Customer Backend for a refreshed link
+  <span class="kw">And</span>   a working, freshly-signed link is returned to the partner-facing response
+
+  <span class="kw">When</span>  Customer Backend's refresh path is itself unavailable
+  <span class="kw">Then</span>  CSP Backend returns the booking detail WITHOUT the voice link
+        (rest of the booking is returned normally)
+  <span class="kw">And</span>   no error pop-up is shown to the partner
+  <span class="kw">And</span>   the booking continues to be actionable for everything that isn't the audio
+
+  <span class="kw">Verify:</span>
+    • <strong>Refresh succeeds</strong> — partner-facing response carries a fresh link; partner can play the audio
+    • <strong>Refresh fails</strong> — partner-facing response carries the booking but no voice link;
+        partner-app renders the booking normally and simply doesn't offer the audio player
+    • <strong>No regression on other fields</strong> — even when the voice path fails, structured address and everything else still return
+    • <strong>Negative</strong> — partner never sees a broken-file error or a stale link that 404s on play</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Audio file removed from storage — link exists but the file is gone
+  <em>Real-world:</em> retention policy or a manual cleanup removed the audio file.
+  The link itself exists on the booking record but the underlying file is gone.
+
+  <span class="kw">Given</span> the voice link is set on the booking record (or returned freshly)
+  <span class="kw">And</span>   the underlying audio file has been removed from storage
+  <span class="kw">When</span>  the partner-facing booking detail is fetched
+  <span class="kw">Then</span>  the partner-facing response still returns the link as it is
+        (CSP Backend does not verify file presence on every fetch)
+
+  <span class="kw">When</span>  the partner taps play
+  <span class="kw">Then</span>  the player handles the file-not-found gracefully
+        (same fallback as any audio-playback failure on the app)
+  <span class="kw">And</span>   no upstream error propagates back to CSP Backend
+  <span class="kw">And</span>   the rest of the booking remains usable
+
+  <span class="kw">Verify:</span>
+    • <strong>CSP Backend</strong> — does NOT check storage presence on every booking-detail fetch
+        (cost / latency reason — file-not-found is a partner-app concern, not a backend concern)
+    • <strong>Partner-facing response</strong> — carries the link unchanged
+    • <strong>Partner / Technician App</strong> — renders the booking normally; player shows a generic
+        "audio unavailable" treatment on file-not-found (UI behaviour is a separate Surface Contract)
+    • <strong>Negative</strong> — partner doesn't see a hard error or a crash; booking remains actionable
+    • <strong>Boundary clarification</strong> — if retention removes the file, the right correction is
+        for Customer Backend to clear the link on its side (future enhancement, out of scope here);
+        CSP Backend doesn't need to detect this</pre></div>
 
   <hr class="sect-end">
 </section>
