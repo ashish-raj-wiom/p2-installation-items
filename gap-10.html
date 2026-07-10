@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-10 — Notify customer backend on P75 request-expiry · close the 7–14 day stuck-refund gap · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 30px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change</a></li>
+    <li><a href="#workflow"><span class="ix">WF.</span>Workflow — before/after + cascades</a></li>
+    <li><a href="#wired"><span class="ix">WR.</span>What's wired / what's not</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">&larr; Bugs &amp; gaps index</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom &middot; Change Spec &middot; v1.0 &middot; PM deliverable &middot; GAP-10</div>
+  <h1>Notify customer backend on P75 request-expiry deactivation &mdash; close the 7&ndash;14 day stuck-refund gap</h1>
+  <p class="lede">When CL OS's P75 timer expires a connection (<code>REQUESTED &rarr; DEACTIVATED</code>, 7 days, no CSP ever accepted), CL already knows the booking is dead &mdash; but it tells no one on the customer side. <code>booking-service-java</code> has its own, independent ~14-day timer (fired externally via an SQS message this repo only consumes, never produces) that eventually refunds the booking amount and security deposit. Between day 7 (CL gives up) and whenever the 14-day mechanism fires, the customer is stuck: booking shows as active, no refund, no CSP will ever be assigned. This spec adds <code>customer_id</code> to the existing <code>CL_CONNECTION_DEACTIVATED</code> event and wires a new booking-service consumer that triggers the existing refund/cancel chain immediately on P75 expiry &mdash; collapsing the gap from up to 7 days to effectively zero.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;&middot;&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;&middot;&nbsp; <strong>Tier:</strong> Medium</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Medium</span> &mdash; A1, A2, A5, A6, A8, B5 + Workflow + Wired-layers. §A6 is included (not omitted per the gap-05 v1.2 convention) because this spec extends a shared event contract (<code>ClConnectionDeactivated</code>) already consumed by 5+ services &mdash; the existing consumers' contract must provably not break. <strong>Five connected changes:</strong> (1) add <code>customer_id</code> to the CL_CONNECTION_DEACTIVATED contract (shared-lib + CL-internal record) and populate it at all 4 emit sites, (2) register <code>booking-service-java</code> as a new HTTP subscriber for this event in the routing registry, (3) new inbound endpoint + handler in <code>booking-service-java</code> filtering on <code>deactivation_reason = REQUEST_EXPIRED</code>, (4) wire the handler to the existing full refund chain (<code>BookingService.cancelBooking</code>, <code>shouldFullRefund=true</code>), (5) cancel any pending 14-day TTL refund event for the same booking so it doesn't double-fire later.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> &mdash; every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd><strong>CL side (csp-connection-lifecycle-service):</strong> add a <code>customer_id</code> field to the <code>CL_CONNECTION_DEACTIVATED</code> event contract (both the shared-lib record consumed cross-service and CL's internal outbound record) and populate it from <code>ConnectionEntity.customerId</code> at all 4 existing emit sites. <strong>Registry side:</strong> register <code>booking-service-java</code> as a new HTTP subscriber for <code>CL_CONNECTION_DEACTIVATED</code> (external routing-registry config, not CL code). <strong>Customer-backend side (booking-service-java):</strong> new inbound REST endpoint (mirrors the existing <code>InboundEventController</code> pattern used by D&amp;A/TAS/Quality/Customer-Access/Support-Resolution) that filters strictly on <code>deactivation_reason = "REQUEST_EXPIRED"</code>, resolves the booking via <code>customer_id</code> (== <code>booking.accountId</code>, the same correlation key <code>booking-service</code> already sends to CL today), cancels any pending 14-day TTL refund event for that booking, and calls the existing <code>BookingService.cancelBooking(..., shouldFullRefund=true)</code> chain (refunds booking amount + installation amount + security deposit, exactly as the 14-day path does today).</dd>
+    <dt>What triggered it?</dt>    <dd>CL OS's P75 (<code>T_request_expiry</code>, 7 days &mdash; <code>Connection_Lifecycle_OS_v1_7_1_LOCKED.md:457</code>) already declares the connection dead and emits <code>CL_CONNECTION_DEACTIVATED</code>, but no consumer today notifies the customer or triggers a refund. The only refund path is <code>booking-service-java</code>'s own independent ~14-day mechanism (external SQS trigger this repo only consumes &mdash; see A2), which is unaware CL gave up 7 days earlier. Customer is stuck for up to 7 days with an active-looking, un-refundable, un-serviceable booking.</dd>
+    <dt>Blast radius</dt>          <dd><code>csp-connection-lifecycle-service</code> (event payload + 4 emit sites) &middot; <code>services/shared-libs/csp-event-contracts</code> (contract addition) &middot; external routing registry (new subscriber registration, out-of-repo) &middot; <code>booking-service-java</code> (new endpoint, new handler, new <code>RefundReasons</code> constant). No DB migration on CL side (additive JSON field only). No CSP-app / customer-app UI change &mdash; the customer already sees a cancellation + refund notification via the existing <code>cancelBooking</code> flow, just sooner.</dd>
+    <dt>Reversible?</dt>           <dd>Yes. The new <code>customer_id</code> field is additive (existing consumers ignore unknown fields). The new booking-service endpoint can be disabled by de-registering the subscriber in the routing registry, or feature-flagged around the handler body, with zero effect on CL or any other consumer.</dd>
+    <dt>Money / PII / migration?</dt><dd><strong>Money: Yes</strong> (refund amount, timing moves earlier &mdash; same total, not a new liability). <strong>PII: Yes</strong> &mdash; <code>customer_id</code> now travels on an event already fanned out via HTTP to 5+ internal consumers plus, with this change, an external-org repo; confirm this is within existing data-sharing policy (same value already flows the *other* direction today &mdash; booking-service &rarr; CL &mdash; so no new PII class is introduced, only a new direction). <strong>Migration: No.</strong></dd>
+    <dt>OS impact / sign-off?</dt> <dd>No CL OS document amendment &mdash; additive payload field, same category of change as BUG-06 (which added <code>customer_id</code> to <code>CL_CONNECTION_ACTIVATED</code> for the same underlying reason: CAEO needed it and it wasn't there). Existing CL_CONNECTION_DEACTIVATED consumers (D&amp;A, TAS/exit, Quality, Customer-Access, Support-Resolution, Visibility per docstring) need no code change &mdash; additive field only. Booking-service-java changes are outside CSP-OS governance (separate repo/org boundary) &mdash; subject to that team's own review, noted explicitly in §A8.</dd>
+    <dt>Tier</dt>                  <dd>Medium</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT &mdash; The Change</h2>
+  <p>The PM's decisions: why, what the new flow looks like, what changes service-by-service.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, baseline.</div>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Notify customer backend on P75 request-expiry deactivation &mdash; close the 7&ndash;14 day stuck-refund gap</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft &rarr; For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-07-10)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td><code>os/Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &sect;T9 (L339-346, <code>REQUESTED &rarr; DEACTIVATED</code> on <code>REQUEST_EXPIRED</code>), P75 parameter definition (L457, <code>T_request_expiry</code> = 7 days, CL-OS-owned per L471), E-14 event schema (L1062-1073, <code>expiry_reason = TIMEOUT_P75</code>), FM-CLO-01 (L754, "Connection stuck in REQUESTED" failure mode). Code baseline &mdash; CL: <code>ConnectionTimeoutScheduler.java:79,93</code> (P75 timer arm), <code>ConnectionLifecycleParameters.java:24</code> (7-day default), <code>SchedulingServiceImpl.java:38-50</code> (<code>processRequestExpiry</code>), <code>InboundEventProcessingServiceImpl.java:876-916</code> (<code>handleRequestExpired</code> &mdash; the T9 transition + <code>ClConnectionDeactivated</code> emit at line 904), <code>ConnectionEntity.java:26-27</code> (<code>customerId</code> column, already populated, never leaves the service today). Code baseline &mdash; booking-service-java: <code>RefundService.java:214-283</code> (<code>handleBookingRefund</code>, the existing 14-day-labelled path), <code>BookingService.java:1350-1582</code> (<code>cancelBooking</code>, the shared refund/cancel chain this spec reuses), <code>CspConnectionService.java:65-95</code> (existing outbound-only CL integration, confirms <code>customer_id</code> == <code>booking.getAccountId().getLongId()</code> is already the correlation key both sides agree on). Related prior fix: <code>BUG-06</code> (<code>bug-06.html</code>) &mdash; same defect class (CL event missing <code>customer_id</code>), different event (<code>CL_CONNECTION_ACTIVATED</code>) and different consumer (CAEO).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Observable trigger, who is affected, cost of leaving it.</div>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td><strong>(1) CL declares the booking dead at day 7, silently.</strong> P75 fires, CL transitions <code>REQUESTED &rarr; DEACTIVATED</code>, and emits <code>CL_CONNECTION_DEACTIVATED</code> &mdash; but the payload has no <code>customer_id</code> (<code>ClConnectionDeactivated.java</code>, shared-lib, 15 fields, none of them a customer identifier), so even if a consumer wanted to act on it, it structurally couldn't correlate the event to a booking. <strong>(2) booking-service-java has no consumer for any CL signal at all.</strong> Its only CL integration (<code>CspConnectionService.java</code>) is outbound &mdash; it tells CL about <code>CONNECTION_REQUEST</code> and <code>USER_CANCELLATION</code>, but has no inbound listener, webhook, or queue consumer for anything CL-initiated. <strong>(3) The only refund trigger booking-service has is a separate, CL-unaware ~14-day mechanism.</strong> Investigation into <code>RefundService.java</code>/<code>QueueConsumerService.java</code> found no internal <code>@Scheduled</code> job computing booking age at all &mdash; the "14 days" is only a reason-code label (<code>RefundReasons.AUTO_AFTER_14_DAYS</code>, <code>RefundReasons.java:8</code>) attached to a refund fired by an external SQS message (<code>BOOKING_AUTOMATIC_REFUND</code>) whose producer is outside this repo. That external timer runs on its own clock, with no knowledge that CL already gave up on day 7.</td></tr>
+    <tr><td>Who experiences it?</td><td><strong>Customers</strong> whose booking never gets a CSP: booking looks alive (no cancellation notice, no refund) for up to 7 days after CL has already internally deactivated it, and typically longer until the independent 14-day mechanism eventually fires &mdash; a customer calling support in this window has no clean answer ("your booking is cancelled but not yet refunded" isn't true; CL already deactivated it, booking-service just doesn't know). <strong>Support/Ops</strong> can't explain the state mismatch between "CL says DEACTIVATED" and "booking-service says still active" without cross-referencing two services manually. <strong>Finance</strong> holds booking amount + security deposit for longer than necessary with no operational reason.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Every P75-expired connection (zero eligible CSP within 7 days &mdash; the exact scenario <code>RoutingEngineServiceImpl.java:121-127</code>'s GAP-05 comment calls a "service vacuum") produces a customer stuck for the gap between day 7 (CL gives up) and whenever the independent 14-day-labelled mechanism actually fires &mdash; up to 7 additional days of held money and an un-cancellable-looking booking, for no operational reason since CL already has all the information needed to trigger the refund immediately.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes &rarr; before &rarr; after &rarr; why</em>.</div>
+  <table class="delta">
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Shared-lib event contract &mdash; add <code>customer_id</code> to <code>ClConnectionDeactivated</code></td>
+        <td><code>services/shared-libs/csp-event-contracts/.../connection/ClConnectionDeactivated.java</code> &mdash; 15 fields (<code>signal_id</code>, <code>signal_type</code>, <code>connection_id</code>, <code>timestamp</code>, <code>previous_state</code>, <code>new_state</code>, <code>csp_id</code>, <code>zone_id</code>, <code>triggered_by_event_id</code>, <code>deactivation_reason</code>, <code>completion_type</code>, <code>total_active_duration</code>, <code>total_pause_duration</code>, <code>failure_subreason_code/source/confidence</code>). No customer identifier of any kind.</td>
+        <td>Add <code>@JsonProperty("customer_id") String customerId</code> as a new field on the record. Additive &mdash; existing consumers deserializing this payload ignore unknown/new fields; no consumer code change required for the 5+ existing subscribers.</td>
+        <td>The event structurally cannot be correlated to a booking without this. Same fix shape as <code>BUG-06</code> (which added <code>customer_id</code> to <code>CL_CONNECTION_ACTIVATED</code> for the same underlying reason &mdash; that event's docstring/consumer contract also lacked it).</td>
+      </tr>
+      <tr>
+        <td>CL-internal outbound record &mdash; mirror the same field</td>
+        <td><code>connection_lifecycle/domain/event/outbound/ClConnectionDeactivated.java</code> &mdash; internal record, same 16 fields (adds <code>deactivationSource</code> vs. the shared-lib version), no <code>customerId</code>.</td>
+        <td>Add <code>String customerId</code> field. This is the record actually constructed at the 4 emit sites below &mdash; must carry the value before it reaches the shared-lib mapping layer / outbox serialization.</td>
+        <td>Keeps CL's internal record and the cross-service contract in lockstep, as they already are for every other field.</td>
+      </tr>
+      <tr>
+        <td>CL &mdash; populate <code>customerId</code> at all 4 emit call sites</td>
+        <td><code>InboundEventProcessingServiceImpl.java</code> constructs <code>new ClConnectionDeactivated(...)</code> at 4 sites: line 857 (<code>handleDeactivationComplete</code>, T&mdash;P77), line 904 (<code>handleRequestExpired</code>, T9/P75 &mdash; <strong>this spec's trigger</strong>), line 1045 (<code>handleUserCancellation</code>, T9/customer-initiated), line 1404 (inside the P76 pause-expiry cascade). None pass a customer identifier today, even though <code>ConnectionEntity.customerId</code> (<code>ConnectionEntity.java:26-27</code>) is already loaded on the <code>connection</code> object at every one of these call sites.</td>
+        <td>Add <code>connection.getCustomerId()</code> as the <code>customerId</code> argument at all 4 sites &mdash; not just the P75 one. Same event class, same field, every deactivation reason should carry it consistently (a consumer must not have to special-case "only REQUEST_EXPIRED carries customer_id").</td>
+        <td>The field must be populated at every emit site to be a reliable contract &mdash; populating it only for P75 would make the shared event's schema conditional on reason code, an inconsistency the next consumer would trip over.</td>
+      </tr>
+      <tr>
+        <td>Routing registry &mdash; register <code>booking-service-java</code> as a new subscriber</td>
+        <td>CL's <code>HttpRoutingPublisher</code> (<code>HttpRoutingPublisher.java:34-60</code>) fetches the list of subscriber URLs for <code>CL_CONNECTION_DEACTIVATED</code> from an external routing registry at publish time (<code>RegistryRoutingClient.getRoutes(eventType)</code>) and fans the event out via HTTP POST to each. Today's registered subscribers do not include <code>booking-service-java</code>.</td>
+        <td>Add <code>booking-service-java</code>'s new endpoint URL (below) as a registered route for <code>eventType = CL_CONNECTION_DEACTIVATED</code>. This is a registry configuration action, not a CL code change &mdash; out of this repo's scope but required for the event to ever reach booking-service.</td>
+        <td>CL's delivery mechanism is registry-driven HTTP fan-out (not a message broker booking-service could independently subscribe to) &mdash; the only way to add a consumer is a registry entry.</td>
+      </tr>
+      <tr>
+        <td>booking-service-java &mdash; new inbound endpoint + handler for <code>CL_CONNECTION_DEACTIVATED</code></td>
+        <td>No inbound consumer of any kind for CSP-side signals exists in this repo. The only CL integration (<code>CspConnectionService.java</code>) is outbound-only.</td>
+        <td>New <code>POST /internal/events/cl-connection-deactivated</code> endpoint, mirroring the <code>InboundEventController</code> pattern already used by CL's other 5 consumers (<code>@PostMapping</code>, <code>@CheckPermission</code>, headers <code>X-Correlation-Id</code>/<code>X-Causation-Event-Id</code>/<code>X-Source-Service</code>). Handler: (a) no-op unless <code>deactivation_reason == "REQUEST_EXPIRED"</code>, (b) resolve the booking by matching <code>customer_id</code> against <code>booking.getAccountId().getLongId()</code> (the existing correlation key &mdash; see A1), (c) no-op if the booking is already in a terminal/cancelled/refunded state (idempotency &mdash; also covers duplicate delivery), (d) otherwise proceed to the next two rows.</td>
+        <td>Filtering strictly on <code>REQUEST_EXPIRED</code> means this handler only ever reacts to CL's own system-driven P75 timeout &mdash; never to <code>USER_CANCELLATION</code> (which originates from a customer-initiated path booking-service may have started itself, so reacting to it here would risk a redundant/looping cancel attempt). The existing correlation key removes the need for a new <code>connection_id</code> column on the booking entity (confirmed: <code>MBooking</code> has none today).</td>
+      </tr>
+      <tr>
+        <td>booking-service-java &mdash; cancel the pending 14-day TTL event before refunding</td>
+        <td><code>EventSchedulerService.cancelBookingEvent(mobileNumber, eventName)</code> / <code>cancelAllEvents(mobileNumber, excludedEventList)</code> (<code>IEventSchedulerService.java:63,49</code>; impl <code>EventSchedulerService.java:181-193,132-163</code>) exist and are already used elsewhere to cancel a scheduled refund TTL when a booking state changes out from under it &mdash; but nothing calls this on receipt of a CL-side deactivation, because no such receipt path exists today.</td>
+        <td>New handler calls <code>cancelAllEvents(mobile, ...)</code> (or the specific booking-refund event name if this booking has one armed) before invoking the refund chain, so the independent 14-day mechanism cannot also fire later and attempt a second refund on an already-cancelled/refunded booking.</td>
+        <td>Without this, the existing 14-day path could still fire afterward &mdash; harmless if the refund idempotency guard in <code>cancelBooking</code> holds, but leaves a dangling scheduled event and a confusing audit trail. Cleaner to cancel it explicitly.</td>
+      </tr>
+      <tr>
+        <td>booking-service-java &mdash; new <code>RefundReasons</code> constant + call into the existing refund chain</td>
+        <td><code>RefundReasons.java</code> has <code>AUTO_AFTER_14_DAYS</code> (L8), <code>AUTO_REFUND_ON_INSTALLATION_NOT_COMPLETED</code> (L13), <code>BOOKING_STUCK_STATE</code> (L16) &mdash; no reason code exists for a CL-initiated trigger.</td>
+        <td>Add <code>CL_P75_REQUEST_EXPIRED = "CSP connection request expired (P75) — no CSP accepted within 7 days"</code>. Handler builds a cancel request (same shape as <code>RefundService.handleBookingRefund</code>, <code>RefundService.java:240-249</code>: <code>unserviceable=true</code>, <code>isCustomer=false</code>) with this reason and calls <code>BookingService.cancelBooking(request, leadStatus, shouldFullRefund=true)</code> directly &mdash; not <code>handleConfigurableRefunds</code>, since that path is designed for admin-configured N-days-after-event TTLs, not an immediate external trigger.</td>
+        <td><code>cancelBooking</code> (<code>BookingService.java:1350-1582</code>) already implements the full chain this spec needs verbatim: status &rarr; <code>UNSERVICEABLE_V2</code>, booking-amount refund (L1428-1453), installation-amount refund (L1486-1504), and &mdash; critically &mdash; security-deposit refund as a separate <code>REFUND_TRANSACTION</code> message when <code>shouldFullRefund &amp;&amp; sdTxnId</code> present (L1506-1523). Reusing it means zero new refund-computation logic, only a new trigger path into code that already works.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>Why filter on <code>REQUEST_EXPIRED</code> specifically, not "any DEACTIVATED."</strong> <code>CL_CONNECTION_DEACTIVATED</code> fires for at least 4 distinct reasons (P75 expiry, customer-initiated cancellation, P77 deactivation-timeout completion, P76 pause-expiry cascade). Only P75/<code>REQUEST_EXPIRED</code> represents "CL decided this on its own, customer-side has no idea" &mdash; <code>USER_CANCELLATION</code> in particular is very likely to already originate from a booking-service-initiated cancel (booking-service tells CL via <code>CspConnectionService</code> today), so reacting to it here would either be a harmless no-op (booking already cancelled) or, worse, a redundant refund attempt if the ordering assumption ever breaks. Scoping strictly to <code>REQUEST_EXPIRED</code> keeps this spec's blast radius to exactly the gap described.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Invariants/behaviors that must not change as a side effect of this spec, each with a one-line reason. Included at Medium tier because a shared, multi-consumer event contract is being extended.</div>
+  <table>
+    <thead><tr><th style="width:35%">Must not change</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Existing 5+ consumers of <code>CL_CONNECTION_DEACTIVATED</code> (D&amp;A, TAS/exit, Quality, Customer-Access, Support-Resolution, Visibility per shared-lib docstring) require zero code changes.</td><td>The new field is additive JSON; deserialization of an unknown-to-them field is a no-op for every existing consumer. Verify none of them use strict/fail-on-unknown-property deserialization.</td></tr>
+      <tr><td><code>CL_CONNECTION_DEACTIVATED</code> must still fire, unchanged in timing and existing-field content, for all 4 deactivation reasons.</td><td>This spec only adds a field and a new subscriber &mdash; CL's emission logic, transitions, and existing payload fields are untouched.</td></tr>
+      <tr><td>The existing outbound-only <code>CspConnectionService</code> flow (booking-service &rarr; CL, for <code>CONNECTION_REQUEST</code>/<code>USER_CANCELLATION</code>) is unaffected.</td><td>This spec adds a new, independent inbound flow (CL &rarr; booking-service); it does not touch or replace the existing outbound direction.</td></tr>
+      <tr><td>The existing 14-day-labelled external refund mechanism keeps working for every booking this spec's handler does <em>not</em> touch (bookings that reach P75 with CL never even created, or connections that never went through CL at all).</td><td>This spec only short-circuits the wait <em>when</em> a P75 <code>REQUEST_EXPIRED</code> signal arrives; it is not a replacement for the general-purpose configurable-TTL refund path, which continues to serve every other stuck-state trigger (<code>BOOKING_FEE_PAID</code>, <code>ADDRESS_VERIFIED</code>, <code>ALL_PARTNER_DECLINES</code>, etc.).</td></tr>
+      <tr><td><code>BookingService.cancelBooking</code>'s existing refund-amount computation (L1393-1401) is called, not modified.</td><td>Correctness of the SD/booking/installation refund math is out of scope &mdash; this spec is purely about triggering the existing, presumably-correct chain sooner.</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="workflow">
+  <h2><span class="num">WF.</span> Workflow &mdash; before/after + cascade <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A state-flow + sequence diagram showing the new chain end-to-end.</div>
+
+  <h3>Before &mdash; the 7&ndash;14 day gap</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Sched as AWS Scheduler
+    participant CL
+    participant Ext as External 14-day trigger (outside this repo)
+    participant BSJ as booking-service-java
+
+    Note over CL: Connection sits in REQUESTED, no CSP ever accepts
+    Sched->>CL: P75 fires at day 7 (2h..7d elapsed)
+    CL->>CL: REQUESTED to DEACTIVATED (T9, REQUEST_EXPIRED)
+    CL->>CL: emit CL_CONNECTION_DEACTIVATED (no customer_id today)
+    Note over CL,BSJ: Nobody tells booking-service. Booking still looks active.
+    Note over BSJ: Customer stuck: no refund, no cancellation notice, no CSP will ever be assigned
+    Ext-->>BSJ: BOOKING_AUTOMATIC_REFUND (fires on its own ~14-day clock, unrelated to CL)
+    BSJ->>BSJ: cancelBooking(shouldFullRefund=true) - refund finally happens
+    Note over BSJ: Gap = up to 7 days of no refund, no explanation, for no operational reason
+  </div>
+
+  <h3>After &mdash; P75 triggers the refund directly</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Sched as AWS Scheduler
+    participant CL
+    participant Reg as Routing Registry
+    participant BSJ as booking-service-java
+
+    Sched->>CL: P75 fires at day 7
+    CL->>CL: REQUESTED to DEACTIVATED (T9, REQUEST_EXPIRED)
+    CL->>CL: emit CL_CONNECTION_DEACTIVATED (NEW: customer_id populated)
+    CL->>Reg: outbox drains, HttpRoutingPublisher fetches subscribers
+    Reg->>BSJ: POST /internal/events/cl-connection-deactivated (NEW endpoint)
+    BSJ->>BSJ: filter deactivation_reason == REQUEST_EXPIRED
+    BSJ->>BSJ: resolve booking by customer_id == accountId
+    BSJ->>BSJ: idempotency check - booking not already cancelled/refunded
+    BSJ->>BSJ: cancelAllEvents(mobile) - cancel pending 14-day TTL
+    BSJ->>BSJ: cancelBooking(reason=CL_P75_REQUEST_EXPIRED, shouldFullRefund=true)
+    Note over BSJ: Existing chain: status to UNSERVICEABLE_V2, booking-amount refund,
+    Note over BSJ: installation-amount refund, SD refund, customer notification
+    Note over CL,BSJ: Gap collapses from up to 7 days to effectively same-day
+  </div>
+
+  <h3>Where the two services sit at each moment</h3>
+  <table>
+    <thead><tr><th style="width:30%">Moment</th><th>CL</th><th>booking-service-java</th></tr></thead>
+    <tbody>
+      <tr><td>Connection in REQUESTED, no CSP accepts</td><td><code>REQUESTED</code></td><td>Booking active, customer waiting</td></tr>
+      <tr><td>P75 fires (day 7)</td><td><code>DEACTIVATED</code> (REQUEST_EXPIRED)</td><td>Booking still active <strong>(before this spec)</strong></td></tr>
+      <tr><td><strong>NEW: booking-service receives the event</strong></td><td><code>DEACTIVATED</code></td><td>Handler validates + resolves booking</td></tr>
+      <tr><td><strong>NEW: refund chain fires</strong></td><td><code>DEACTIVATED</code></td><td><code>UNSERVICEABLE_V2</code>, refund initiated, customer notified</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="wired">
+  <h2><span class="num">WR.</span> What's wired, what's not <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Per-layer audit.</div>
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:24%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>CL: P75 timer + T9 transition + emission</td><td><code>ConnectionTimeoutScheduler.java:79,93</code>, <code>SchedulingServiceImpl.java:38-50</code>, <code>InboundEventProcessingServiceImpl.java:876-916</code>. Fully live (verified against prod DB per the July 2026 scheduler audit).</td></tr>
+      <tr><td>2</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>CL: outbox + HTTP fan-out delivery infra</td><td><code>EventSender.java:60-66</code> (BEFORE_COMMIT outbox schedule), <code>RoutingOutboxHandler.java:17-34</code>, <code>HttpRoutingPublisher.java:34-60</code>. Already delivers to 5+ consumers today &mdash; proven infra, no new plumbing needed on CL's delivery side.</td></tr>
+      <tr><td>3</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>CL: <code>customer_id</code> already stored on the connection</td><td><code>ConnectionEntity.java:26-27</code>, <code>@Column(name = "customer_id", nullable = false)</code>. Just never leaves the service today.</td></tr>
+      <tr><td>4</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Correlation key already agreed on both sides</td><td><code>CspConnectionService.java:65-66</code> already sends <code>customerId = booking.getAccountId().getLongId()</code> to CL on connection creation &mdash; the same value CL stores as <code>ConnectionEntity.customerId</code>. No new correlation column needed on either side.</td></tr>
+      <tr><td>5</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>booking-service-java: full refund/cancel chain</td><td><code>BookingService.cancelBooking()</code> (<code>BookingService.java:1350-1582</code>) already handles status transition, booking/installation/SD refund, and customer notification &mdash; reusable verbatim.</td></tr>
+      <tr><td>6</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td><code>customer_id</code> field on <code>ClConnectionDeactivated</code></td><td>Neither the shared-lib contract nor CL's internal record has it. Must be added to both + populated at all 4 emit sites (row 3 of A5).</td></tr>
+      <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>booking-service-java registered as a routing-registry subscriber</td><td>External infra action, not code in either repo &mdash; must be done before the event will ever reach booking-service, regardless of how complete the code-side change is.</td></tr>
+      <tr><td>8</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>booking-service-java: inbound endpoint + handler</td><td>No <code>InboundEventController</code>-style consumer exists in this repo for any CSP-side event today &mdash; confirmed via full search of <code>BookingQueueKey.java</code> (SQS keys) and the controller package (no CSP-facing webhook). Net-new.</td></tr>
+      <tr><td>9</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td><code>RefundReasons.CL_P75_REQUEST_EXPIRED</code> constant</td><td>Net-new reason code; every other reason in <code>RefundReasons.java</code> already exists for its own trigger path.</td></tr>
+      <tr><td>10</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Cancellation of the pending 14-day TTL on receipt of this event</td><td><code>EventSchedulerService.cancelAllEvents()</code> exists and is used elsewhere for similar "state changed out from under a scheduled TTL" situations, but nothing calls it from this new path yet.</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius.</div>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Notes</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>CL OS</td><td>Verify (additive field)</td><td>Adding <code>customer_id</code> to <code>CL_CONNECTION_DEACTIVATED</code> is a payload addition, not a semantic/contract change to the state machine or transition rules &mdash; same category as <code>BUG-06</code>'s precedent (added <code>customer_id</code> to <code>CL_CONNECTION_ACTIVATED</code>). No CL OS document amendment expected; confirm with CL OS owner that additive-field changes to this event don't require a locked-doc revision.</td><td>CL OS owner</td><td>Pending</td></tr>
+      <tr><td>D&amp;A OS / TAS / Quality OS / Customer-Access / Support-Resolution / Visibility (existing consumers)</td><td>No</td><td>Additive JSON field; none of these consumers need code changes. Verify none use strict/fail-on-unknown-property deserialization (listed as a §A6 must-not-change item) &mdash; if any do, this becomes a coordinated multi-service deploy instead of a CL-only one.</td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>ESR (Event Schema Registry)</td><td>Verify</td><td>Register the updated <code>CL_CONNECTION_DEACTIVATED</code> schema (v1.1, additive <code>customer_id</code> field) if ESR tracks payload versions the way it does for new event classes in other specs (e.g. GAP-07).</td><td>ESR owner</td><td>Pending</td></tr>
+      <tr><td>Routing Registry (infra, not an OS)</td><td>Yes &mdash; new subscriber</td><td>booking-service-java must be registered as a subscriber for <code>CL_CONNECTION_DEACTIVATED</code>. This is the one dependency that blocks the entire spec if skipped &mdash; code-complete on both sides is useless without this registration.</td><td>Platform/infra owner</td><td>Pending</td></tr>
+      <tr><td>Customer Backend (booking-service-java) &mdash; org/repo boundary note</td><td>Yes &mdash; primary changes here</td><td><strong>This spec spans outside the CSP-OS monorepo.</strong> The booking-service-java changes (new endpoint, new handler, new reason code, TTL cancellation) are not governed by any CSP OS and are not this repo's to unilaterally ship &mdash; they require sign-off from whichever team owns <code>booking-service-java</code>. Flagging explicitly since every other Change Spec in this project (gap-01 through gap-09) is CSP-side-only; this is the first to require a cross-org handoff.</td><td>booking-service-java owner</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW &mdash; Detailing</h2>
+  <p>Verification layer for engineering build and test.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria &mdash; Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic and use / edge cases. Negative checks first-class on every block.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Happy path &mdash; P75 fires, customer refunded same-day instead of up to 7 days later
+  <em>Real-world:</em> a booking in a zone with zero eligible CSPs, connection sits REQUESTED for 7 days.
+
+  <span class="kw">Given</span> a CL connection in REQUESTED state for &lt;connection_id&gt;, customer_id = &lt;cid&gt;,
+        with a matching booking in booking-service in a pre-install, un-refunded state
+  <span class="kw">When</span>  the P75 AWS schedule fires and CL transitions REQUESTED to DEACTIVATED (REQUEST_EXPIRED)
+  <span class="kw">Then</span>  CL emits CL_CONNECTION_DEACTIVATED with customer_id = &lt;cid&gt; and deactivation_reason = REQUEST_EXPIRED
+  <span class="kw">And</span>   the routing registry delivers it to booking-service-java's new endpoint
+  <span class="kw">And</span>   booking-service resolves the booking via accountId == &lt;cid&gt;
+  <span class="kw">And</span>   booking-service cancels any pending 14-day TTL event for this booking
+  <span class="kw">And</span>   booking-service calls cancelBooking(reason=CL_P75_REQUEST_EXPIRED, shouldFullRefund=true)
+  <span class="kw">And</span>   booking.status transitions to UNSERVICEABLE_V2
+  <span class="kw">And</span>   a REFUND_TRANSACTION message is sent for the booking amount
+  <span class="kw">And</span>   a REFUND_TRANSACTION message is sent for the security deposit (if sdTxnId was present)
+  <span class="kw">And</span>   the customer receives the existing cancellation/refund notification
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>CL outbox</strong> &mdash; exactly 1 CL_CONNECTION_DEACTIVATED row with customer_id populated
+    &bull; <strong>booking-service DB</strong> &mdash; booking.status = UNSERVICEABLE_V2, refund fields populated
+    &bull; <strong>booking-service outbox/queue</strong> &mdash; REFUND_TRANSACTION messages for booking amount + SD (if applicable)
+    &bull; <strong>Negative</strong> &mdash; no second refund attempt later from the (now-cancelled) 14-day TTL path</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> USER_CANCELLATION must NOT trigger this handler
+  <em>Real-world:</em> customer cancels via the app; CL deactivates via a different reason.
+
+  <span class="kw">Given</span> CL emits CL_CONNECTION_DEACTIVATED with deactivation_reason = USER_CANCELLATION
+  <span class="kw">When</span>  booking-service-java's new endpoint receives it
+  <span class="kw">Then</span>  the handler no-ops immediately on the reason filter
+  <span class="kw">And</span>   no refund/cancel logic is invoked from this path
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>booking-service logs</strong> &mdash; explicit "skipped, reason != REQUEST_EXPIRED" log line
+    &bull; <strong>Negative</strong> &mdash; zero calls into cancelBooking from this handler for this event</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> Booking already cancelled/refunded by the time the P75 event arrives
+  <em>Real-world:</em> customer cancelled directly through the app moments before P75 fired; both paths race.
+
+  <span class="kw">Given</span> the booking for customer_id = &lt;cid&gt; is already in a cancelled/refunded terminal state
+  <span class="kw">When</span>  the P75-triggered CL_CONNECTION_DEACTIVATED event arrives
+  <span class="kw">Then</span>  the handler's idempotency check finds the booking already terminal
+  <span class="kw">And</span>   no second cancelBooking call is made, no duplicate refund is sent
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>booking-service DB</strong> &mdash; exactly one refund transaction total for this booking, not two
+    &bull; <strong>Negative</strong> &mdash; no duplicate REFUND_TRANSACTION message</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> customer_id in the event doesn't match any booking (orphan/race/test-data case)
+  <em>Real-world:</em> stale connection from test data, or a booking deleted independently of CL.
+
+  <span class="kw">Given</span> a CL_CONNECTION_DEACTIVATED event with customer_id = &lt;cid&gt; and reason REQUEST_EXPIRED
+  <span class="kw">And</span>   no booking in booking-service matches accountId = &lt;cid&gt;
+  <span class="kw">When</span>  the handler processes the event
+  <span class="kw">Then</span>  it logs a WARN (not silent) and returns without error
+  <span class="kw">And</span>   the HTTP response to CL's fan-out is still a success (this is not CL's problem to retry)
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>booking-service logs</strong> &mdash; WARN entry naming the unmatched customer_id
+    &bull; <strong>Negative</strong> &mdash; no exception propagates, no 5xx returned to the registry's HTTP fan-out</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Duplicate delivery of the same event (outbox/registry at-least-once retry)
+  <em>Real-world:</em> HTTP fan-out retries on transient failure; same event_id delivered twice.
+
+  <span class="kw">Given</span> the same CL_CONNECTION_DEACTIVATED (same signal_id) delivered to booking-service twice
+  <span class="kw">When</span>  both deliveries are processed
+  <span class="kw">Then</span>  exactly one cancelBooking call is made (second delivery hits the idempotency check from LOGIC-3)
+
+  <span class="kw">Verify:</span>
+    &bull; Exactly 1 refund transaction, not 2, for this booking</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Stale/late P75 fire after the connection already moved on
+  <em>Real-world:</em> CL's own SchedulingServiceImpl already no-ops a stale P75 timer if the connection
+  left REQUESTED before the timer fired (loadInState guard, SchedulingServiceImpl.java:125-138) &mdash;
+  so a stale fire should never even reach emission. This case verifies the guard holds.
+
+  <span class="kw">Given</span> a connection that moved OUT of REQUESTED (e.g. a CSP accepted) before its P75 timer fired
+  <span class="kw">When</span>  the stale P75 timer fires anyway
+  <span class="kw">Then</span>  CL's existing loadInState guard no-ops it &mdash; no REQUEST_EXPIRED transition, no emission at all
+  <span class="kw">And</span>   booking-service never receives an event for this connection from this stale fire
+
+  <span class="kw">Verify:</span>
+    &bull; CL logs the existing "P75 request-expiry no-op: moved on" line
+    &bull; booking-service: no event received, no action taken (nothing to verify server-side &mdash; confirms no new
+      code path is needed here; this is a restatement of CL's existing guard for completeness)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Pending 14-day TTL must be cancelled, not just outrun
+  <em>Real-world:</em> if the TTL cancellation call is skipped or fails silently, the external 14-day
+  mechanism could still fire after this spec's refund already completed.
+
+  <span class="kw">Given</span> a booking with a 14-day-labelled refund TTL already armed
+  <span class="kw">When</span>  the P75-triggered handler processes and refunds the booking
+  <span class="kw">Then</span>  cancelAllEvents (or the specific event-name cancel) is called for this booking's mobile/account
+  <span class="kw">And</span>   if the TTL somehow still fires later, the downstream refund call finds the booking already
+        terminal (LOGIC-3's idempotency) and no-ops &mdash; defense in depth, not a substitute for cancelling it
+
+  <span class="kw">Verify:</span>
+    &bull; DynamoDB scheduled-event record for this booking is deleted/cancelled after this handler runs
+    &bull; If it fires anyway (race), zero duplicate refund &mdash; covered by LOGIC-3</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Registry subscriber not yet registered (rollout sequencing)
+  <em>Real-world:</em> code deploys before the registry entry is added, or vice versa.
+
+  <span class="kw">Given</span> booking-service-java's endpoint is NOT yet registered as a subscriber
+  <span class="kw">When</span>  CL emits CL_CONNECTION_DEACTIVATED (any reason)
+  <span class="kw">Then</span>  HttpRoutingPublisher's fan-out to the OTHER existing subscribers (D&amp;A, TAS, etc.)
+        must be unaffected &mdash; verify HttpRoutingPublisher's "try-all" dispatch (HttpRoutingPublisher.java:44-60)
+        does not fail the whole publish if one route (not yet registered, or later, timing out) errors
+  <span class="kw">And</span>   once the registry entry is added, subsequent P75 firings are delivered normally &mdash; no backfill
+        of connections that already deactivated before registration (accepted gap, not in scope)
+
+  <span class="kw">Verify:</span>
+    &bull; Existing 5 consumers show zero delivery regression during the rollout window
+    &bull; Confirm no automatic retry/backfill is expected for pre-registration deactivations (state this
+      explicitly to Ops so it isn't assumed to be covered)</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 rows (payload extension, registry registration, new endpoint, TTL cancellation, refund trigger)</td><td>4 logic lines</td><td>LOGIC-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>&mdash;</td><td>N/A (reuses existing refund-amount computation verbatim, out of scope)</td><td>&mdash;</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>A6 (existing-consumer non-regression, outbound-flow non-regression, 14-day-path non-regression)</td><td>5 invariants</td><td>Covered via EDGE-4 (consumer non-regression) + EDGE-3 (14-day path)</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>EDGE-1..4 (replay, stale timer, TTL race, rollout sequencing)</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 table</td><td>5 must-not-change rows</td><td>EDGE-4 (consumer regression) + explicit A6 table</td><td>All covered</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Medium</span></td><td>Quick Check filled (incl. tier)</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Required sections (A1, A2, A5, A6, A8, B5) filled</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>B5 coverage matrix reads "all covered" or "N/A" on every class</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Negative checks present on every Verify block</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Workflow diagrams (before/after sequence) present</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Wired-layers table present</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Every A8 "Impacted" row has sign-off Received</td><td class="check">Pending (CL OS, ESR, registry, booking-service owner)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code + schema evidence (verified 2026-07-10):</strong>
+    <ul>
+      <li><strong>P75 timer + T9 transition:</strong> <code>ConnectionTimeoutScheduler.java:79,93</code>, <code>SchedulingServiceImpl.java:38-50</code>, <code>InboundEventProcessingServiceImpl.java:876-916</code>.</li>
+      <li><strong>customer_id already on ConnectionEntity, unused on the wire:</strong> <code>ConnectionEntity.java:26-27</code>.</li>
+      <li><strong>4 emit sites for ClConnectionDeactivated:</strong> <code>InboundEventProcessingServiceImpl.java:857,904,1045,1404</code> (confirmed via direct grep of the current file, not inferred).</li>
+      <li><strong>Shared-lib contract, 15 fields, no customer_id:</strong> <code>services/shared-libs/csp-event-contracts/.../connection/ClConnectionDeactivated.java</code>.</li>
+      <li><strong>CL-internal outbound record, mirrors shared-lib minus customer_id, plus deactivationSource:</strong> <code>connection_lifecycle/domain/event/outbound/ClConnectionDeactivated.java</code>.</li>
+      <li><strong>Outbox + HTTP fan-out delivery, registry-driven:</strong> <code>EventSender.java:60-66</code> (BEFORE_COMMIT), <code>RoutingOutboxHandler.java:17-34</code>, <code>HttpRoutingPublisher.java:34-60</code> (fetches subscriber list via <code>RegistryRoutingClient.getRoutes</code>).</li>
+      <li><strong>Existing 5 consumers, identical InboundEventController pattern:</strong> confirmed in <code>csp-demand-allocation-service</code>, <code>csp-tas-service</code>, <code>csp-quality-service</code>, <code>csp-customer-access-service</code>, <code>csp-support-resolution-service</code>; shared-lib docstring additionally lists <code>csp-exit-service</code>, <code>csp-visibility-service</code> (not independently grep-confirmed this pass).</li>
+      <li><strong>Correlation key already shared both directions:</strong> <code>CspConnectionService.java:65-66</code> (booking-service &rarr; CL, sends <code>customerId = booking.getAccountId().getLongId()</code>).</li>
+      <li><strong>No internal 14-day cron in booking-service-java:</strong> confirmed via full-repo search for <code>@Scheduled</code>/<code>@EnableScheduling</code>/Quartz &mdash; zero matches. The "14 days" is a reason-code label only (<code>RefundReasons.java:8</code>), fired by an externally-produced <code>BOOKING_AUTOMATIC_REFUND</code> SQS message.</li>
+      <li><strong>Full refund/cancel chain, reused verbatim:</strong> <code>BookingService.java:1350-1582</code> (status transition L1361, refund computation L1393-1401 incl. SD, booking-amount refund L1428-1453, installation-amount refund L1486-1504, SD refund L1506-1523).</li>
+      <li><strong>No MBooking.connection_id column:</strong> confirmed absent &mdash; correlation relies on customer_id/accountId instead (see above), no new column required.</li>
+      <li><strong>Precedent for this exact defect class:</strong> <code>bug-06.html</code> &mdash; <code>CL_CONNECTION_ACTIVATED</code> also lacked <code>customer_id</code>, causing CAEO to plug in <code>cspId</code> as a placeholder. Same root cause, different event and consumer.</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-07-10</td><td>Ashish Raj</td><td>All</td><td>Initial draft. Adds <code>customer_id</code> to the <code>CL_CONNECTION_DEACTIVATED</code> event (shared-lib contract + CL-internal record), populated at all 4 existing emit sites from the already-loaded <code>ConnectionEntity.customerId</code>. Registers <code>booking-service-java</code> as a new HTTP subscriber for this event via the routing registry (external infra action). New inbound endpoint + handler in <code>booking-service-java</code>, filtering strictly on <code>deactivation_reason = REQUEST_EXPIRED</code> to avoid reacting to customer-initiated or other-reason deactivations, resolving the booking via the <code>customer_id</code>/<code>accountId</code> correlation key both sides already agree on today, cancelling the pending independent 14-day TTL refund event, and calling the existing <code>BookingService.cancelBooking(shouldFullRefund=true)</code> chain (reused verbatim &mdash; booking-amount, installation-amount, and security-deposit refund all already implemented there). Closes the gap between CL's P75 deactivation (day 7) and the previously-unrelated ~14-day external refund trigger, collapsing customer wait time from up to 7 additional days to effectively same-day. No CL OS amendment expected (additive field, precedent: BUG-06). Flagged as the first Change Spec in this project requiring cross-org sign-off (booking-service-java is outside CSP-OS governance).</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
+</body>
+</html>
