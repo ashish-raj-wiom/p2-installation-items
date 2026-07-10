@@ -108,24 +108,24 @@
 <header class="doc">
   <div class="eyebrow">Wiom &middot; Change Spec &middot; v1.0 &middot; GAP-10</div>
   <h1>P75 Should Trigger the Existing Refund + Workflow Chain</h1>
-  <p class="lede">When CLOS deactivates a connection on P75 (<code>REQUESTED &rarr; DEACTIVATED</code>, no confirmed CSP acceptance in time), booking-service-java never finds out. The customer isn't refunded and no customer-chat workflow fires until booking-service's own, unrelated 14-day check eventually catches it. <strong>The fix requires zero changes to the CSP system.</strong> CLOS already returns and later re-emits everything booking-service needs (<code>connection_id</code>) &mdash; booking-service just isn't using it. On P75: refund the booking fee and/or security deposit, whichever was paid, and trigger the exact same customer-chat workflows that the 14-day check triggers today. Nothing new, nothing different &mdash; just triggered on P75 instead of two weeks later.</p>
+  <p class="lede">When CLOS deactivates a connection on P75 (<code>REQUESTED &rarr; DEACTIVATED</code>, no confirmed CSP acceptance in time), booking-service-java never finds out. The customer isn't refunded and no customer-chat workflow fires until booking-service's own, unrelated 14-day check eventually catches it. <strong>The fix: CLOS emits one new, dedicated event to booking-service on P75</strong>, carrying <strong>customer id</strong> and a <strong>reason attribution</strong> (<code>CL_DEACTIVATION_P75</code>). It's additive and separate from <code>CL_CONNECTION_DEACTIVATED</code> &mdash; nothing about that existing event or its other consumers changes. Booking-service consumes the new event and does exactly what the 14-day check already does today: refund the booking fee and/or security deposit, whichever was paid, and trigger the same customer-chat workflows. Nothing new, nothing different &mdash; just triggered on P75 instead of two weeks later.</p>
   <div class="meta-row">
-    <span><strong>Author:</strong> Ashish Raj &nbsp;&middot;&nbsp; <strong>Reviewer:</strong> Customer Backend &nbsp;&middot;&nbsp; <strong>Tier:</strong> Light</span>
+    <span><strong>Author:</strong> Ashish Raj &nbsp;&middot;&nbsp; <strong>Reviewer:</strong> CLOS + Customer Backend &nbsp;&middot;&nbsp; <strong>Tier:</strong> Light</span>
   </div>
   <div class="convention">
-    <strong>Tier:</strong> <span class="badge light">Light</span> &mdash; every change is inside booking-service-java. No CSP-side delta, no wired-layers audit, no workflow cascade section: none of that is needed when the CSP system doesn't change. Sections are numbered sequentially within this document.
+    <strong>Tier:</strong> <span class="badge light">Light</span> &mdash; one new event, emitted from one site, consumed by one new handler. Sections are numbered sequentially within this document.
   </div>
 </header>
 
 <aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
   <h2>Quick Check</h2>
   <dl>
-    <dt>What's changing?</dt>     <dd>Only booking-service-java. Capture the <code>connection_id</code> CLOS already returns when a connection is created (currently silently dropped), subscribe to CLOS's existing <code>CL_CONNECTION_DEACTIVATED</code> event, and on P75 trigger the same refund + workflow chain that the 14-day check triggers today.</dd>
+    <dt>What's changing?</dt>     <dd>CLOS emits a new, dedicated event on P75, carrying <code>customer_id</code> and <code>reason_attribution = CL_DEACTIVATION_P75</code>. Booking-service-java consumes it and triggers the same refund + workflow chain that the 14-day check triggers today.</dd>
     <dt>What triggered it?</dt>    <dd>CLOS already ends the connection on P75. Nothing tells booking-service, so the customer waits for an unrelated, later check instead.</dd>
-    <dt>CSP-side change?</dt>      <dd><strong>None.</strong> See §B1.</dd>
-    <dt>Reversible?</dt>           <dd>Yes &mdash; additive: a new field, a new subscription, a new handler.</dd>
-    <dt>Money / PII / migration?</dt><dd>Money: refund timing moves earlier, amount unchanged. PII: none new &mdash; <code>connection_id</code> is already returned to booking-service today, just not stored. Migration: one new field on the booking record.</dd>
-    <dt>Sign-off?</dt>             <dd>Customer Backend owner. No CSP OS sign-off needed &mdash; nothing changes there.</dd>
+    <dt>CSP-side change?</dt>      <dd>Yes, small: one new event class, emitted at the existing P75 site only. <code>CL_CONNECTION_DEACTIVATED</code> and its other 5 consumers are untouched. See §B1.</dd>
+    <dt>Reversible?</dt>           <dd>Yes &mdash; a new, additive event; stop emitting it and nothing else is affected.</dd>
+    <dt>Money / PII / migration?</dt><dd>Money: refund timing moves earlier, amount unchanged. PII: <code>customer_id</code> now also travels on this new event (already flows the other way today). Migration: none.</dd>
+    <dt>Sign-off?</dt>             <dd>CLOS owner (new event, additive) and Customer Backend owner (new consumer).</dd>
   </dl>
 </aside>
 
@@ -141,7 +141,7 @@
     <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
     <tr><td>Status</td><td>Draft &rarr; For review</td></tr>
     <tr><td>Version</td><td>v1.0 (2026-07-10)</td></tr>
-    <tr><td>Baseline</td><td>CLOS: <code>Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &sect;T9 (P75, <code>REQUESTED &rarr; DEACTIVATED</code>). Code: <code>ConnectionTimeoutScheduler.java</code> (P75 timer), <code>InboundEventProcessingServiceImpl.java</code> (T9 transition + <code>CL_CONNECTION_DEACTIVATED</code> emit, and the connection-creation handler that already returns <code>connection_id</code> synchronously). booking-service-java: <code>CspConnectionService.java</code> (existing, outbound-only CL integration), <code>BookingService.cancelBooking()</code> (the existing refund + workflow chain this spec reuses).</td></tr>
+    <tr><td>Baseline</td><td>CLOS: <code>Connection_Lifecycle_OS_v1_7_1_LOCKED.md</code> &sect;T9 (P75, <code>REQUESTED &rarr; DEACTIVATED</code>). Code: <code>ConnectionTimeoutScheduler.java</code> (P75 timer), <code>InboundEventProcessingServiceImpl.java</code> (T9/<code>handleRequestExpired</code> &mdash; the emit site for the new event). booking-service-java: <code>CspConnectionService.java</code> (existing, outbound-only CL integration), <code>BookingService.cancelBooking()</code> (the existing refund + workflow chain this spec reuses).</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -175,9 +175,9 @@
   <table>
     <thead><tr><th style="width:28%">Area</th><th style="width:16%">Impacted?</th><th>Notes</th><th>Sign-off</th></tr></thead>
     <tbody>
-      <tr><td>Customer Backend owners</td><td>Yes &mdash; sole owner</td><td>All changes are here: capture a value already received, add a subscription, add a handler that calls existing logic.</td><td>Pending</td></tr>
-      <tr><td>CSP System (CLOS) owners</td><td>No</td><td>Nothing changes in CLOS. Informational only.</td><td>&mdash;</td></tr>
-      <tr><td>Whoever manages the event routing registry</td><td>Small</td><td>One subscription entry: booking-service added as a recipient of the already-existing <code>CL_CONNECTION_DEACTIVATED</code> event. Configuration, not code.</td><td>Pending</td></tr>
+      <tr><td>CSP System (CLOS) owners</td><td>Yes &mdash; small</td><td>New event class + one new emit call at the existing P75 site. No change to the state machine, to <code>CL_CONNECTION_DEACTIVATED</code>, or to any of its 5 existing consumers.</td><td>Pending</td></tr>
+      <tr><td>Customer Backend owners</td><td>Yes &mdash; primary owner</td><td>New consumer for the new event; handler calls the existing refund-and-cancel process, unmodified.</td><td>Pending</td></tr>
+      <tr><td>Whoever manages the event routing registry</td><td>Small</td><td>One subscription entry: booking-service registered as the recipient of this new event.</td><td>Pending</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -190,13 +190,12 @@
 
 <section class="spec" id="b1">
   <h2><span class="num">B1.</span> CSP System (CLOS) &mdash; Changes Required <span class="tier how">HOW</span></h2>
-  <div class="none-box"><strong>None.</strong> Two things CLOS already does, unmodified, are all this spec needs:</div>
   <table>
-    <tr><th style="width:30%">Already exists</th><th>Detail</th></tr>
-    <tr><td>Returns <code>connection_id</code> synchronously</td><td>When booking-service creates a connection, CLOS's response already includes the <code>connection_id</code> it generated (<code>ConnectionRequestResponse</code>, single field). This has always been returned &mdash; booking-service's own DTO just doesn't capture it (see §B2).</td></tr>
-    <tr><td>Emits <code>CL_CONNECTION_DEACTIVATED</code> on P75</td><td>The existing event already carries <code>connection_id</code> and <code>deactivation_reason = REQUEST_EXPIRED</code> for a P75-driven deactivation. Unmodified, no new field, no new logic.</td></tr>
+    <tr><th style="width:26%">Change</th><th>Detail</th></tr>
+    <tr><td>1. New event, dedicated to this signal</td><td>A new event type &mdash; not a modification of <code>CL_CONNECTION_DEACTIVATED</code> &mdash; carrying exactly two business fields: <strong><code>customer_id</code></strong> (already tracked on the connection today) and <strong><code>reason_attribution</code></strong>, set to <code>CL_DEACTIVATION_P75</code>. Kept minimal on purpose so it's obvious what it's for and easy for booking-service to consume without needing to understand CLOS's broader state machine or reason taxonomy.</td></tr>
+    <tr><td>2. Emitted only at the P75 site</td><td>Raised alongside the existing T9/<code>REQUEST_EXPIRED</code> transition (<code>InboundEventProcessingServiceImpl.java</code>, <code>handleRequestExpired</code>). No other deactivation reason emits it. <code>CL_CONNECTION_DEACTIVATED</code> still fires exactly as it does today, for every reason, unchanged &mdash; this is a second, separate, additive emission at this one site.</td></tr>
+    <tr><td>3. Registry subscription</td><td>Booking-service registered as the recipient of this new event type. Configuration, not CLOS code.</td></tr>
   </table>
-  <p style="font-size:13.5px;color:var(--muted);">The one non-code action still needed is registering booking-service as a recipient of this existing event in the routing registry &mdash; an infra/config entry, not a change inside CLOS.</p>
   <hr class="sect-end">
 </section>
 
@@ -204,9 +203,10 @@
   <h2><span class="num">B2.</span> Customer Backend &mdash; Changes Required <span class="tier how">HOW</span></h2>
   <table>
     <tr><th style="width:26%">Change</th><th>Detail</th></tr>
-    <tr><td>1. Capture and store <code>connection_id</code></td><td>Booking-service's response DTO for the connection-creation call doesn't include a <code>connection_id</code> field today, so the value CLOS already sends back is silently dropped. Add the field, and persist it against the booking &mdash; no such column exists today.</td></tr>
-    <tr><td>2. New handler for <code>CL_CONNECTION_DEACTIVATED</code></td><td>On receipt, act only when <code>deactivation_reason == REQUEST_EXPIRED</code>. Resolve the booking via the stored <code>connection_id</code>. If the booking isn't already cancelled or refunded, trigger the existing refund-and-cancel process &mdash; the same one the 14-day check calls today &mdash; unmodified: refunds the booking fee and/or security deposit (whichever was paid) and fires every customer-chat workflow that already accompanies that process.</td></tr>
-    <tr><td>3. Cancel the pending 14-day check</td><td>Once P75 has handled the booking, cancel that booking's own pending 14-day check so it doesn't also fire later.</td></tr>
+    <tr><td>1. New handler for the new event</td><td>A dedicated inbound endpoint for CLOS's new P75 event. No reason-code filtering needed &mdash; the event's existence <em>is</em> the trigger (<code>reason_attribution</code> is carried for logging/audit, not for branching).</td></tr>
+    <tr><td>2. Resolve the booking</td><td>Match <code>customer_id</code> against the booking's existing account id &mdash; no new column needed, this correlation key already exists on both sides today.</td></tr>
+    <tr><td>3. Trigger the existing refund-and-cancel process</td><td>If the booking isn't already cancelled or refunded, call the same process the 14-day check calls today &mdash; unmodified: refunds the booking fee and/or security deposit (whichever was paid) and fires every customer-chat workflow that already accompanies that process.</td></tr>
+    <tr><td>4. Cancel the pending 14-day check</td><td>Once P75 has handled the booking, cancel its own pending 14-day check so it doesn't also fire later.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -219,8 +219,8 @@
       <tr><td>Happy path &mdash; P75 fires</td><td>Same-day refund of whatever was paid (booking fee / security deposit), and every customer-chat workflow that the 14-day path triggers today &mdash; identical outcome, just sooner.</td></tr>
       <tr><td>Booking already cancelled/refunded some other way</td><td>No-op. No second refund.</td></tr>
       <tr><td>Same event delivered twice</td><td>Refund happens once, not twice.</td></tr>
-      <tr><td>Deactivation for any other reason (e.g. customer cancelled)</td><td>Ignored &mdash; handler only acts on <code>REQUEST_EXPIRED</code>.</td></tr>
-      <tr><td>14-day check, after P75 already handled it</td><td>Does not fire &mdash; cancelled in step 3 of §B2.</td></tr>
+      <tr><td><code>CL_CONNECTION_DEACTIVATED</code> and its 5 existing consumers</td><td>Completely unaffected &mdash; this event and its consumers are untouched by this spec.</td></tr>
+      <tr><td>14-day check, after P75 already handled it</td><td>Does not fire &mdash; cancelled in step 4 of §B2.</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
