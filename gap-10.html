@@ -87,7 +87,8 @@
     <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
     <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
     <li><a href="#a3"><span class="ix">A3.</span>The objective</a></li>
-    <li><a href="#a4"><span class="ix">A4.</span>Sign-off</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Workflow — today vs proposed</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>Sign-off</a></li>
   </ol>
   <h2 class="how">Part B — How</h2>
   <ol>
@@ -171,7 +172,22 @@
 </section>
 
 <section class="spec" id="a4">
-  <h2><span class="num">A4.</span> Sign-off <span class="tier what">WHAT</span></h2>
+  <h2><span class="num">A4.</span> Workflow &mdash; Today vs Proposed <span class="tier what">WHAT</span></h2>
+  <table>
+    <thead><tr><th style="width:8%">Step</th><th style="width:44%">Today</th><th>Proposed</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Connection sits in <code>REQUESTED</code>; no CSP confirms acceptance.</td><td>Same.</td></tr>
+      <tr><td>2</td><td>P75 fires. CLOS: <code>REQUESTED &rarr; DEACTIVATED</code> (<code>REQUEST_EXPIRED</code>). Existing <code>CL_CONNECTION_DEACTIVATED</code> event fires, as always &mdash; to its usual 5 consumers.</td><td>Same, unchanged. <strong>Plus:</strong> CLOS also emits the new event (<code>customer_id</code>, <code>reason_attribution = CL_DEACTIVATION_P75</code>) directly to booking-service.</td></tr>
+      <tr><td>3</td><td>Booking-service has no idea. Booking still shows active &mdash; no refund, no cancellation notice.</td><td>Booking-service receives the new event immediately, resolves the booking.</td></tr>
+      <tr><td>4</td><td>Nothing happens until booking-service's own, unrelated 14-day check eventually fires.</td><td>Booking-service triggers the existing refund-and-cancel process right away &mdash; refunds the booking fee and/or security deposit (whichever was paid), fires the same customer-chat workflows the 14-day check fires today.</td></tr>
+      <tr><td>5</td><td>14-day check fires: refund + workflows happen. Booking-service also calls back to CLOS (<code>sendUserCancellationEvent</code>) to say the booking is cancelled.</td><td>Same refund + workflows &mdash; just on P75, not day 14. <strong>Booking-service does <em>not</em> call back to CLOS this time</strong> &mdash; CLOS already knows (it's the one that triggered this), so no cancellation notice is sent back. See §B2.</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> Sign-off <span class="tier what">WHAT</span></h2>
   <table>
     <thead><tr><th style="width:28%">Area</th><th style="width:16%">Impacted?</th><th>Notes</th><th>Sign-off</th></tr></thead>
     <tbody>
@@ -205,7 +221,7 @@
     <tr><th style="width:26%">Change</th><th>Detail</th></tr>
     <tr><td>1. New handler for the new event</td><td>A dedicated inbound endpoint for CLOS's new P75 event. No reason-code filtering needed &mdash; the event's existence <em>is</em> the trigger (<code>reason_attribution</code> is carried for logging/audit, not for branching).</td></tr>
     <tr><td>2. Resolve the booking</td><td>Match <code>customer_id</code> against the booking's existing account id &mdash; no new column needed, this correlation key already exists on both sides today.</td></tr>
-    <tr><td>3. Trigger the existing refund-and-cancel process</td><td>If the booking isn't already cancelled or refunded, call the same process the 14-day check calls today &mdash; unmodified: refunds the booking fee and/or security deposit (whichever was paid) and fires every customer-chat workflow that already accompanies that process.</td></tr>
+    <tr><td>3. Trigger the existing refund-and-cancel process, <strong>without</strong> notifying CLOS back</td><td>If the booking isn't already cancelled or refunded, call the same process the 14-day check calls today &mdash; refunds the booking fee and/or security deposit (whichever was paid) and fires every customer-chat workflow that already accompanies that process. <strong>Skip the step that normally notifies CLOS the booking was cancelled</strong> (today, cancelling a booking always calls back to CLOS to say so). CLOS already knows &mdash; it's the one that triggered this &mdash; so calling back here would be redundant, and against a connection CLOS has already deactivated. <em>Exact guard/call-site detail pending verification &mdash; see investigation note below.</em></td></tr>
     <tr><td>4. Cancel the pending 14-day check</td><td>Once P75 has handled the booking, cancel its own pending 14-day check so it doesn't also fire later.</td></tr>
   </table>
   <hr class="sect-end">
