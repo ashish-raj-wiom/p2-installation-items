@@ -82,7 +82,7 @@
 <nav class="toc" aria-label="Table of contents">
   <h2 class="qc">Quick Check</h2>
   <ol><li><a href="#quickcheck"><span class="ix">QC.</span>Triage</a></li></ol>
-  <h2 class="what">Part A — Why</h2>
+  <h2 class="what">Part A — WHAT</h2>
   <ol>
     <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
     <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
@@ -90,7 +90,7 @@
     <li><a href="#a4"><span class="ix">A4.</span>Workflow — today vs proposed</a></li>
     <li><a href="#a5"><span class="ix">A5.</span>Sign-off</a></li>
   </ol>
-  <h2 class="how">Part B — How</h2>
+  <h2 class="how">Part B — HOW</h2>
   <ol>
     <li><a href="#b1"><span class="ix">B1.</span>CSP System changes</a></li>
     <li><a href="#b2"><span class="ix">B2.</span>Customer Backend changes</a></li>
@@ -132,7 +132,7 @@
 
 <div class="part-divider what">
   <div class="label">Part A</div>
-  <h2>Why</h2>
+  <h2>WHAT (the change)</h2>
 </div>
 
 <section class="spec" id="a1">
@@ -180,9 +180,51 @@
       <tr><td>2</td><td>P75 fires. CLOS: <code>REQUESTED &rarr; DEACTIVATED</code> (<code>REQUEST_EXPIRED</code>). Existing <code>CL_CONNECTION_DEACTIVATED</code> event fires, as always &mdash; to its usual 5 consumers.</td><td>Same, unchanged. <strong>Plus:</strong> CLOS also emits the new event (<code>customer_id</code>, <code>reason_attribution = CL_DEACTIVATION_P75</code>) directly to booking-service.</td></tr>
       <tr><td>3</td><td>Booking-service has no idea. Booking still shows active &mdash; no refund, no cancellation notice.</td><td>Booking-service receives the new event immediately, resolves the booking.</td></tr>
       <tr><td>4</td><td>Nothing happens until booking-service's own, unrelated 14-day check eventually fires.</td><td>Booking-service triggers the existing refund-and-cancel process right away &mdash; refunds the booking fee and/or security deposit (whichever was paid), fires the same customer-chat workflows the 14-day check fires today.</td></tr>
-      <tr><td>5</td><td>14-day check fires: refund + workflows happen. Booking-service also calls back to CLOS (<code>sendUserCancellationEvent</code>) to say the booking is cancelled.</td><td>Same refund + workflows &mdash; just on P75, not day 14. <strong>Booking-service does <em>not</em> call back to CLOS this time</strong> &mdash; CLOS already knows (it's the one that triggered this), so no cancellation notice is sent back. See §B2.</td></tr>
+      <tr><td>5</td><td>14-day check fires: refund + workflows happen. Booking-service also calls back to CLOS (<code>sendUserCancellationEvent</code>) to say the booking is cancelled &mdash; but CLOS already deactivated this connection on P75, so CLOS's own guard rejects the call and logs an error for a connection it already closed (swallowed quietly on booking-service's side today).</td><td>Same refund + workflows &mdash; just on P75, not day 14. <strong>Booking-service does <em>not</em> call back to CLOS this time</strong> &mdash; CLOS already knows (it's the one that triggered this), so no cancellation notice is sent back, and the avoidable guard-rejection error in step 5 (today) never happens.</td></tr>
     </tbody>
   </table>
+
+  <h3 style="font-size:15px;margin:20px 0 4px;">Complete sequence &mdash; today</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant BSJ as Booking Service
+    participant CL as CLOS
+    participant TAS
+    participant Ext as 14-day check (external, unrelated timer)
+
+    Note over CL: Connection in REQUESTED, no confirmed CSP acceptance
+    CL->>CL: P75 fires - REQUESTED to DEACTIVATED (REQUEST_EXPIRED)
+    CL->>TAS: CL_CONNECTION_DEACTIVATED (existing event, unchanged)
+    Note over TAS: If an active install candidate exists for this connection,<br/>TAS already closes it: CANCELLED_BY_UPSTREAM, reason=REQUEST_EXPIRED
+    Note over BSJ: Nobody tells booking-service. Booking still looks active - no refund, no notice.
+    Ext-->>BSJ: 14-day check fires (its own, unrelated clock)
+    BSJ->>BSJ: refund booking fee / security deposit (whichever was paid)
+    BSJ->>BSJ: trigger customer-chat workflows
+    BSJ->>CL: sendUserCancellationEvent (booking cancelled)
+    CL->>CL: guard expects REQUESTED - connection already DEACTIVATED
+    CL-->>BSJ: rejected / error (swallowed quietly by booking-service)
+  </div>
+
+  <h3 style="font-size:15px;margin:20px 0 4px;">Complete sequence &mdash; proposed</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant BSJ as Booking Service
+    participant CL as CLOS
+    participant TAS
+
+    Note over CL: Connection in REQUESTED, no confirmed CSP acceptance
+    CL->>CL: P75 fires - REQUESTED to DEACTIVATED (REQUEST_EXPIRED)
+    CL->>TAS: CL_CONNECTION_DEACTIVATED (existing event, unchanged)
+    Note over TAS: Same as today - if an active candidate exists,<br/>CANCELLED_BY_UPSTREAM, reason=REQUEST_EXPIRED. Unaffected by this spec.
+    CL->>BSJ: NEW event - customer_id, reason_attribution=CL_DEACTIVATION_P75
+    BSJ->>BSJ: resolve booking via customer_id
+    BSJ->>BSJ: refund booking fee / security deposit (whichever was paid)
+    BSJ->>BSJ: trigger customer-chat workflows - same as the 14-day path
+    Note over BSJ,CL: Booking-service does NOT call CLOS back - CLOS already knows
+    BSJ->>BSJ: cancel the pending 14-day check for this booking
+  </div>
   <hr class="sect-end">
 </section>
 
@@ -201,7 +243,7 @@
 
 <div class="part-divider how">
   <div class="label">Part B</div>
-  <h2>How</h2>
+  <h2>HOW (detailing)</h2>
 </div>
 
 <section class="spec" id="b1">
@@ -212,6 +254,7 @@
     <tr><td>2. Emitted only at the P75 site</td><td>Raised alongside the existing T9/<code>REQUEST_EXPIRED</code> transition (<code>InboundEventProcessingServiceImpl.java</code>, <code>handleRequestExpired</code>). No other deactivation reason emits it. <code>CL_CONNECTION_DEACTIVATED</code> still fires exactly as it does today, for every reason, unchanged &mdash; this is a second, separate, additive emission at this one site.</td></tr>
     <tr><td>3. Registry subscription</td><td>Booking-service registered as the recipient of this new event type. Configuration, not CLOS code.</td></tr>
   </table>
+  <div class="hint"><strong>Confirmed, unrelated to this spec:</strong> when P75 fires, CLOS's existing <code>CL_CONNECTION_DEACTIVATED</code> event already reaches TAS today, and if an install execution candidate happens to be active for that connection (possible if a CSP was assigned but the candidate wasn't closed before P75's window elapsed), TAS already transitions it to <code>CANCELLED_BY_UPSTREAM</code> with reason <code>REQUEST_EXPIRED</code>. This cascade already works correctly and needs no change &mdash; included here only because it was asked about directly.</div>
   <hr class="sect-end">
 </section>
 
@@ -221,7 +264,7 @@
     <tr><th style="width:26%">Change</th><th>Detail</th></tr>
     <tr><td>1. New handler for the new event</td><td>A dedicated inbound endpoint for CLOS's new P75 event. No reason-code filtering needed &mdash; the event's existence <em>is</em> the trigger (<code>reason_attribution</code> is carried for logging/audit, not for branching).</td></tr>
     <tr><td>2. Resolve the booking</td><td>Match <code>customer_id</code> against the booking's existing account id &mdash; no new column needed, this correlation key already exists on both sides today.</td></tr>
-    <tr><td>3. Trigger the existing refund-and-cancel process, <strong>without</strong> notifying CLOS back</td><td>If the booking isn't already cancelled or refunded, call the same process the 14-day check calls today &mdash; refunds the booking fee and/or security deposit (whichever was paid) and fires every customer-chat workflow that already accompanies that process. <strong>Skip the step that normally notifies CLOS the booking was cancelled</strong> (today, cancelling a booking always calls back to CLOS to say so). CLOS already knows &mdash; it's the one that triggered this &mdash; so calling back here would be redundant, and against a connection CLOS has already deactivated. <em>Exact guard/call-site detail pending verification &mdash; see investigation note below.</em></td></tr>
+    <tr><td>3. Trigger the existing refund-and-cancel process, <strong>without</strong> notifying CLOS back</td><td>If the booking isn't already cancelled or refunded, call the same process the 14-day check calls today &mdash; refunds the booking fee and/or security deposit (whichever was paid) and fires every customer-chat workflow that already accompanies that process. <strong>Skip the step that today unconditionally notifies CLOS the booking was cancelled.</strong> Verified: that notification call is not gated on connection state at all today &mdash; if it fires after CLOS already deactivated the connection (exactly this P75 case), CLOS's own guard rejects it because the connection is no longer in the state that call expects, and CLOS logs/returns an error for a connection it already closed (currently swallowed quietly on booking-service's side, so harmless today, but avoidable noise). Skipping the call for this trigger removes that avoidable error entirely.</td></tr>
     <tr><td>4. Cancel the pending 14-day check</td><td>Once P75 has handled the booking, cancel its own pending 14-day check so it doesn't also fire later.</td></tr>
   </table>
   <hr class="sect-end">
@@ -267,5 +310,11 @@
 
 </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
 </body>
 </html>
