@@ -138,11 +138,11 @@
   <h1>WhatsApp fallback for undelivered install-task PNs, via task deeplink</h1>
   <p class="lede">Push-notification delivery for the New Installation task sits at ~88% today — meaning roughly 1 in 8 CSPs never sees the task push and discovers new work only by opening the feed. The fix: the <code>install_task_created</code> CleverTap event (already fired by csp-notification-service on every candidate creation) additionally carries a <code>deeplink</code> URL to the task; a CleverTap journey sends a WhatsApp message carrying that link when the PN is not delivered within a CT-configured window (initial value 10 minutes). The app's deeplink rail — App Links intent-filter, <code>DeepLinkRouter</code>, and the <code>openPage</code> routing path — already exists and needs no structural change; what remains is hosting <code>assetlinks.json</code> plus a browser fallback to the APK download, correct <code>entry_source</code> attribution on <code>install_candidate_opened</code> (today every open is misattributed as <code>home_card</code>), and a toast when the linked task no longer exists.</p>
   <div class="meta-row">
-    <span><strong>Author:</strong> Ashish Raj &nbsp;&middot;&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;&middot;&nbsp; <strong>Tier:</strong> Medium</span>
+    <span><strong>Author:</strong> Ashish Raj &nbsp;&middot;&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;&middot;&nbsp; <strong>Tier:</strong> Light</span>
   </div>
   <div class="convention">
     <strong>Tier:</strong>
-    <span class="badge light">Medium</span> &mdash; A1, A2, A5, A6, A8, B5 (incl. REGRESSION blocks) + Workflow + Wired-layers. <strong>6 connected changes:</strong> (1) <code>deeplink</code> property added to <code>install_task_created</code>, (2) host <code>assetlinks.json</code> on <code>csp.wiom.in</code>, (3) browser fallback on <code>csp.wiom.in</code> redirects to the APK download, (4) <code>entry_source</code> threaded through the app's drilldown-open rail (<code>pn</code> / <code>deeplink</code> / <code>home_card</code>), (5) task-not-found opens land on HOME with a toast, (6) CT journey sends WhatsApp with the deeplink when the PN is undelivered within the CT-configured window.
+    <span class="badge light">Light</span> &mdash; A1, A2, A5, A8, B5 + Workflow + Wired-layers; §A6 retained voluntarily. EDGE and REGRESSION blocks omitted per PM decision (gap-05 v1.2 convention). <strong>6 connected changes:</strong> (1) <code>deeplink</code> property added to <code>install_task_created</code>, (2) host <code>assetlinks.json</code> on <code>csp.wiom.in</code>, (3) browser fallback on <code>csp.wiom.in</code> redirects to the APK download, (4) <code>entry_source</code> threaded through the app's drilldown-open rail (<code>pn</code> / <code>deeplink</code> / <code>home_card</code>), (5) task-not-found opens land on HOME with a toast, (6) CT journey sends WhatsApp with the deeplink when the PN is undelivered within the CT-configured window.
     <br><strong>Rows:</strong> <span class="badge req">Required</span> &mdash; every row filled or marked N/A with a reason.
   </div>
 </header>
@@ -157,7 +157,7 @@
     <dt>Reversible?</dt>           <dd>Yes — the event property is additive; the CT journey can be paused from the dashboard; app changes are attribution + toast only (no flow change).</dd>
     <dt>Money / PII / migration?</dt><dd>Money: No. PII: No — the deeplink carries only <code>execution_candidate_id</code> (opaque ID; consistent with ASM-ES-INSTALL-05, no customer mobile anywhere in the link). Migration: No.</dd>
     <dt>OS impact / sign-off?</dt> <dd>None — csp-notification-service is a read-only fan-out consumer; no OS event contract, state, or timer changes. No OS amendments.</dd>
-    <dt>Tier</dt>                  <dd>Medium</dd>
+    <dt>Tier</dt>                  <dd>Light (§A6 retained; EDGE/REGRESSION blocks omitted per PM decision)</dd>
   </dl>
 </aside>
 
@@ -302,22 +302,22 @@ sequenceDiagram
     participant NS as csp-notification-service
     participant CT as CleverTap
     participant WA as WhatsApp
-    participant AND as Android OS
+    participant DROID as Android OS
     participant APP as CSP App
     participant WEB as csp.wiom.in
 
     NS->>CT: install_task_created + deeplink property
     CT->>CT: PN attempted - no delivery signal within CT-defined window
     CT->>WA: WhatsApp message, CTA URL = deeplink property
-    WA->>AND: CSP taps link
+    WA->>DROID: CSP taps link
     alt app installed - verified App Link
-        AND->>APP: VIEW intent - parseDeepLinkFromIntent
+        DROID->>APP: VIEW intent - parseDeepLinkFromIntent
         APP->>APP: DeepLinkRouter resolves /task/install/id
         APP->>APP: openPage - navigateToDrilldown - drilldown opens
         APP->>CT: install_candidate_opened entry_source=deeplink
     else app not installed or legacy version
-        AND->>WEB: opens URL in browser
-        WEB->>AND: 302 redirect to Wiom-CSP.apk on S3
+        DROID->>WEB: opens URL in browser
+        WEB->>DROID: 302 redirect to Wiom-CSP.apk on S3
     end
   </div>
 
@@ -335,7 +335,7 @@ flowchart TD
     G -- yes --> I[openPage INSTALL_TASK_DRILLDOWN]
     I --> J{Task in feed after forced refresh?}
     J -- yes --> K[Drilldown opens - install_candidate_opened entry_source=deeplink]
-    J -- no --> L[HOME + toast: This task does not exist]
+    J -- no --> L["HOME + toast: This task does not exist"]
   </div>
   <div class="hint"><strong>Logged-out scope note (v1):</strong> if the app is installed but the CSP is logged out, the App Link still opens the app (the OS routes it regardless of auth state); the CSP lands on login and, after logging in, on the HOME feed. The pending deeplink is <em>not</em> replayed after login in v1 — the task is one feed-tap away. Replaying the route post-login is a possible v1.1 enhancement, not in scope.</div>
   <hr class="sect-end">
@@ -391,7 +391,7 @@ flowchart TD
 
 <section class="spec" id="b5">
   <h2><span class="num">B5.</span> Acceptance Criteria &mdash; Verification Layer <span class="tier how">HOW</span></h2>
-  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, edge cases, and regressions. Negative checks first-class on every block.</div>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic. Negative checks first-class on every block. EDGE and REGRESSION blocks omitted per PM decision (v1.2 convention).</div>
 
   <h3>Business logic</h3>
   <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> install_task_created carries the deeplink
@@ -468,83 +468,15 @@ flowchart TD
     &bull; <strong>curl https://csp.wiom.in/.well-known/assetlinks.json</strong> &mdash; HTTP 200, correct package name + release-key SHA-256 fingerprint (this path must NOT redirect)
     &bull; <strong>Negative</strong> &mdash; no 404 on any /task/install/* path</pre></div>
 
-  <h3>Use &amp; edge cases</h3>
-  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> malformed deeplink (missing task id)
-  <em>Real-world:</em> truncated copy-paste or hand-edited link
-
-  <span class="kw">Given</span> the app receives https://csp.wiom.in/task/install (no id)
-  <span class="kw">When</span>  DeepLinkRouter resolves it
-  <span class="kw">Then</span>  the existing BEC-01 guard returns no route and the app lands on HOME without crashing (DeepLinkRouter.kt:131&ndash;134)
-
-  <span class="kw">Verify:</span>
-    &bull; logcat "matchRoute: /task/install missing taskId"; no toast required (nothing to look up), no crash</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> PN arrives late, after the WhatsApp was already sent
-  <em>Real-world:</em> FCM delivers after the CT window closes — the CSP gets both messages
-
-  <span class="kw">Given</span> the WhatsApp was sent at window expiry and the PN lands afterwards
-  <span class="kw">When</span>  the CSP taps either (or both, in sequence)
-  <span class="kw">Then</span>  each tap routes correctly and attributes by its own entry point (pn / deeplink); a second open simply re-opens the drilldown
-
-  <span class="kw">Verify:</span>
-    &bull; two install_candidate_opened events with distinct entry_source values are acceptable; no crash on re-entry
-    &bull; <strong>Negative</strong> &mdash; the late PN delivery does not retro-cancel or duplicate the WhatsApp send</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> logged out, app installed
-  <em>Real-world:</em> session expired between task creation and link tap
-
-  <span class="kw">Given</span> the app is installed but C is logged out
-  <span class="kw">When</span>  C taps the deeplink
-  <span class="kw">Then</span>  the app opens on the login screen; after successful login C lands on the HOME feed (deeplink not replayed &mdash; v1 scope, see WF note)
-
-  <span class="kw">Verify:</span>
-    &bull; no crash; task reachable from feed post-login
-    &bull; <strong>Negative</strong> &mdash; no drilldown for E opens for a not-yet-authenticated session</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> legacy app version without the App Links intent-filter
-  <em>Real-world:</em> CSP hasn't updated since before Deep Link Handling Spec v0.6 shipped
-
-  <span class="kw">Given</span> an installed app version that does not claim csp.wiom.in
-  <span class="kw">When</span>  C taps the deeplink
-  <span class="kw">Then</span>  Android opens the URL in the browser, which 302s to the APK &mdash; effectively an update prompt (desired)
-
-  <span class="kw">Verify:</span>
-    &bull; on a legacy build: browser opens, download starts; no dead-end 404</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">EDGE-5:</span> deeplink for another CSP's task (forwarded WhatsApp)
-  <em>Real-world:</em> CSP forwards the message; a different logged-in CSP taps it
-
-  <span class="kw">Given</span> logged-in CSP D taps a deeplink for task E belonging to CSP C
-  <span class="kw">When</span>  navigateToDrilldown looks up E in D's feed
-  <span class="kw">Then</span>  E is not found &rarr; same HOME + "This task does not exist" toast as LOGIC-5
-
-  <span class="kw">Verify:</span>
-    &bull; <strong>Negative</strong> &mdash; no task data belonging to C is fetched or rendered for D; the deeplink grants no cross-CSP read (lookup is feed-scoped, HomeViewModel.kt:2318&ndash;2324)</pre></div>
-
-  <h3>Regressions</h3>
-  <div class="gherkin"><pre><span class="kw">REGRESSION-1:</span> plain feed tap still attributes home_card
-  <span class="kw">Given</span> the CSP opens the app organically and taps an install card in the feed
-  <span class="kw">Then</span>  install_candidate_opened fires with entry_source=home_card, exactly as today
-
-  <span class="kw">Verify:</span>
-    &bull; CT event stream on a build with this change; <strong>Negative</strong> &mdash; feed taps never report pn or deeplink</pre></div>
-
-  <div class="gherkin"><pre><span class="kw">REGRESSION-2:</span> FPN rail untouched
-  <span class="kw">Given</span> an FPN-triggering push arrives (launch_from_fpn=true) and the CSP taps the overlay CTA
-  <span class="kw">Then</span>  the PendingRoute hand-off is still skipped (MainActivity.kt:324), the overlay drives the open, and install_candidate_opened fires with entry_source=fpn
-
-  <span class="kw">Verify:</span>
-    &bull; Phase-4 FPN funnel joins (fpn_delivered / fpn_action_taken / install_candidate_opened) unchanged; <strong>Negative</strong> &mdash; FPN opens never report pn or deeplink</pre></div>
-
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
     <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
     <tbody>
       <tr><td class="cls">Business logic</td><td>A5 rows 1&ndash;6</td><td>6 paths</td><td>LOGIC-1..6</td><td>All covered</td></tr>
       <tr><td class="cls">Computation</td><td>&mdash;</td><td>None — no derived values beyond string concatenation of the URL (checked in LOGIC-1)</td><td>&mdash;</td><td>N/A</td></tr>
-      <tr><td class="cls">Invariants</td><td>A6 rows 1&ndash;7</td><td>7</td><td>REGRESSION-1..2 + negatives inside LOGIC-1/2/4</td><td>All covered</td></tr>
-      <tr><td class="cls">Use / edge</td><td>malformed link, late PN, logged-out, legacy build, cross-CSP forward</td><td>5</td><td>EDGE-1..5</td><td>All covered</td></tr>
-      <tr><td class="cls">Regression</td><td>A6 (feed attribution, FPN rail)</td><td>2</td><td>REGRESSION-1..2</td><td>All covered</td></tr>
+      <tr><td class="cls">Invariants</td><td>A6 rows 1&ndash;7</td><td>7</td><td>Negatives inside LOGIC-1/2/4/5</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>N/A — EDGE blocks omitted per PM decision (v1.2 convention)</td></tr>
+      <tr><td class="cls">Regression</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>N/A — REGRESSION blocks omitted per PM decision (v1.2 convention); A6 still binds implementation</td></tr>
     </tbody>
   </table>
   <hr class="sect-end">
@@ -555,13 +487,13 @@ flowchart TD
   <table>
     <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
     <tbody>
-      <tr><td><span class="badge light">Medium</span></td><td>Quick Check filled (incl. tier)</td><td class="check">&check;</td></tr>
-      <tr><td><span class="badge light">Medium</span></td><td>Required sections filled per tier &mdash; omissions noted with reason</td><td class="check">&check;</td></tr>
-      <tr><td><span class="badge light">Medium</span></td><td>B5 coverage matrix reads "all covered" or "N/A" on every class</td><td class="check">&check;</td></tr>
-      <tr><td><span class="badge light">Medium</span></td><td>Negative checks present on every Verify block</td><td class="check">&check;</td></tr>
-      <tr><td><span class="badge light">Medium</span></td><td>Workflow diagrams (sequence + decision flow) present</td><td class="check">&check;</td></tr>
-      <tr><td><span class="badge light">Medium</span></td><td>Wired-layers table present</td><td class="check">&check;</td></tr>
-      <tr><td><span class="badge light">Medium</span></td><td>Every A8 "Impacted" row has sign-off Received (all rows are No-impact)</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections filled per tier &mdash; omissions noted with reason</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" or "N/A" on every class</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Negative checks present on every Verify block</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Workflow diagrams (sequence + decision flow) present</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Wired-layers table present</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Impacted" row has sign-off Received (all rows are No-impact)</td><td class="check">&check;</td></tr>
     </tbody>
   </table>
   <div class="note"><strong>Code + schema evidence (verified 2026-07-17 against csp-os-yaml qa@e0618cf4 and wiom-csp-app development@ee48c6ae):</strong>
