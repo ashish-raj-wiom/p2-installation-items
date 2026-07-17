@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAP-11 — WhatsApp fallback for undelivered install-task PNs via task deeplink · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 30px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change</a></li>
+    <li><a href="#workflow"><span class="ix">WF.</span>Workflow — happy path + cascades</a></li>
+    <li><a href="#wired"><span class="ix">WR.</span>What's wired / what's not</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="./installation-p2-bugs.html">&larr; Bugs &amp; gaps index</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom &middot; Change Spec &middot; v1.0 &middot; PM deliverable &middot; GAP-11</div>
+  <h1>WhatsApp fallback for undelivered install-task PNs, via task deeplink</h1>
+  <p class="lede">Push-notification delivery for the New Installation task sits at ~88% today — meaning roughly 1 in 8 CSPs never sees the task push and discovers new work only by opening the feed. The fix: the <code>install_task_created</code> CleverTap event (already fired by csp-notification-service on every candidate creation) additionally carries a <code>deeplink</code> URL to the task; a CleverTap journey sends a WhatsApp message carrying that link when the PN is not delivered within a CT-configured window (initial value 10 minutes). The app's deeplink rail — App Links intent-filter, <code>DeepLinkRouter</code>, and the <code>openPage</code> routing path — already exists and needs no structural change; what remains is hosting <code>assetlinks.json</code> plus a browser fallback to the APK download, correct <code>entry_source</code> attribution on <code>install_candidate_opened</code> (today every open is misattributed as <code>home_card</code>), and a toast when the linked task no longer exists.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Ashish Raj &nbsp;&middot;&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;&middot;&nbsp; <strong>Tier:</strong> Medium</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Medium</span> &mdash; A1, A2, A5, A6, A8, B5 (incl. REGRESSION blocks) + Workflow + Wired-layers. <strong>6 connected changes:</strong> (1) <code>deeplink</code> property added to <code>install_task_created</code>, (2) host <code>assetlinks.json</code> on <code>csp.wiom.in</code>, (3) browser fallback on <code>csp.wiom.in</code> redirects to the APK download, (4) <code>entry_source</code> threaded through the app's drilldown-open rail (<code>pn</code> / <code>deeplink</code> / <code>home_card</code>), (5) task-not-found opens land on HOME with a toast, (6) CT journey sends WhatsApp with the deeplink when the PN is undelivered within the CT-configured window.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> &mdash; every row filled or marked N/A with a reason.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>(1) csp-notification-service adds a <code>deeplink</code> property to <code>install_task_created</code>; (2)+(3) a new web endpoint on <code>csp.wiom.in</code> serves <code>/.well-known/assetlinks.json</code> and 302-redirects browser opens to the APK download; (4) the CSP app attributes drilldown opens with <code>entry_source</code> = <code>pn</code> / <code>deeplink</code> / <code>home_card</code> (today everything is <code>home_card</code>); (5) task-not-found opens show a toast instead of failing silently; (6) a CT journey sends a WhatsApp message with the deeplink when the PN is undelivered within the CT-configured window.</dd>
+    <dt>What triggered it?</dt>    <dd>New Installation PN delivery rate ~88% (PM-measured, Jul 2026). ~12% of CSPs never receive the task push; task discovery for them depends on unprompted feed opens.</dd>
+    <dt>Blast radius</dt>          <dd>csp-notification-service (<code>EventTranslator</code>, one method), CSP partner app (MainActivity / DeepLinkRouter callsite / HomeViewModel), one new static web endpoint on <code>csp.wiom.in</code>, CT dashboard config (journey + WhatsApp template). <strong>No DB migration. No ES / OS state-machine change. No customer-app change. Existing PN payload and campaign untouched.</strong></dd>
+    <dt>Reversible?</dt>           <dd>Yes — the event property is additive; the CT journey can be paused from the dashboard; app changes are attribution + toast only (no flow change).</dd>
+    <dt>Money / PII / migration?</dt><dd>Money: No. PII: No — the deeplink carries only <code>execution_candidate_id</code> (opaque ID; consistent with ASM-ES-INSTALL-05, no customer mobile anywhere in the link). Migration: No.</dd>
+    <dt>OS impact / sign-off?</dt> <dd>None — csp-notification-service is a read-only fan-out consumer; no OS event contract, state, or timer changes. No OS amendments.</dd>
+    <dt>Tier</dt>                  <dd>Medium</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT &mdash; The Change</h2>
+  <p>The PM's decisions: why, what the new flow looks like, what changes service-by-service.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, baseline.</div>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>WhatsApp fallback for undelivered install-task PNs, via task deeplink</td></tr>
+    <tr><td>Owner (PM)</td><td>Ashish Raj</td></tr>
+    <tr><td>Status</td><td>Draft &rarr; For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-07-17)</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>
+      <strong>Backend</strong> — <code>csp-notification-service/&hellip;/translate/EventTranslator.java:83&ndash;91</code> (<code>translateInstallCandidateCreated</code>: current <code>install_task_created</code> property set) on <code>csp-os-yaml</code> qa@e0618cf4.<br>
+      <strong>App</strong> — <code>wiom-csp-app</code> development@ee48c6ae: <code>AndroidManifest.xml:70&ndash;81</code> (App Links intent-filter for <code>csp.wiom.in</code>, autoVerify, with the D-02 note that <code>assetlinks.json</code> is not yet hosted); <code>DeepLinkRouter.kt:29, 128&ndash;151</code> (route registry incl. <code>/task/install/&lt;taskId&gt;</code>); <code>MainActivity.kt:313&ndash;363</code> (push routing + <code>pn_clicked</code>), <code>:370&ndash;378</code> (external App Link parsing); <code>HomeViewModel.kt:2259&ndash;2344</code> (<code>openPage</code>/<code>navigateToDrilldown</code>, silent not-found fallback at 2343), <code>:2476&ndash;2504</code> (<code>onCardBodyClick</code>, hard-coded <code>entry_source="home_card"</code> at 2501).<br>
+      <strong>APK download URL</strong> (PM-provided) — <code>https://wiom-partner.s3.ap-south-1.amazonaws.com/Wiom-CSP.apk</code>.
+    </td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Observable trigger, who is affected, cost of leaving it.</div>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>
+      <ol style="margin:0; padding-left:18px;">
+        <li><strong>~12% of New Installation task PNs are never delivered</strong> (delivery ~88%, in line with the 80&ndash;90% industry norm — but each miss is a CSP who doesn't know a task exists). There is no fallback channel today.</li>
+        <li><strong>No clickable link exists outside the app.</strong> <code>install_task_created</code> (<code>EventTranslator.java:83&ndash;91</code>) carries <code>execution_id</code> and <code>page_name</code> but no https URL, so a WhatsApp/SMS message today could not take the CSP to the task.</li>
+        <li><strong>Open-source attribution is broken.</strong> Every drilldown open — feed tap, PN tap, future deeplink tap — funnels through <code>onCardBodyClick</code>, which hard-codes <code>entry_source="home_card"</code> (<code>HomeViewModel.kt:2501</code>). PN-driven opens are indistinguishable from feed opens, so a fallback channel's contribution would be unmeasurable.</li>
+        <li><strong>A dead link fails silently.</strong> If the routed task is no longer in the feed (cancelled / reassigned / expired), <code>navigateToDrilldown</code> logs and stays on HOME with no user-visible explanation (<code>HomeViewModel.kt:2343</code>).</li>
+      </ol>
+    </td></tr>
+    <tr><td>Who experiences it?</td><td><strong>CSP</strong> — learns about a new installation task late (or only on next feed open), delaying slot proposal. <strong>Customer</strong> — waits longer for first CSP contact after booking. <strong>PM/analytics</strong> — cannot separate PN-driven opens from organic feed opens, so PN reach experiments can't be evaluated.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>~12% of new install tasks start with a delayed first-touch. Every hour of delay in slot proposal compounds through the booking&rarr;install funnel (auto-confirm and expiry timers keep running regardless of whether the CSP knows the task exists).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes &rarr; before &rarr; after &rarr; why</em>.</div>
+  <table class="delta">
+    <thead><tr><th style="width:22%">What changes</th><th class="before" style="width:28%">Before</th><th class="after" style="width:28%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>1 &middot; csp-notification-service</strong> — add <code>deeplink</code> property to <code>install_task_created</code></td>
+        <td><code>translateInstallCandidateCreated</code> (<code>EventTranslator.java:83&ndash;91</code>) puts <code>execution_id</code>, <code>zone_id</code>, <code>csp_role</code>, spine (<code>source_event</code>, <code>source_event_id</code>, <code>csp_id</code>, <code>page_name=INSTALL_TASK_DRILLDOWN</code>). No URL of any kind.</td>
+        <td>Same method additionally puts <code>deeplink = "https://csp.wiom.in/task/install/" + e.executionCandidateId()</code>. All existing properties unchanged.</td>
+        <td>The WhatsApp template needs a clickable https URL. The path segment matches the app's <code>DeepLinkRouter</code> registry entry <code>/task/install/&lt;taskId&gt;</code> (<code>DeepLinkRouter.kt:137&ndash;140</code>) verbatim — no new route on the app side. The full URL travels as one property (rather than CT assembling it from <code>execution_id</code>) so the path shape has a single source of truth in code, not in N dashboard templates.</td>
+      </tr>
+      <tr>
+        <td><strong>2 &middot; Deeplink web service (new)</strong> — host <code>assetlinks.json</code></td>
+        <td>Nothing served at <code>https://csp.wiom.in/.well-known/assetlinks.json</code>. The manifest's <code>autoVerify</code> fails silently and Android shows an app-chooser instead of opening the app directly (documented in <code>AndroidManifest.xml:70&ndash;74</code>, note D-02).</td>
+        <td><code>assetlinks.json</code> served at that path, declaring the CSP app package name + release-signing-key SHA-256 fingerprint.</td>
+        <td>Verified App Links are what make a WhatsApp link open the app in one tap with no chooser. This was already anticipated by the app team (D-02) — the hosting side was never built.</td>
+      </tr>
+      <tr>
+        <td><strong>3 &middot; Deeplink web service (new)</strong> — browser fallback &rarr; APK download</td>
+        <td>No handler exists on <code>csp.wiom.in</code>; if the app is not installed, the link opens in a browser and dead-ends.</td>
+        <td>Any browser <code>GET</code> on <code>/task/install/*</code> (and, as default, any other path) responds <code>302 Location: https://wiom-partner.s3.ap-south-1.amazonaws.com/Wiom-CSP.apk</code>.</td>
+        <td>PM decision: the no-app case (not installed, or an old app version without the App Links filter) should land the user on the app download. A static host/CDN redirect rule is sufficient; implementation choice is engineering's.</td>
+      </tr>
+      <tr>
+        <td><strong>4 &middot; CSP app</strong> — thread <code>entry_source</code> through the drilldown-open rail</td>
+        <td><code>onCardBodyClick</code> fires <code>install_candidate_opened</code> with hard-coded <code>entry_source="home_card"</code> (<code>HomeViewModel.kt:2501</code>). PN-routed opens (via <code>openPage</code> &rarr; <code>navigateToDrilldown</code> &rarr; <code>onCardBodyClick</code>) are therefore recorded as <code>home_card</code>. The <code>openPage</code> rail carries no source information.</td>
+        <td><code>entry_source</code> becomes a parameter carried from the entry point: push-payload route (<code>MainActivity.parsePageNameFromIntent</code>) &rarr; <code>pn</code>; external App Link route (<code>MainActivity.parseDeepLinkFromIntent</code> &rarr; <code>DeepLinkRouter.handleResult</code>) &rarr; <code>deeplink</code>; direct feed tap &rarr; <code>home_card</code> (default, unchanged); FPN overlay CTA &rarr; <code>fpn</code> (already fired separately today — untouched). Applies to all four typed <code>*_candidate_opened</code> events since they share <code>onCardBodyClick</code>, but only install has non-feed entry points in scope here.</td>
+        <td>PM requirement: PN-opened &rarr; source <code>pn</code>; deeplink-opened &rarr; source <code>deeplink</code> (reserved exclusively for link taps). Without this the WhatsApp fallback's contribution is unmeasurable — which is the point of the experiment. Values follow the existing noun style of <code>home_card</code>/<code>fpn</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>5 &middot; CSP app</strong> — task-not-found toast</td>
+        <td><code>navigateToDrilldown</code> silently stays on HOME when <code>execution_id</code> isn't found after a forced feed refresh (<code>HomeViewModel.kt:2343</code> — log line only).</td>
+        <td>Same fallback (land/stay on HOME feed) plus a user-visible toast: <em>&ldquo;This task does not exist&rdquo;</em> (final copy/translation with content team). One toast for all not-found causes — terminal-state task, reassigned task, unknown ID.</td>
+        <td>PM decision: a CSP who taps a WhatsApp link hours later must get an explanation, not a silent landing on HOME. One undifferentiated toast — the app cannot (and should not) distinguish why the task is gone from the feed alone.</td>
+      </tr>
+      <tr>
+        <td><strong>6 &middot; CleverTap config</strong> — WhatsApp fallback journey (dashboard, not code)</td>
+        <td>A single PN campaign triggers on <code>install_task_created</code>. No fallback branch.</td>
+        <td>Journey: trigger on <code>install_task_created</code> &rarr; wait window <strong>defined on CT</strong> (initial value 10 min) &rarr; branch on CT's push-delivery signal &rarr; if undelivered, send WhatsApp template to the CSP's profile number with CTA URL = <code>{{deeplink}}</code> event property. Delivered branch: exit, no message.</td>
+        <td>Reaches the ~12% whose PN never lands. The window is a CT-dashboard setting so ops can tune it without a release. WhatsApp channel/BSP integration already exists on CT (PM-confirmed); template authoring and approval is part of this journey setup.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>Relationship to existing rails:</strong> rows 2&ndash;4 complete work the app already shipped — the App Links intent-filter, <code>DeepLinkRouter</code>, and the <code>parseDeepLinkFromIntent</code> hook all exist in the current development branch (see WR). This spec adds no new route, screen, or navigation mechanism; the PN tap path itself (<code>page_name</code>/<code>execution_id</code> push extras) is untouched — PN messages do <em>not</em> need the https deeplink, they already route natively.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Invariants and behaviours that must NOT change as a side effect of this spec.</div>
+  <table>
+    <thead><tr><th style="width:38%">Invariant / behaviour</th><th>Why it must hold</th></tr></thead>
+    <tbody>
+      <tr><td>CT push payload contract — <code>page_name</code>, <code>execution_id</code>, <code>batch_id</code>, <code>deadline_at</code> extras and the <code>MainActivity.parsePageNameFromIntent</code> rail.</td><td>PN routing already works end-to-end; this spec only changes the attribution it reports, not how it navigates.</td></tr>
+      <tr><td><code>pn_clicked</code> event and CT's <code>pushNotificationClickedEvent</code> (<code>MainActivity.kt:329&ndash;362</code>).</td><td>Existing FPN/PN funnel dashboards join on these; they remain the click-side signal for the PN channel.</td></tr>
+      <tr><td><code>entry_source="fpn"</code> firing for FPN overlay CTA opens, and the <code>launch_from_fpn</code> skip of the PendingRoute hand-off (<code>MainActivity.kt:324</code>).</td><td>Phase-4 FPN funnel attribution must keep working unchanged; <code>fpn</code> is already a distinct source value.</td></tr>
+      <tr><td>All existing <code>install_task_created</code> properties (spine, <code>execution_id</code>, <code>zone_id</code>, <code>csp_role</code>, flags).</td><td>The change is strictly additive — live CT campaigns, segments, and dashboards keyed on these properties must not break.</td></tr>
+      <tr><td><code>ES_INSTALL_CANDIDATE_CREATED</code> contract and every ES / OS state machine, timer, and event.</td><td>csp-notification-service is a downstream fan-out consumer; nothing upstream of it changes. No OS amendment.</td></tr>
+      <tr><td>Other <code>CtPageName</code> routes and <code>DeepLinkRouter</code> registry entries (<code>restore</code>, <code>netbox-recovery</code>, wallet, recharge&hellip;).</td><td>The WhatsApp fallback is scoped to the New Installation task only. The router already supports other task types — deliberately not activated here.</td></tr>
+      <tr><td>Bell / banner deep-link callsites (<code>BellNavGraph.kt:24</code>, <code>HomeScreen.kt:781</code>) keep their current attribution.</td><td>In-app surfaces that resolve through <code>DeepLinkRouter</code> are not &ldquo;deeplink taps&rdquo; in the PM sense — <code>deeplink</code> is reserved for external App Link opens only (PM decision).</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="workflow">
+  <h2><span class="num">WF.</span> Workflow &mdash; happy path + cascades <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Sequence diagrams for the PN happy path and the WhatsApp fallback cascade, plus the deeplink resolution decision flow.</div>
+
+  <h3>Sequence — PN delivered (happy path, behaviour unchanged; attribution fixed)</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant ES as es-installation-service
+    participant NS as csp-notification-service
+    participant CT as CleverTap
+    participant WA as WhatsApp
+    participant APP as CSP App
+
+    ES->>NS: ES_INSTALL_CANDIDATE_CREATED
+    NS->>CT: install_task_created + deeplink property
+    CT->>APP: PN via FCM with page_name + execution_id extras
+    Note over CT: delivery signal received within window - journey exits, no WhatsApp
+    APP->>APP: CSP taps PN - parsePageNameFromIntent
+    APP->>CT: pn_clicked
+    APP->>APP: openPage - navigateToDrilldown - drilldown opens
+    APP->>CT: install_candidate_opened entry_source=pn
+  </div>
+
+  <h3>Sequence — PN undelivered &rarr; WhatsApp fallback (new cascade)</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant NS as csp-notification-service
+    participant CT as CleverTap
+    participant WA as WhatsApp
+    participant AND as Android OS
+    participant APP as CSP App
+    participant WEB as csp.wiom.in
+
+    NS->>CT: install_task_created + deeplink property
+    CT->>CT: PN attempted - no delivery signal within CT-defined window
+    CT->>WA: WhatsApp message, CTA URL = deeplink property
+    WA->>AND: CSP taps link
+    alt app installed - verified App Link
+        AND->>APP: VIEW intent - parseDeepLinkFromIntent
+        APP->>APP: DeepLinkRouter resolves /task/install/id
+        APP->>APP: openPage - navigateToDrilldown - drilldown opens
+        APP->>CT: install_candidate_opened entry_source=deeplink
+    else app not installed or legacy version
+        AND->>WEB: opens URL in browser
+        WEB->>AND: 302 redirect to Wiom-CSP.apk on S3
+    end
+  </div>
+
+  <h3>Deeplink resolution decision flow (app side)</h3>
+  <div class="mermaid">
+flowchart TD
+    A[CSP taps https link] --> B{App installed with verified App Link?}
+    B -- no --> W[Browser opens csp.wiom.in] --> X[302 to APK download]
+    B -- yes --> C[MainActivity.parseDeepLinkFromIntent]
+    C --> D{Logged in?}
+    D -- no --> E[Login screen - after login land on HOME feed]
+    D -- yes --> F[DeepLinkRouter /task/install/id]
+    F --> G{taskId present?}
+    G -- no --> H[Fallback - HOME, no toast]
+    G -- yes --> I[openPage INSTALL_TASK_DRILLDOWN]
+    I --> J{Task in feed after forced refresh?}
+    J -- yes --> K[Drilldown opens - install_candidate_opened entry_source=deeplink]
+    J -- no --> L[HOME + toast: This task does not exist]
+  </div>
+  <div class="hint"><strong>Logged-out scope note (v1):</strong> if the app is installed but the CSP is logged out, the App Link still opens the app (the OS routes it regardless of auth state); the CSP lands on login and, after logging in, on the HOME feed. The pending deeplink is <em>not</em> replayed after login in v1 — the task is one feed-tap away. Replaying the route post-login is a possible v1.1 enhancement, not in scope.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="wired">
+  <h2><span class="num">WR.</span> What's wired, what's not <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Per-layer audit &mdash; this is what separates "designed" from "shippable".</div>
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:26%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>App Links intent-filter</td><td><code>AndroidManifest.xml:75&ndash;81</code> — <code>https://csp.wiom.in</code> + <code>www.</code> variant, <code>autoVerify="true"</code>, on MainActivity. Shipped with Deep Link Handling Spec v0.6.</td></tr>
+      <tr><td>2</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Deeplink route registry</td><td><code>DeepLinkRouter.kt:137&ndash;140</code> — <code>/task/install/&lt;taskId&gt;</code> &rarr; <code>PageName("INSTALL_TASK_DRILLDOWN", executionId=taskId)</code>. Host allow-list at <code>:29</code> (<code>csp.wiom.in</code>). Missing-id guard BEC-01 at <code>:131&ndash;134</code>.</td></tr>
+      <tr><td>3</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>External-intent parsing</td><td><code>MainActivity.parseDeepLinkFromIntent</code> (<code>MainActivity.kt:370&ndash;378</code>), called from <code>onCreate</code>/<code>onNewIntent</code>; result consumed at <code>:225&ndash;234</code> via <code>DeepLinkRouter.handleResult</code>. Skips intents already carrying <code>page_name</code> (push), so PN and deeplink paths cannot double-fire.</td></tr>
+      <tr><td>4</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>Drilldown navigation rail</td><td><code>HomeViewModel.openPage</code> &rarr; <code>navigateToDrilldown</code> (<code>HomeViewModel.kt:2259&ndash;2344</code>): fast-path from current feed, cold-start wait, forced <code>refreshFromSource()</code> retry — all exists.</td></tr>
+      <tr><td>5</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td><code>install_task_created</code> emission</td><td><code>EventTranslator.translateInstallCandidateCreated</code> (<code>EventTranslator.java:83&ndash;91</code>) on <code>ES_INSTALL_CANDIDATE_CREATED</code>, carrying <code>execution_id</code> — the ID the deeplink needs is already in hand at the emit site.</td></tr>
+      <tr><td>6</td><td><span style="background:#e9f5ee;color:#0b6b3a;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Wired</span></td><td>PN click instrumentation</td><td><code>pn_clicked</code> + CT <code>pushNotificationClickedEvent</code> (<code>MainActivity.kt:329&ndash;362</code>) — click-side PN funnel already measurable.</td></tr>
+      <tr><td>7</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td><code>deeplink</code> event property</td><td>Delta row 1. One <code>data.put</code> in <code>translateInstallCandidateCreated</code>.</td></tr>
+      <tr><td>8</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td><code>assetlinks.json</code> hosting</td><td>Delta row 2. <code>https://csp.wiom.in/.well-known/assetlinks.json</code> with package name + release-key SHA-256. Explicitly flagged as not-yet-live in the manifest (D-02 note, <code>AndroidManifest.xml:70&ndash;74</code>). Until served, taps show an OS chooser instead of opening the app directly.</td></tr>
+      <tr><td>9</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Browser fallback &rarr; APK</td><td>Delta row 3. 302 redirect rule on <code>csp.wiom.in</code> to the S3 APK URL for non-app opens.</td></tr>
+      <tr><td>10</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td><code>entry_source</code> threading</td><td>Delta row 4. <code>onCardBodyClick</code> hard-codes <code>home_card</code> (<code>HomeViewModel.kt:2501</code>); <code>openPage(pageName, executionId, batchId)</code> and <code>DeepLinkRouter.handleResult</code>'s <code>openPage</code> callback carry no source parameter — both need one, with per-callsite values (<code>pn</code> from push parsing, <code>deeplink</code> from App Link parsing, default <code>home_card</code>).</td></tr>
+      <tr><td>11</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>Task-not-found toast</td><td>Delta row 5. <code>navigateToDrilldown</code>'s not-found terminus is a log line only (<code>HomeViewModel.kt:2343</code>) — needs a UI-visible toast event surfaced to HomeScreen.</td></tr>
+      <tr><td>12</td><td><span style="background:#fee2e2;color:#b91c1c;font-weight:700;padding:2px 8px;border-radius:3px;font-size:11px;">Missing</span></td><td>CT journey + WhatsApp template</td><td>Delta row 6. Journey with delivery-window branch (window is a CT setting, initial 10 min); approved WhatsApp template whose CTA URL binds <code>{{deeplink}}</code>. Dashboard config, not code.</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius &mdash; include every OS even to say "No impact".</div>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Notes</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>ES — es-installation-service</td><td>No</td><td>No state, transition, guard, timer, or event change. <code>ES_INSTALL_CANDIDATE_CREATED</code> payload untouched; csp-notification-service consumes it read-only.</td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>D&amp;A OS</td><td>No</td><td>Notification reach does not alter allocation state or INV-DAO-03 stickiness. A faster first-touch only moves work earlier inside existing windows.</td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>CL OS</td><td>No</td><td>No connection-state interaction; CL timers unaffected.</td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>Asset Custody</td><td>No</td><td>Not in the path.</td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>Quality OS</td><td>No</td><td>No quality signal changes. (Faster task pickup may improve install-timeliness metrics — a welcome second-order effect, not a contract change.)</td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>Compensation OS</td><td>No</td><td>No money movement; INV-CS-12 untouched.</td><td>&mdash;</td><td>&mdash;</td></tr>
+      <tr><td>Visibility OS</td><td>No</td><td>CT fan-out via csp-notification-service is a separate rail from visibility-os; neither's contract changes.</td><td>&mdash;</td><td>&mdash;</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW &mdash; Detailing</h2>
+  <p>Verification layer for engineering build and test.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria &mdash; Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering business logic, edge cases, and regressions. Negative checks first-class on every block.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> install_task_created carries the deeplink
+  <em>Real-world:</em> every new installation candidate, from creation onward
+
+  <span class="kw">Given</span> ES emits ES_INSTALL_CANDIDATE_CREATED for execution_candidate_id E assigned to CSP C
+  <span class="kw">When</span>  csp-notification-service translates and uploads the event to CleverTap
+  <span class="kw">Then</span>  install_task_created evtData contains deeplink = https://csp.wiom.in/task/install/E
+  <span class="kw">And</span>   every pre-existing property (spine, execution_id, zone_id, csp_role, flags) is present and unchanged
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>CT event dashboard / uploadEvent request log</strong> &mdash; inspect a fresh install_task_created; deeplink value matches ^https://csp\.wiom\.in/task/install/[A-Za-z0-9-]+$ and its tail equals execution_id
+    &bull; <strong>Negative</strong> &mdash; restore_task_created / recharge_task_created / pickup_task_assigned uploaded in the same window carry NO deeplink property</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> PN tap opens the task and attributes as pn
+  <em>Real-world:</em> the ~88% delivered case — behaviour unchanged, attribution corrected
+
+  <span class="kw">Given</span> the New Installation PN for E was delivered and the task is in CSP C's feed
+  <span class="kw">When</span>  C taps the PN
+  <span class="kw">Then</span>  the install drilldown for E opens (existing rail)
+  <span class="kw">And</span>   install_candidate_opened fires with execution_id=E and entry_source=pn
+  <span class="kw">And</span>   pn_clicked fires as today
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>CT events</strong> &mdash; for this open: one pn_clicked and one install_candidate_opened with entry_source=pn, same execution_id
+    &bull; <strong>Negative</strong> &mdash; NO install_candidate_opened with entry_source=home_card is recorded for this open</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> undelivered PN triggers exactly one WhatsApp with the working link
+  <em>Real-world:</em> the ~12% target population
+
+  <span class="kw">Given</span> install_task_created for E entered the CT journey and CT records no push-delivery signal within the CT-configured window (initial 10 min)
+  <span class="kw">When</span>  the journey branch evaluates
+  <span class="kw">Then</span>  one WhatsApp message is sent to CSP C's profile number
+  <span class="kw">And</span>   its CTA URL equals the event's deeplink property value
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>CT journey stats + WhatsApp provider delivery report</strong> &mdash; undelivered-branch count matches WhatsApp send count; sample message CTA resolves to /task/install/E
+    &bull; <strong>Negative</strong> &mdash; a CSP whose PN WAS delivered inside the window receives no WhatsApp for E</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-4:</span> deeplink tap with app installed and logged in opens the task, attributed as deeplink
+  <em>Real-world:</em> the WhatsApp fallback doing its job
+
+  <span class="kw">Given</span> the app (with App Links filter) is installed, assetlinks.json is live, C is logged in, and E is in C's feed
+  <span class="kw">When</span>  C taps the WhatsApp link https://csp.wiom.in/task/install/E
+  <span class="kw">Then</span>  the app opens directly (no browser, no chooser) on the install drilldown for E
+  <span class="kw">And</span>   install_candidate_opened fires with execution_id=E and entry_source=deeplink
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>adb logcat</strong> &mdash; "DEEPLINK external intent" line from MainActivity, then DeepLinkRouter "InApp(PageName(INSTALL_TASK_DRILLDOWN, eid=E))"
+    &bull; <strong>CT events</strong> &mdash; install_candidate_opened with entry_source=deeplink
+    &bull; <strong>Negative</strong> &mdash; no pn_clicked for this open; entry_source is not home_card and not pn</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-5:</span> linked task no longer exists &rarr; HOME + toast
+  <em>Real-world:</em> CSP taps the WhatsApp link hours later; candidate meanwhile cancelled / reassigned / expired
+
+  <span class="kw">Given</span> a deeplink (or PN) routes to execution_id E that is no longer in C's feed
+  <span class="kw">When</span>  navigateToDrilldown completes its forced refresh without finding E
+  <span class="kw">Then</span>  the app lands (or stays) on the HOME feed
+  <span class="kw">And</span>   a toast "This task does not exist" is shown (same copy for all not-found causes)
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>adb logcat</strong> &mdash; existing "not found after refresh" log line followed by the toast render
+    &bull; <strong>Negative</strong> &mdash; NO install_candidate_opened fires for E; app does not crash and does not open another task's drilldown</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-6:</span> app not installed &rarr; browser &rarr; APK download
+  <em>Real-world:</em> CSP on a fresh/secondary device, or app uninstalled
+
+  <span class="kw">Given</span> the device has no app installed that claims csp.wiom.in
+  <span class="kw">When</span>  the CSP taps the WhatsApp link
+  <span class="kw">Then</span>  the browser opens the URL and is redirected to the APK
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>curl -I https://csp.wiom.in/task/install/any-id</strong> &mdash; HTTP 302, Location: https://wiom-partner.s3.ap-south-1.amazonaws.com/Wiom-CSP.apk
+    &bull; <strong>curl https://csp.wiom.in/.well-known/assetlinks.json</strong> &mdash; HTTP 200, correct package name + release-key SHA-256 fingerprint (this path must NOT redirect)
+    &bull; <strong>Negative</strong> &mdash; no 404 on any /task/install/* path</pre></div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> malformed deeplink (missing task id)
+  <em>Real-world:</em> truncated copy-paste or hand-edited link
+
+  <span class="kw">Given</span> the app receives https://csp.wiom.in/task/install (no id)
+  <span class="kw">When</span>  DeepLinkRouter resolves it
+  <span class="kw">Then</span>  the existing BEC-01 guard returns no route and the app lands on HOME without crashing (DeepLinkRouter.kt:131&ndash;134)
+
+  <span class="kw">Verify:</span>
+    &bull; logcat "matchRoute: /task/install missing taskId"; no toast required (nothing to look up), no crash</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> PN arrives late, after the WhatsApp was already sent
+  <em>Real-world:</em> FCM delivers after the CT window closes — the CSP gets both messages
+
+  <span class="kw">Given</span> the WhatsApp was sent at window expiry and the PN lands afterwards
+  <span class="kw">When</span>  the CSP taps either (or both, in sequence)
+  <span class="kw">Then</span>  each tap routes correctly and attributes by its own entry point (pn / deeplink); a second open simply re-opens the drilldown
+
+  <span class="kw">Verify:</span>
+    &bull; two install_candidate_opened events with distinct entry_source values are acceptable; no crash on re-entry
+    &bull; <strong>Negative</strong> &mdash; the late PN delivery does not retro-cancel or duplicate the WhatsApp send</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> logged out, app installed
+  <em>Real-world:</em> session expired between task creation and link tap
+
+  <span class="kw">Given</span> the app is installed but C is logged out
+  <span class="kw">When</span>  C taps the deeplink
+  <span class="kw">Then</span>  the app opens on the login screen; after successful login C lands on the HOME feed (deeplink not replayed &mdash; v1 scope, see WF note)
+
+  <span class="kw">Verify:</span>
+    &bull; no crash; task reachable from feed post-login
+    &bull; <strong>Negative</strong> &mdash; no drilldown for E opens for a not-yet-authenticated session</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> legacy app version without the App Links intent-filter
+  <em>Real-world:</em> CSP hasn't updated since before Deep Link Handling Spec v0.6 shipped
+
+  <span class="kw">Given</span> an installed app version that does not claim csp.wiom.in
+  <span class="kw">When</span>  C taps the deeplink
+  <span class="kw">Then</span>  Android opens the URL in the browser, which 302s to the APK &mdash; effectively an update prompt (desired)
+
+  <span class="kw">Verify:</span>
+    &bull; on a legacy build: browser opens, download starts; no dead-end 404</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-5:</span> deeplink for another CSP's task (forwarded WhatsApp)
+  <em>Real-world:</em> CSP forwards the message; a different logged-in CSP taps it
+
+  <span class="kw">Given</span> logged-in CSP D taps a deeplink for task E belonging to CSP C
+  <span class="kw">When</span>  navigateToDrilldown looks up E in D's feed
+  <span class="kw">Then</span>  E is not found &rarr; same HOME + "This task does not exist" toast as LOGIC-5
+
+  <span class="kw">Verify:</span>
+    &bull; <strong>Negative</strong> &mdash; no task data belonging to C is fetched or rendered for D; the deeplink grants no cross-CSP read (lookup is feed-scoped, HomeViewModel.kt:2318&ndash;2324)</pre></div>
+
+  <h3>Regressions</h3>
+  <div class="gherkin"><pre><span class="kw">REGRESSION-1:</span> plain feed tap still attributes home_card
+  <span class="kw">Given</span> the CSP opens the app organically and taps an install card in the feed
+  <span class="kw">Then</span>  install_candidate_opened fires with entry_source=home_card, exactly as today
+
+  <span class="kw">Verify:</span>
+    &bull; CT event stream on a build with this change; <strong>Negative</strong> &mdash; feed taps never report pn or deeplink</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">REGRESSION-2:</span> FPN rail untouched
+  <span class="kw">Given</span> an FPN-triggering push arrives (launch_from_fpn=true) and the CSP taps the overlay CTA
+  <span class="kw">Then</span>  the PendingRoute hand-off is still skipped (MainActivity.kt:324), the overlay drives the open, and install_candidate_opened fires with entry_source=fpn
+
+  <span class="kw">Verify:</span>
+    &bull; Phase-4 FPN funnel joins (fpn_delivered / fpn_action_taken / install_candidate_opened) unchanged; <strong>Negative</strong> &mdash; FPN opens never report pn or deeplink</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 rows 1&ndash;6</td><td>6 paths</td><td>LOGIC-1..6</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>&mdash;</td><td>None — no derived values beyond string concatenation of the URL (checked in LOGIC-1)</td><td>&mdash;</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>A6 rows 1&ndash;7</td><td>7</td><td>REGRESSION-1..2 + negatives inside LOGIC-1/2/4</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>malformed link, late PN, logged-out, legacy build, cross-CSP forward</td><td>5</td><td>EDGE-1..5</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>A6 (feed attribution, FPN rail)</td><td>2</td><td>REGRESSION-1..2</td><td>All covered</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Medium</span></td><td>Quick Check filled (incl. tier)</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Required sections filled per tier &mdash; omissions noted with reason</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>B5 coverage matrix reads "all covered" or "N/A" on every class</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Negative checks present on every Verify block</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Workflow diagrams (sequence + decision flow) present</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Wired-layers table present</td><td class="check">&check;</td></tr>
+      <tr><td><span class="badge light">Medium</span></td><td>Every A8 "Impacted" row has sign-off Received (all rows are No-impact)</td><td class="check">&check;</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code + schema evidence (verified 2026-07-17 against csp-os-yaml qa@e0618cf4 and wiom-csp-app development@ee48c6ae):</strong>
+    <ul>
+      <li><strong>install_task_created property set (no URL today):</strong> <code>EventTranslator.java:83&ndash;91</code> — spine + <code>csp_role</code>, <code>execution_id</code>, <code>zone_id</code>, flags.</li>
+      <li><strong>App Links filter shipped, assetlinks not hosted:</strong> <code>AndroidManifest.xml:70&ndash;81</code> — intent-filter for <code>csp.wiom.in</code> with the explicit D-02 comment that verification fails until <code>assetlinks.json</code> is live.</li>
+      <li><strong>Install deeplink route exists:</strong> <code>DeepLinkRouter.kt:137&ndash;140</code> (<code>/task/install/&lt;taskId&gt;</code> &rarr; <code>INSTALL_TASK_DRILLDOWN</code>); host constant at <code>:29</code>; missing-id guard at <code>:131&ndash;134</code>.</li>
+      <li><strong>External-link parsing exists and cannot double-fire with push:</strong> <code>MainActivity.kt:370&ndash;378</code> (skips intents with <code>page_name</code> extra); result handled at <code>:225&ndash;234</code>.</li>
+      <li><strong>PN routing + click events exist:</strong> <code>MainActivity.kt:313&ndash;363</code> (<code>parsePageNameFromIntent</code>, <code>pushNotificationClickedEvent</code>, <code>pn_clicked</code>).</li>
+      <li><strong>Attribution hard-coded today:</strong> <code>HomeViewModel.kt:2501</code> — <code>entry_source="home_card"</code> for every <code>onCardBodyClick</code> open.</li>
+      <li><strong>Not-found is silent today:</strong> <code>HomeViewModel.kt:2343</code> — log-only fallback after forced refresh.</li>
+      <li><strong>Feed-scoped lookup (no cross-CSP read):</strong> <code>HomeViewModel.kt:2318&ndash;2324</code> — task resolved only from the logged-in user's own feed state.</li>
+      <li><strong>PN delivery rate ~88% / APK URL / 10-min initial window / WhatsApp channel live on CT:</strong> PM-provided (Ashish Raj, 2026-07-17).</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-07-17</td><td>Ashish Raj</td><td>All</td><td>Initial spec. New Installation PN delivery is ~88%; to reach the undelivered ~12%, a CT journey sends a WhatsApp message when the PN is undelivered within a CT-configured window (initial 10 min). csp-notification-service adds a <code>deeplink</code> property (<code>https://csp.wiom.in/task/install/&lt;execution_id&gt;</code>) to <code>install_task_created</code>; a new web endpoint hosts <code>assetlinks.json</code> and 302-redirects browser opens to the APK on S3. The app's existing deeplink rail (App Links filter + DeepLinkRouter + openPage) is reused unchanged; the app adds <code>entry_source</code> threading (<code>pn</code> for push taps, <code>deeplink</code> reserved for link taps, <code>home_card</code> default, <code>fpn</code> untouched) — fixing the pre-existing misattribution where every open reported <code>home_card</code> — and a "This task does not exist" toast on the not-found fallback. No OS, ES, DB, or customer-app changes.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
+</body>
+</html>
